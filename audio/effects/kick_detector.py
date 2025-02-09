@@ -5,6 +5,5 @@ class KickDetector(SpikeDetector):
         super().__init__(chunks_per_second, 3, 10, [0, 3], DetectionType.UPPER)
 
     def detect(self, data):
-        print(data.get_ps_mean([0, 20000]))
         result = super().detect(data)
         return result

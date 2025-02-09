@@ -34,6 +34,9 @@ class SpikeDetector:
         self.energy_history = deque(maxlen=self.window_size)
         self.freq_range = freq_range
         self.detection_type = detection_type
+    
+    def clear(self):
+        self.energy_history.clear()
 
     def detect(self, data: AudioData):
         current_energy = data.get_ps_mean(self.freq_range)
