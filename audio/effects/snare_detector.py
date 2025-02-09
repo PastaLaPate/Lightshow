@@ -1,10 +1,9 @@
 from .spike_detector import SpikeDetector, DetectionType
 
-class KickDetector(SpikeDetector):
+class SnareDetector(SpikeDetector):
     def __init__(self, chunks_per_second):
-        super().__init__(chunks_per_second, 3, 10, [0, 3], DetectionType.UPPER)
+        super().__init__(chunks_per_second, 7.5, 100, [20, 20_000], DetectionType.UPPER)
 
     def detect(self, data):
-        print(data.get_ps_mean([0, 20000]))
         result = super().detect(data)
         return result

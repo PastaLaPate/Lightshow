@@ -1,3 +1,4 @@
+from typing import Union, Callable, Type
 from abc import ABC, abstractmethod
 import numpy as np
 
@@ -25,8 +26,11 @@ class AudioListener(ABC):
         super().__init__()
     
     @abstractmethod
-    def process(self, data:AudioData) -> bool: # Return False if the listener wants to stop listening
+    def __call__(self, data:AudioData) -> bool: # Return False if the listener wants to stop listening
         pass
+
+AudioListenerType = Union[AudioListener, Callable[[AudioData], bool], Type[AudioListener]]
+
 
 class Processor(ABC):
     

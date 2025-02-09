@@ -1,16 +1,15 @@
 import os
 import sys
 import inspect
+from collections import deque
+from enum import Enum
+
 # Fucking things to import from upper folder
 currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir) 
+sys.path.insert(0, parentdir)
 
-from collections import deque
 from audio_streams import AudioData
-from enum import Enum
-import numpy as np
-
 
 class DetectionType(Enum):
     UPPER = 0
@@ -31,6 +30,7 @@ class SpikeDetector:
         self.chunks_per_second = chunks_per_second
         self.sensitivity = sensitivity
         self.window_size = int(window_size*chunks_per_second)
+        print(self.window_size)
         self.energy_history = deque(maxlen=self.window_size)
         self.freq_range = freq_range
         self.detection_type = detection_type

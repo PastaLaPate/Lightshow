@@ -1,11 +1,11 @@
 
 from collections import deque
-from typing import List, Type
+from typing import List, Type, Callable, Optional
 
 import numpy as np
 import pyaudiowpatch as pyaudio
     
-from audio_types import AudioData, AudioListener, Processor
+from audio_types import AudioData, AudioListener, Processor, AudioListenerType
 
 class AudioCapture:
     """
@@ -17,7 +17,7 @@ class AudioCapture:
         self.audio_buffer = deque(maxlen=max_buffer)
         self.channels = channels  # default is 1
         self.processor = processor
-        self.listeners:List[AudioListener] = []
+        self.listeners:List[AudioListenerType] = []
 
     def callback(self, in_data, frame_count, time_info, status):
         # Convert incoming bytes into a NumPy array of int16.
@@ -30,17 +30,29 @@ class AudioCapture:
                 data = data[:self.chunk_size]
         else:
             data = data[:self.chunk_size]
-        treatedData = self.processor.process(data);
+        treatedData = self.processor.process(data)
         for listener in self.listeners:
-            if not listener.process(treatedData):
+            if not listener(treatedData):
                 self.listeners.remove(listener)
         self.audio_buffer.append(data)
         return (in_data, pyaudio.paContinue)
     
-    def add_listener(self, listener: Type[AudioListener]):
-        #if not issubclass(listener, AudioListener):
-        #    raise ValueError("Listener must be an instance of AudioListener")
-        self.listeners.append(listener(self.channels, self.chunk_size, self.sample_rate))
+    def add_listener(self, listener: AudioListenerType) -> Optional[AudioListener]:
+        """
+        Returns the listener instanced if it was initialy a class.
+        """
+        
+        if isinstance(listener, type) and issubclass(listener, AudioListener):
+            listener = listener(self.channels, self.chunk_size, self.sample_rate)
+            self.listeners.append(listener)
+            return listener
+        elif isinstance(listener, AudioListener):
+            self.listeners.append(listener)
+        elif isinstance(listener, Callable): # Lambda function
+            self.listeners.append(listener)
+        else:
+            raise ValueError("Listener must be an AudioListener instance, class or a lambda function")
+        return None
     
     def remove_listener(self, listener: Type[AudioListener]):
         if not issubclass(listener, AudioListener):
