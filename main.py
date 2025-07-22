@@ -10,21 +10,26 @@ from audio.processors import SpectrumProcessor
 import audio.effects as effects
 from audio.audio_streams import AudioStreamHandler, AudioListener
 from visualization.spike_detector_visualizer import SpikeDetectorVisualizer
-
+from devices.moving_head import MovingHead
+from devices.device import PacketData, PacketStatus, PacketType
 class MainAudioListener(AudioListener):
     def __init__(self, channels, chunk_size, sample_rate, ax_kick, ax_snare, ax_break):
         super().__init__(channels, chunk_size, sample_rate)
+        self.mh = MovingHead()
         self.kick_detector = effects.KickDetector(int(sample_rate / chunk_size))
         self.snare_detector = effects.SnareDetector(int(sample_rate / chunk_size))
         self.break_detector = effects.BreakDetector(int(sample_rate / chunk_size))
-        
         self.kick_visualizer = SpikeDetectorVisualizer(self.kick_detector, ax_kick)
         self.snare_visualizer = SpikeDetectorVisualizer(self.snare_detector, ax_snare)
         self.break_visualizer = SpikeDetectorVisualizer(self.break_detector, ax_break)
+        self.last_beat = False
 
     def __call__(self, data):
-        self.kick_detector.detect(data)
-        self.kick_visualizer(data)
+        beat = self.kick_detector.detect(data)
+        if beat:
+            self.mh.on(PacketData(PacketType.BEAT, PacketStatus.ON))
+        self.last_beat = beat
+        self.kick_visualizer(data, beat_detected=beat)
         self.snare_detector.detect(data)
         self.snare_visualizer(data)
         self.break_detector.detect(data)
@@ -32,13 +37,15 @@ class MainAudioListener(AudioListener):
         return True
 
 def update_plot(frame, listener):
-    return listener.kick_visualizer.line_energy, listener.kick_visualizer.line_limit, \
-           listener.snare_visualizer.line_energy, listener.snare_visualizer.line_limit, \
-           listener.break_visualizer.line_energy, listener.break_visualizer.line_limit
+    lines = []
+    lines += listener.kick_visualizer.line_energy, listener.kick_visualizer.line_limit, listener.kick_visualizer.scatter_beats
+    lines += listener.snare_visualizer.line_energy, listener.snare_visualizer.line_limit
+    lines += listener.break_visualizer.line_energy, listener.break_visualizer.line_limit
+    return lines
 
 def main():
     # Set up the audio stream.
-    audio_handler = AudioStreamHandler(SpectrumProcessor, chunk_size=512)
+    audio_handler = AudioStreamHandler(SpectrumProcessor, chunk_size=1024)
     print(f"Recording from device index: {audio_handler.device_index}")
     audio_handler.start_stream()
 

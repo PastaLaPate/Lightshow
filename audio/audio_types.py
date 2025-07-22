@@ -29,7 +29,7 @@ class AudioListener(ABC):
     def __call__(self, data:AudioData) -> bool: # Return False if the listener wants to stop listening
         pass
 
-AudioListenerType = Union[AudioListener, Callable[[AudioData], bool], Type[AudioListener]]
+AudioListenerType = Union[AudioListener, Callable[[AudioData], bool]]
 
 
 class Processor(ABC):

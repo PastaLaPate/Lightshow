@@ -72,11 +72,8 @@ class AudioStreamHandler:
         self.pyaudio_instance = pyaudio.PyAudio()
         self.stream = None
         self.device_index = None
-        self.sample_rate = None
-        self.channels = None
         self.setup_device()
         self.processor = processor(self.chunk_size, self.sample_rate)
-        # Pass the correct number of channels to AudioCapture.
         self.audio_capture = AudioCapture(self.processor, chunk_size=chunk_size, channels=self.channels, sample_rate=self.sample_rate)
 
     def setup_device(self):
