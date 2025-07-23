@@ -30,16 +30,28 @@ class MainAudioListener(AudioListener):
         self.kick_visualizer = SpikeDetectorVisualizer(self.kick_detector, ax_kick)
         self.break_detected = False
         self.drop_detected = False
+        self.silence_detected = False
+        self.silence_since = 0
 
     def __call__(self, data):
         if self.silent_detector.detect(data):
-            self.kick_detector.clear()
-            self.break_detector.clear()
-            self.drop_detector.clear()
-            self.kick_visualizer.clear()
-            self.break_detected = False
-            self.drop_detected = False
+            if not self.silence_detected:
+                self.silence_detected = True
+                self.silence_since = time_ns()
+            if time_ns() - self.silence_since > 1.5 * 1e9:
+                self.kick_detector.clear()
+                self.break_detector.clear()
+                self.drop_detector.clear()
+                self.kick_visualizer.clear()
+                self.break_detected = False
+                self.drop_detected = False
+                self.mh.on(PacketData(PacketType.NEW_MUSIC, PacketStatus.ON))
+            # print("Silent detected, resetting kick and break detectors.")
             return True
+        elif self.silence_detected:
+            self.silence_detected = False
+            self.mh.on(PacketData(PacketType.NEW_MUSIC, PacketStatus.OFF))
+            print("Music started, resuming kick and break detection.")
 
         beat = self.kick_detector.detect(
             data, appendCurrentEnergy=not self.break_detected
@@ -56,6 +68,7 @@ class MainAudioListener(AudioListener):
                 self.mh.on(PacketData(PacketType.BREAK, PacketStatus.OFF))
             self.break_detector.on_beat()
             self.drop_detector.on_beat()
+            print("beat detected")
             self.mh.on(PacketData(PacketType.BEAT, PacketStatus.ON))
 
         mbreak, drop = False, False
@@ -67,12 +80,13 @@ class MainAudioListener(AudioListener):
             self.drop_detected = True
             self.mh.on(PacketData(PacketType.DROP, PacketStatus.ON))
             drop = True
-        if not self.drop_detector.detect(data):
+        if self.drop_detected and not self.drop_detector.detect(data):
             self.drop_detected = False
             self.mh.on(PacketData(PacketType.DROP, PacketStatus.OFF))
         self.kick_visualizer(
             data, beat_detected=beat, break_detected=mbreak, drop_detected=drop
         )
+        self.mh.on(PacketData(PacketType.TICK, PacketStatus.ON))
         # self.snare_detector.detect(data)
         # self.snare_visualizer(data)
         # self.break_visualizer(data)

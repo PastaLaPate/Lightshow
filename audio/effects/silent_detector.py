@@ -8,7 +8,7 @@ sys.path.insert(0, parentdir)
 
 from audio_streams import AudioData
 
+
 class SilentDetector:
-  def detect(self, data: AudioData):
-    return data.get_ps_mean([0, 20000]) < 200 # 200 bcs it's a silent detector
-  
+    def detect(self, data: AudioData):
+        return data.get_ps_mean([0, 20000]) < 1e7  # 1e7 bcs it's a silent detector
