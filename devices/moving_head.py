@@ -22,7 +22,7 @@ class MovingHead(Device):
         self.cooldown_time = 0.2 * 1e9  # Cooldown time in nanoseconds (0.3 seconds)
         self.base_cycle = cycle([0, 90, 180])
         self.rgb_cycle = cycle([(255, 0, 0), (0, 255, 0), (0, 0, 255)])  # RGB colors for the LED
-        super().__init__()
+        super().__init__(False)
         
     def connect(self):
         """Establish a persistent WebSocket connection."""
@@ -88,6 +88,10 @@ class MovingHead(Device):
         self.baseAngle = next(self.base_cycle)
             
     def on(self, packet):
+
+        if not self.ws:
+            return
+
         """Handle a packet (e.g. beat) and update the device state accordingly."""
         current_time = time.time_ns()
         if current_time - self.last_on_time < self.cooldown_time:

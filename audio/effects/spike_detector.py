@@ -30,13 +30,11 @@ class SpikeDetector:
         self.chunks_per_second = chunks_per_second
         self.sensitivity = sensitivity
         self.window_size = int(window_size*chunks_per_second)
-        print(self.window_size)
         self.energy_history = deque(maxlen=self.window_size)
         self.freq_range = freq_range
         self.detection_type = detection_type
         self.detecting = False
-        self.min_frame_duration = max(1, int(min_duration * chunks_per_second))
-        print("frame dur : ", self.min_frame_duration)
+        self.min_frame_duration = int(min_duration * chunks_per_second)
         self.current_frame_dur = 0
         self.cooldown_frame_duration = max(1, int(cooldown * chunks_per_second))
         self.cooldown_counter = 0
@@ -44,9 +42,12 @@ class SpikeDetector:
     def clear(self):
         self.energy_history.clear()
 
-    def detect(self, data: AudioData):
+    def detect(self, data: AudioData, appendCurrentEnergy=True):
         current_energy = data.get_ps_mean(self.freq_range)
-        self.energy_history.append(current_energy)
+        if appendCurrentEnergy:
+            self.energy_history.append(current_energy)
+        if len(self.energy_history) < 1:
+            return False
         avg_energy = sum(self.energy_history) / len(self.energy_history)
         limit = self.sensitivity * avg_energy
         result = current_energy > limit if (self.detection_type == DetectionType.UPPER) else current_energy < limit
@@ -61,6 +62,10 @@ class SpikeDetector:
             return False
         elif result and not self.detecting:
             self.detecting = True
+            if self.min_frame_duration == 0:
+                self.detecting = False
+                self.cooldown_counter = self.cooldown_frame_duration
+                return True
             return False
         elif result and self.detecting:
             self.current_frame_dur += 1
