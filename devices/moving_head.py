@@ -22,18 +22,14 @@ CIRCLE_ANIMATION = {
     "top": lambda t: 52.5 + 22.5 * np.sin(t * 2 * np.pi),  # Max 30 to 75
 }
 
-COLORS = [
-    (255, 0, 0),  # Red
-    (0, 255, 0),  # Green
+RAINBOW_KICK_COLORS = [
+    (148, 0, 211),  # Violet
+    (75, 0, 130),  # Indigo
     (0, 0, 255),  # Blue
+    (0, 255, 0),  # Green
     (255, 255, 0),  # Yellow
-    (255, 165, 0),  # Orange
-    (128, 0, 128),  # Purple
-    (0, 255, 255),  # Cyan
-    (255, 192, 203),  # Pink
-    (165, 42, 42),  # Brown
-    (128, 128, 128),  # Gray
-    (255, 255, 255),  # White
+    (255, 127, 0),  # Orange
+    (255, 0, 0),  # Red
 ]
 
 
@@ -52,6 +48,15 @@ class MovingHead(Device):
 
         self.base_cycle = cycle(TRIANGLE_ANIMATION["base"])
         self.top_cycle = cycle(TRIANGLE_ANIMATION["top"])
+
+        def random_rainbow_color():
+            return [x * 255 for x in self.hsv_to_rgb(random.uniform(0, 1), 1, 1, 1)[:3]]
+
+        self.rainbow_kick_colors_cycle = cycle(RAINBOW_KICK_COLORS)
+        self.colors_mode = cycle(
+            [lambda: next(self.rainbow_kick_colors_cycle), random_rainbow_color]
+        )
+        self.color_mode = next(self.colors_mode)
 
         self.breaking = False
         self.break_time = 0
@@ -157,12 +162,13 @@ class MovingHead(Device):
         if packet.packet_type == PacketType.BREAK:
             if packet.packet_status == PacketStatus.OFF:
                 max_added_time = 3
-                t = min((current_time - self.break_time) / 1e9 / 10, 1.0)
+                t = min((current_time - self.break_time) / 1e9 / 15, 1.0)
                 added_time = self.break_added_time_curve(t) * max_added_time
                 self.flicker(2 + added_time)
                 self.next_cool = (
                     current_time + added_time * 1e9
                 )  # Set next cooldown to 2 seconds
+                self.color_mode = next(self.colors_mode)
                 self.breaking = False
                 self.randomAnimation()
             else:
@@ -195,7 +201,7 @@ class MovingHead(Device):
                 return False  # Skip the `on` command if cooldown is active
 
             # Change LED to red and move top servo as an example reaction
-            self.r, self.g, self.b = random.choice(COLORS)
+            self.r, self.g, self.b = self.color_mode()
             self.baseAngle = next(self.base_cycle)
             self.topAngle = next(self.top_cycle)
             self.rgb()
