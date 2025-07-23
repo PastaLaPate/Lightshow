@@ -127,6 +127,22 @@ class MovingHead(Device):
         message = {"led": {"r": int(self.r), "g": int(self.g), "b": int(self.b)}}
         self.send_message(message)
 
+    def rgb_fade(self, fr: int, fg: int, fb: int, duration: float = 0.1):
+        message = {
+            "led": {
+                "r": int(self.r),
+                "g": int(self.g),
+                "b": int(self.b),
+            },
+            "fade": duration * 1000,
+            "from": {
+                "r": fr,
+                "g": fg,
+                "b": fb,
+            },
+        }
+        self.send_message(message)
+
     def baseServo(self):
         """Set the base servo angle via WebSocket."""
         # print(f"Setting base servo to {self.baseAngle}")
@@ -201,10 +217,11 @@ class MovingHead(Device):
                 return False  # Skip the `on` command if cooldown is active
 
             # Change LED to red and move top servo as an example reaction
+            fr, fg, fb = 255, 255, 255
             self.r, self.g, self.b = self.color_mode()
             self.baseAngle = next(self.base_cycle)
             self.topAngle = next(self.top_cycle)
-            self.rgb()
+            self.rgb_fade(fr, fg, fb, 0.2)
             self.baseServo()
             self.topServo()
         return super().on(packet)
