@@ -1,0 +1,105 @@
+import time
+from typing import List, Callable
+from itertools import cycle
+import numpy as np
+import random
+
+from devices.animations import RGB
+from lightshow.devices.animations.AAnimation import FadeCommand
+from lightshow.devices.moving_head.moving_head_animations import (
+    AMHAnimation,
+    MHAnimationFrame,
+    ServoCommand,
+)
+
+
+class CircleAnimation(AMHAnimation):
+    def __init__(
+        self,
+        rgb: List[RGB] | Callable[[], RGB],
+        speed=0.01,
+        base_angle_offset=0,
+        beat_flicker=False,
+    ):
+        super().__init__()
+
+        self.setRGB(rgb)
+
+        self.change_color_on_tick = False
+        self.last_color = RGB(255, 255, 255)
+
+        self.tickeable = True
+        self.progress_speed = speed
+
+        self.baseAngleRange = (0, 120)
+        self.topAngleRange = (0, 70)
+        self.base_angle_offset = base_angle_offset
+
+        self.boost_speed = 0.035
+        self.boost_time = 13  # 10 Frames
+        self.boost_progress = 1
+        # easeInOutQuart
+        self.boost_curve = lambda t: 1 - (
+            8 * (t**4) if t < 0.5 else 1 - ((-2 * t + 2) ** 4) / 2
+        )
+
+        self.circle_progress = 0
+
+        self.beat_flicker = beat_flicker
+        self.color_cooldown = 0
+
+    def setRGB(self, rgb: List[RGB] | Callable[[], RGB]):
+        self.rgb = cycle(rgb) if isinstance(rgb, list) else rgb
+
+    def next(self, isTick=False) -> MHAnimationFrame:
+        rgb = self.last_color
+        if not isTick:
+            self.boost_progress = 0
+            if random.uniform(0, 1) < 1 / 12:  # 8.3% reverse chance
+                self.reverse()
+            if self.beat_flicker:
+                rgb = FadeCommand(RGB(255, 255, 255), rgb, 100)
+                self.color_cooldown = time.time_ns() + 0.2 * 1e9
+            if not self.change_color_on_tick:
+                rgb = self.nextRGB()
+        if self.boost_progress < 1:
+            self.boost_progress += 1 / self.boost_time
+            self.circle_progress += (
+                self.boost_curve(self.boost_progress) * self.boost_speed
+            )
+
+        if self.change_color_on_tick and time.time_ns() >= self.color_cooldown:
+            rgb = self.nextRGB()
+        self.circle_progress += self.progress_speed
+        self.circle_progress %= 1
+
+        angle = self.circle_progress * 2 * np.pi
+        if self.reversed:
+            angle = -angle
+
+        base = (
+            self.baseAngleRange[0]
+            + self.baseAngleRange[1] / 2
+            + self.baseAngleRange[1] / 2 * np.cos(angle)
+        )  # Max 0° to 90°
+        top = (
+            self.topAngleRange[0]
+            + self.topAngleRange[1] / 2
+            + self.topAngleRange[1] / 2 * np.sin(angle)
+        )  # Max 30 to 75
+        self.last_color = rgb
+
+        return MHAnimationFrame(
+            duration=0,
+            rgb=rgb,
+            topServo=ServoCommand(servo="top", angle=int(top)),
+            baseServo=ServoCommand(
+                servo="base", angle=int(base + self.base_angle_offset)
+            ),
+        )
+
+    def nextRGB(self) -> RGB:
+        return next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
+
+    def reverse(self):
+        super().reverse()

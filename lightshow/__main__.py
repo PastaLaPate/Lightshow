@@ -5,16 +5,16 @@ Real-time audio spectrum visualization with kick detection.
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
-from pyaudio import PyAudio, paWASAPI
-
-from config import Config
-from audio.processors import SpectrumProcessor
-import audio.effects as effects
-from audio.audio_streams import AudioStreamHandler, AudioListener
-from visualization.spike_detector_visualizer import SpikeDetectorVisualizer
-from devices.moving_head import MovingHead
-from devices.device import PacketData, PacketStatus, PacketType
+from pyaudio import PyAudio
 from time import time_ns
+
+from lightshow.utils.config import Config
+from lightshow.audio.processors import SpectrumProcessor
+import lightshow.audio.effects as effects
+from lightshow.audio.audio_streams import AudioStreamHandler, AudioListener
+from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
+from lightshow.devices.moving_head.moving_head import MovingHead
+from lightshow.devices.device import PacketData, PacketStatus, PacketType
 
 plt.style.use("dark_background")
 
@@ -68,7 +68,7 @@ class MainAudioListener(AudioListener):
                 self.mh.on(PacketData(PacketType.BREAK, PacketStatus.OFF))
             self.break_detector.on_beat()
             self.drop_detector.on_beat()
-            print("beat detected")
+            # print("beat detected")
             self.mh.on(PacketData(PacketType.BEAT, PacketStatus.ON))
 
         mbreak, drop = False, False
@@ -139,7 +139,7 @@ def main():
     )
     audio_handler.audio_capture.add_listener(listener)
 
-    ani = animation.FuncAnimation(
+    anim = animation.FuncAnimation(
         fig, update_plot, fargs=(listener,), interval=50, blit=True
     )
     plt.show()
