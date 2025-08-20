@@ -1,9 +1,10 @@
 import random
-from typing import List
+from typing import List, Callable
 
-from lightshow.devices.animations.AAnimation import RGB
+from lightshow.devices.animations.AAnimation import RGB, Command, FadeCommand
 from lightshow.utils.colors import hsv_to_rgb
 
+COLOR_MODE = List[RGB] | Callable[[], RGB]
 
 DEFAULT_RGBs: List[RGB] = RGB.fromRGBsList([[255, 0, 0], [0, 255, 0], [0, 0, 255]])
 
@@ -24,3 +25,14 @@ def random_rainbow_color():
     return RGB.fromList(
         [x * 255 for x in hsv_to_rgb(random.uniform(0, 1), 1, 1, 1)[:3]]
     )
+
+
+COLOR_TRANSFORMER = Callable[[RGB], Command]
+
+
+def toFadeBlack(color: RGB) -> FadeCommand:
+    return FadeCommand(color, RGB(0, 0, 0), 200)
+
+
+def startFlicker(color: RGB) -> FadeCommand:
+    return FadeCommand(RGB(255, 255, 255), color, 100)

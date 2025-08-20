@@ -18,6 +18,7 @@ class Config:
     def reload_config(self):
         self.chunk_size = self.get("chunk_size", 1024)
         self.device_index = self.get("device_index", -2)  # Auto-detect if -1
+        self.max_fps = self.get("max_fps", 30)
 
     def get(self, key, default=None):
         return self.settings.get(key, default)
@@ -26,5 +27,6 @@ class Config:
         with open(self.config_file, "w") as f:
             self.settings["chunk_size"] = self.chunk_size
             self.settings["device_index"] = self.device_index
+            self.settings["max_fps"] = self.max_fps
             json.dump(self.settings, f, indent=4)
         print(f"Configuration saved to {self.config_file}")

@@ -1,11 +1,10 @@
 import time
-from typing import List, Callable
+from typing import List, Callable, Tuple
 from itertools import cycle
 import numpy as np
 import random
 
 from devices.animations import RGB
-from lightshow.devices.animations.AAnimation import FadeCommand
 from lightshow.devices.moving_head.moving_head_animations import (
     AMHAnimation,
     MHAnimationFrame,
@@ -19,7 +18,6 @@ class CircleAnimation(AMHAnimation):
         rgb: List[RGB] | Callable[[], RGB],
         speed=0.01,
         base_angle_offset=0,
-        beat_flicker=False,
     ):
         super().__init__()
 
@@ -44,8 +42,6 @@ class CircleAnimation(AMHAnimation):
         )
 
         self.circle_progress = 0
-
-        self.beat_flicker = beat_flicker
         self.color_cooldown = 0
 
     def setRGB(self, rgb: List[RGB] | Callable[[], RGB]):
@@ -57,37 +53,27 @@ class CircleAnimation(AMHAnimation):
             self.boost_progress = 0
             if random.uniform(0, 1) < 1 / 12:  # 8.3% reverse chance
                 self.reverse()
-            if self.beat_flicker:
-                rgb = FadeCommand(RGB(255, 255, 255), rgb, 100)
-                self.color_cooldown = time.time_ns() + 0.2 * 1e9
             if not self.change_color_on_tick:
                 rgb = self.nextRGB()
+            self.last_color = rgb
+            rgb = self.apply_transformer(rgb)
+            self.color_cooldown = time.time_ns() + 0.2 * 1e9
+        else:
+            if self.change_color_on_tick and time.time_ns() >= self.color_cooldown:
+                rgb = self.nextRGB()
+                self.last_color = rgb
         if self.boost_progress < 1:
             self.boost_progress += 1 / self.boost_time
             self.circle_progress += (
                 self.boost_curve(self.boost_progress) * self.boost_speed
             )
-
-        if self.change_color_on_tick and time.time_ns() >= self.color_cooldown:
-            rgb = self.nextRGB()
         self.circle_progress += self.progress_speed
         self.circle_progress %= 1
 
         angle = self.circle_progress * 2 * np.pi
         if self.reversed:
             angle = -angle
-
-        base = (
-            self.baseAngleRange[0]
-            + self.baseAngleRange[1] / 2
-            + self.baseAngleRange[1] / 2 * np.cos(angle)
-        )  # Max 0° to 90°
-        top = (
-            self.topAngleRange[0]
-            + self.topAngleRange[1] / 2
-            + self.topAngleRange[1] / 2 * np.sin(angle)
-        )  # Max 30 to 75
-        self.last_color = rgb
+        base, top = self.nextCurve(angle)
 
         return MHAnimationFrame(
             duration=0,
@@ -97,6 +83,19 @@ class CircleAnimation(AMHAnimation):
                 servo="base", angle=int(base + self.base_angle_offset)
             ),
         )
+
+    def nextCurve(self, t: float) -> Tuple[int, int]:
+        base = (
+            self.baseAngleRange[0]
+            + self.baseAngleRange[1] / 2
+            + self.baseAngleRange[1] / 2 * np.cos(t)
+        )  # Max 0° to 90°
+        top = (
+            self.topAngleRange[0]
+            + self.topAngleRange[1] / 2
+            + self.topAngleRange[1] / 2 * np.sin(t)
+        )  # Max 30 to 75
+        return (base, top)
 
     def nextRGB(self) -> RGB:
         return next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()

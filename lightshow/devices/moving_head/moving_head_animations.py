@@ -8,6 +8,7 @@ from devices.animations.AAnimation import (
     AAnimation,
     RGB,
 )
+from lightshow.devices.moving_head.moving_head_colors import COLOR_TRANSFORMER
 
 QUART_OUT = lambda t: 1 - (1 - t) ** 4
 
@@ -47,3 +48,11 @@ class AMHAnimation(AAnimation):
     @abstractmethod
     def next(self, isTick=False) -> MHAnimationFrame:
         pass
+
+    def setTransformer(self, transformer: COLOR_TRANSFORMER):
+        self.transformer = transformer
+
+    def apply_transformer(self, color: RGB):
+        if self.transformer:
+            return self.transformer(color)
+        return color
