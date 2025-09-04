@@ -3,4 +3,4 @@ PyAudioWPatch
 websocket-client
 matplotlib
 librosa
-sv-ttk
+dearpygui==2.0.0
