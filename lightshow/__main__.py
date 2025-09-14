@@ -2,36 +2,53 @@
 Real-time audio spectrum visualization with kick detection.
 """
 
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-
+import sys
+from typing import List
 from pyaudio import PyAudio
 from time import time_ns
+import signal
 
-from lightshow.utils.config import Config
+import lightshow.utils.config as config
 from lightshow.audio.processors import SpectrumProcessor
-import lightshow.audio.effects as effects
+import lightshow.audio.detectors as detectors
 from lightshow.audio.audio_streams import AudioStreamHandler, AudioListener
-from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
-from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.devices.device import PacketData, PacketStatus, PacketType
-
-plt.style.use("dark_background")
+from lightshow.gui.main_window import UIManager
+from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
 
 
 class MainAudioListener(AudioListener):
-    def __init__(self, channels, chunk_size, sample_rate, ax_kick):
-        super().__init__(channels, chunk_size, sample_rate)
-        self.mh = MovingHead()
-        self.kick_detector = effects.KickDetector(int(sample_rate / chunk_size))
-        self.silent_detector = effects.SilentDetector()
-        self.break_detector = effects.BreakDetector(30)
-        self.drop_detector = effects.DropDetector(30, 5)  # Maybe needs to be fine-tuned
-        self.kick_visualizer = SpikeDetectorVisualizer(self.kick_detector, ax_kick)
+    def __init__(self, AudioHandler: AudioStreamHandler):
+        super().__init__(AudioHandler)
+        # self.mh = MovingHead()
+        self.kick_detector = detectors.KickDetector(AudioHandler)
+        self.silent_detector = detectors.SilentDetector()
+        self.break_detector = detectors.BreakDetector(30)
+        self.drop_detector = detectors.DropDetector(30, 5)
+        # Visualizer is created but not initialized with DPG items yet
+        self.kick_visualizer = SpikeDetectorVisualizer(self.kick_detector)
+        self.clear_state()
+
+    def clear_state(self):
+        """Resets all detectors and visualizers to their initial state."""
         self.break_detected = False
         self.drop_detected = False
         self.silence_detected = False
         self.silence_since = 0
+        self.new_music = False
+        if hasattr(self, "kick_detector"):
+            self.kick_detector.clear()
+            self.break_detector.clear()
+            self.drop_detector.clear()
+            self.kick_visualizer.clear()
+
+    def send_packet_to_devices(self, packet: PacketData):
+        devices = (
+            config.live_devices.copy()
+        )  # Create copy to avoid exception during change
+        for device in devices.values():
+            if device.ready:
+                device.on(packet)
 
     def __call__(self, data):
         if self.silent_detector.detect(data):
@@ -39,18 +56,16 @@ class MainAudioListener(AudioListener):
                 self.silence_detected = True
                 self.silence_since = time_ns()
             if time_ns() - self.silence_since > 1.5 * 1e9:
-                self.kick_detector.clear()
-                self.break_detector.clear()
-                self.drop_detector.clear()
-                self.kick_visualizer.clear()
-                self.break_detected = False
-                self.drop_detected = False
-                self.mh.on(PacketData(PacketType.NEW_MUSIC, PacketStatus.ON))
-            # print("Silent detected, resetting kick and break detectors.")
+                self.new_music = True
+                self.send_packet_to_devices(
+                    PacketData(PacketType.NEW_MUSIC, PacketStatus.ON)
+                )
             return True
-        elif self.silence_detected:
-            self.silence_detected = False
-            self.mh.on(PacketData(PacketType.NEW_MUSIC, PacketStatus.OFF))
+        elif self.silence_detected and self.new_music:
+            self.clear_state()
+            self.send_packet_to_devices(
+                PacketData(PacketType.NEW_MUSIC, PacketStatus.OFF)
+            )
             print("Music started, resuming kick and break detection.")
 
         beat = self.kick_detector.detect(
@@ -64,88 +79,66 @@ class MainAudioListener(AudioListener):
                 self.break_detector.clean_beats(
                     time_ns() - self.break_detector.beats[-1]
                 )
-                # print("Break detected.")
-                self.mh.on(PacketData(PacketType.BREAK, PacketStatus.OFF))
+                self.send_packet_to_devices(
+                    PacketData(PacketType.BREAK, PacketStatus.OFF)
+                )
             self.break_detector.on_beat()
             self.drop_detector.on_beat()
-            # print("beat detected")
-            self.mh.on(PacketData(PacketType.BEAT, PacketStatus.ON))
+            self.send_packet_to_devices(PacketData(PacketType.BEAT, PacketStatus.ON))
 
         mbreak, drop = False, False
         if not self.break_detected and self.break_detector.detect(data):
             self.break_detected = True
-            self.mh.on(PacketData(PacketType.BREAK, PacketStatus.ON))
+            self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.ON))
             mbreak = True
         if not self.drop_detected and self.drop_detector.detect(data):
             self.drop_detected = True
-            self.mh.on(PacketData(PacketType.DROP, PacketStatus.ON))
+            self.send_packet_to_devices(PacketData(PacketType.DROP, PacketStatus.ON))
             drop = True
         if self.drop_detected and not self.drop_detector.detect(data):
             self.drop_detected = False
-            self.mh.on(PacketData(PacketType.DROP, PacketStatus.OFF))
+            self.send_packet_to_devices(PacketData(PacketType.DROP, PacketStatus.OFF))
+
+        # Update visualizer data
         self.kick_visualizer(
             data, beat_detected=beat, break_detected=mbreak, drop_detected=drop
         )
-        self.mh.on(PacketData(PacketType.TICK, PacketStatus.ON))
-        # self.snare_detector.detect(data)
-        # self.snare_visualizer(data)
-        # self.break_visualizer(data)
+        self.send_packet_to_devices(PacketData(PacketType.TICK, PacketStatus.ON))
         return True
 
 
-def update_plot(frame, listener):
-    lines = []
-    lines += [listener.kick_visualizer.line_energy, listener.kick_visualizer.line_limit]
-    # Add all scatter markers (beat, break, drop)
-    lines += [mt["scatter"] for mt in listener.kick_visualizer.marker_types.values()]
-    # lines += listener.snare_visualizer.line_energy, listener.snare_visualizer.line_limit
-    # lines += listener.break_visualizer.line_energy, listener.break_visualizer.line_limit
-    return lines
+def get_audio_devices() -> List[str]:
+    """Returns a list of audio device names formatted for the combo box."""
+    pyaudio_instance = PyAudio()
+    devices = []
+    for i in range(pyaudio_instance.get_device_count()):
+        device_info = pyaudio_instance.get_device_info_by_index(i)
+        devices.append(f"{i}: {device_info['name']}")
+    pyaudio_instance.terminate()
+    return devices
 
 
 def main():
-    # Set up the audio stream.
-    config = Config("config.json")
+    global ui_manager
+    audio_devices = get_audio_devices()
 
-    if config.device_index == -2:
-        pyaudio = PyAudio()
-        for i in range(pyaudio.get_device_count()):
-            device_info = pyaudio.get_device_info_by_index(i)
-            print(f"Device {i}: {device_info['name']}")
-        print("To auto select the default device, set device_index to -1.")
-        config.device_index = int(
-            input(
-                f"Please select a device index from the list above [-1-{pyaudio.get_device_count() - 1}]:"
-            )
-        )
-        if (
-            config.device_index > pyaudio.get_device_count() - 1
-            or config.device_index < -1
-        ):
-            print("Invalid device index. Exiting.")
-            config.device_index = -2
-            return
-        else:
-            config.save()
+    # The AudioStreamHandler is now initialized but not started.
+    # The UIManager will control when the stream starts and stops.
+    audio_handler = AudioStreamHandler(SpectrumProcessor, config.global_config)
+    listener = MainAudioListener(audio_handler)
+    audio_handler.add_listener_on_init(listener)
 
-    audio_handler = AudioStreamHandler(SpectrumProcessor, config)
-    print(f"Starting recording stream from device {audio_handler.device_index}")
-    audio_handler.start_stream()
+    # Create and run the GUI, passing all necessary components
+    ui_manager = UIManager(listener, audio_handler, config.global_config, audio_devices)
+    ui_manager.run()
 
-    # Set up the plot.
-    fig, axs = plt.subplots(1, 1, figsize=(10, 8))
-    listener = MainAudioListener(
-        audio_handler.channels, audio_handler.chunk_size, audio_handler.sample_rate, axs
-    )
-    audio_handler.audio_capture.add_listener(listener)
 
-    anim = animation.FuncAnimation(
-        fig, update_plot, fargs=(listener,), interval=50, blit=True
-    )
-    plt.show()
-
-    audio_handler.stop_stream()
+def terminate(sig, frame):
+    print("Interupt signal caught! Stopping...")
+    ui_manager.stop()
+    sys.exit(0)
 
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, terminate)
     main()

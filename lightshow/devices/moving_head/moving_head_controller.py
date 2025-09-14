@@ -29,7 +29,7 @@ from lightshow.devices.moving_head.moving_head_colors import (
     startFlicker,
     toFadeBlack,
 )
-from lightshow.utils.config import Config
+from lightshow.utils.config import global_config
 
 if typing.TYPE_CHECKING:
     from lightshow.devices.moving_head.moving_head import MovingHead
@@ -67,7 +67,7 @@ class MovingHeadController:
         self.beats_since_anim_change = 0
         self.beats_time = deque(maxlen=30)  # last 30 beats to calculate average for BPM
 
-        self.max_fps = Config().max_fps
+        self.max_fps = global_config.max_fps or 60
         self.frame_time = 1 / self.max_fps * 1e9  # For nanoseconds
         self.next_frame_time = 0
         self.avg_fps = deque(maxlen=self.max_fps * 2)
@@ -78,8 +78,8 @@ class MovingHeadController:
     def init_lists(self):
         self.anim_list: typing.List[AMHAnimation] = [
             TRIANGLE_ANIMATION,
-            # CIRCLE_ANIMATION,
-            # LEMNISCATE_ANIMATION,
+            CIRCLE_ANIMATION,
+            LEMNISCATE_ANIMATION,
             SQUARE_ANIMATION,
         ]
 
@@ -91,7 +91,9 @@ class MovingHeadController:
         self.update_anim_color_mode()
 
     def update_anim_color_mode(self):
-        if isinstance(self.current_anim, (ListAnimation, CircleAnimation)):
+        if isinstance(
+            self.current_anim, (ListAnimation, CircleAnimation, RegularPolygonAnimation)
+        ):
             self.current_anim.setRGB(self.color_mode)
         self.current_anim.setTransformer(startFlicker)
         if len(self.beats_time) > 1:
@@ -143,9 +145,12 @@ class MovingHeadController:
         self.next_frame_time = time.time_ns() + self.frame_time
         self.avg_fps.append(time.time_ns())
         color = frame["rgb"]
+        """
         self.device.sendCommand(color)
         self.device.sendCommand(frame["baseServo"])
         self.device.sendCommand(frame["topServo"])
+        """
+        self.device.sendCommands([color, frame["baseServo"], frame["topServo"]])
 
     def calcAverageFPS(self):
         if len(self.avg_fps) < 2:
@@ -186,13 +191,13 @@ class MovingHeadController:
                     self.BREAK_ADDED_TIME_CURVE(added_time_t)
                     * self.BREAK_ADDED_TIME_MAX
                 )
+                self.next_beat_cool = (
+                    current_time + added_time * 1e9
+                )  # Set next cooldown to 2 seconds
                 self.randomAnimation()
                 self.device.sendCommand(
                     FlickerCommand(RGB(255, 255, 255), (2 + added_time) * 1000)
                 )
-                self.next_beat_cool = (
-                    current_time + added_time * 1e9
-                )  # Set next cooldown to 2 seconds
             else:
                 self.breaking_since = current_time
                 self.breaking = True
@@ -207,5 +212,5 @@ class MovingHeadController:
             self.next_beat_cool += self.cooldown_time
             frame = self.current_anim.next(False)
             self.updateFromFrame(frame)
-            bpm = self.calcBPM()
-            print(f"bpm: {bpm}")
+            # bpm = self.calcBPM()
+            # print(f"bpm: {bpm}")

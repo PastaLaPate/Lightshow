@@ -11,7 +11,7 @@ class DropDetector(SpikeDetector):
         self.window_size = window_size
         self.comparing_window_size = comparing_window_size
 
-    def detect(self, data):
+    def detect(self, data, appendCurrentEnergy=True):
         if len(self.beats) < self.comparing_window_size:
             return False
 

@@ -12,7 +12,7 @@ from lightshow.devices.moving_head.moving_head_colors import COLOR_MODE
 
 class RegularPolygonAnimation(AMHAnimation):
     def __init__(
-        self, rgb: COLOR_MODE, points_num=4, topRange=(0, 90), baseRange=(0, 90)
+        self, rgb: COLOR_MODE, points_num=4, topRange=(0, 90), baseRange=(0, 90), angle_offset_cycle=15
     ):
         super().__init__()
         self.tickeable = False
@@ -22,6 +22,7 @@ class RegularPolygonAnimation(AMHAnimation):
         self.baseRange = baseRange
         self.topRange = topRange
         self.angle_offset = 0
+        self.angle_offset_cycle = angle_offset_cycle
         self.calculateServoPoses(self.angle_offset)
 
     def setRGB(self, rgb: COLOR_MODE):
@@ -34,7 +35,7 @@ class RegularPolygonAnimation(AMHAnimation):
         if self.cycle_progress == min(
             len(self.topServoPositions), len(self.baseServoPositions)
         ):
-            self.angle_offset += 15
+            self.angle_offset += self.angle_offset_cycle
             if random.uniform(0, 1) < 1 / 2:
                 self.reverse()
                 self.cycle_progress = 0

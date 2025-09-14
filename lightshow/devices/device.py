@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
+from typing import Any, Tuple
 
 
 class PacketType(Enum):
@@ -26,29 +27,53 @@ class PacketData:
 
 
 class Device(ABC):
-    def __init__(self, fatal_non_discovery=True):
+    DEVICE_TYPE_NAME = "DUMMY DEVICE"
+
+    EDITABLE_PROPS = []
+
+    def __init__(self):
+        self.ready = False
+        self.device_name = ""
+        super().__init__()
+
+    def connect(self, fatal_non_discovery=True):
         success = self.scan_for_device()
         if not success and fatal_non_discovery:
             raise Exception("No device was found")
         elif not success:
-            super().__init__()
             return
         success = self.init_device()
         if not success and fatal_non_discovery:
             raise Exception("The device could not be found")
-        super().__init__()
+        self.ready = success
+        return
 
     @abstractmethod
-    def scan_for_device() -> bool:  # Returns if a device was found
+    def disconnect(self):
+        self.ready = False
+        return
+
+    @abstractmethod
+    def scan_for_device(self) -> bool:  # Returns if a device was found
         pass
 
     @abstractmethod
-    def init_device() -> bool:  # Returns if the device was successfully initialized
+    def init_device(self) -> bool:  # Returns if the device was successfully initialized
+        pass
+
+    # Name, data
+    @abstractmethod
+    def save(self) -> Tuple[str, dict[str, Any]]:
+        pass
+
+    # Returns if correctly loaded
+    @abstractmethod
+    def load(self, data: Tuple[str, dict[str, Any]]) -> bool:
         pass
 
     @property
     @abstractmethod
-    def name(self):
+    def name(self) -> str:
         pass
 
     @abstractmethod
@@ -80,6 +105,7 @@ class Device(ABC):
                 return (v, w, q, a)
         else:
             return (v, v, v, a)
+        return (0, 0, 0, a)
 
     def __str__(self):
-        return self.name
+        return self.name or "Device"

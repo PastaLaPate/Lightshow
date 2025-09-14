@@ -36,6 +36,10 @@ class RGB(Command):  # out of 255
     def fromRGBsList(cls, list: List[List[int]]):
         return [cls.fromList(x) for x in list]
 
+    @classmethod
+    def fromRGBsTupleList(cls, list: List[Tuple[int, int, int]]):
+        return [cls.fromTuple(x) for x in list]
+
 
 class FlickerCommand(Command):
     color: RGB
@@ -46,7 +50,7 @@ class FlickerCommand(Command):
         self.flicker = flicker
 
     def toMHCommand(self):
-        return self.color.toMHCommand() | {"flicker": self.flicker}
+        return self.color.toMHCommand() | {"flicker": int(self.flicker)}
 
 
 class FadeCommand(Command):

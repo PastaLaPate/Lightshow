@@ -1,10 +1,12 @@
+from lightshow.audio.audio_streams import AudioStreamHandler
 from .spike_detector import SpikeDetector, DetectionType
 
 
 class KickDetector(SpikeDetector):
-    def __init__(self, chunks_per_second):
+    def __init__(self, AudioHandler: AudioStreamHandler):
+
         super().__init__(
-            chunks_per_second,
+            AudioHandler,
             2,
             20,
             [0, 2],

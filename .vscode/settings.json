@@ -3,5 +3,7 @@
   "editor.insertSpaces": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.ruff": "always"
-  }
+  },
+  "python.analysis.indexing": true,
+  "python.analysis.autoImportCompletions": true
 }

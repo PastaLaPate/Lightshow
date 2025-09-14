@@ -1,0 +1,8 @@
+README.md
+pyproject.toml
+lightshow.egg-info/PKG-INFO
+lightshow.egg-info/SOURCES.txt
+lightshow.egg-info/dependency_links.txt
+lightshow.egg-info/entry_points.txt
+lightshow.egg-info/requires.txt
+lightshow.egg-info/top_level.txt

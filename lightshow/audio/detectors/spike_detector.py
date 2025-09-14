@@ -1,6 +1,8 @@
 from collections import deque
 from enum import Enum
-from lightshow.audio.audio_streams import AudioData
+
+from lightshow.audio.audio_streams import AudioCapture, AudioStreamHandler
+from lightshow.audio.audio_types import AudioData
 
 
 class DetectionType(Enum):
@@ -16,7 +18,7 @@ class SpikeDetector:
 
     def __init__(
         self,
-        chunks_per_second,
+        AudioHandler: AudioStreamHandler,
         sensitivity=2.0,
         window_size=1,
         freq_range=[0, 3],
@@ -28,18 +30,37 @@ class SpikeDetector:
         :param sensitivity: Factor by which the current energy must exceed the average to trigger the smaller the more sensitive.
         :param window_size: Number of recent frames over which to average energy in seconds.
         """
+        AudioHandler.add_device_change_listener(self.on_device_change)
+        chunks_per_second = int(
+            44100 / 1024
+        )  # Default value, will be updated on device change
         if not chunks_per_second or chunks_per_second <= 0:
-            raise ValueError("Chunks per second must be a positive non-nul integer.")
+            raise ValueError("Chunks per second must be a positive non-nul int.")
         self.chunks_per_second = chunks_per_second
         self.sensitivity = sensitivity
+        self.p_window_size = window_size
         self.window_size = int(window_size * chunks_per_second)
         self.energy_history = deque(maxlen=self.window_size)
         self.freq_range = freq_range
         self.detection_type = detection_type
         self.detecting = False
+        self.p_min_frame_duration = min_duration
         self.min_frame_duration = int(min_duration * chunks_per_second)
         self.current_frame_dur = 0
+        self.p_cooldown = cooldown
         self.cooldown_frame_duration = max(1, int(cooldown * chunks_per_second))
+        self.cooldown_counter = 0
+
+    def on_device_change(self, device: AudioCapture):
+        self.chunks_per_second = int(device.sample_rate / device.chunk_size)
+        self.window_size = int(self.p_window_size * self.chunks_per_second)
+        self.energy_history = deque(maxlen=self.window_size)
+        self.min_frame_duration = int(
+            self.p_min_frame_duration * self.chunks_per_second
+        )
+        self.cooldown_frame_duration = max(
+            1, int(self.p_cooldown * self.chunks_per_second)
+        )
         self.cooldown_counter = 0
 
     def clear(self):

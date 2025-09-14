@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from typing import Literal, TypedDict, Union
 
-from devices.animations.AAnimation import (
+from lightshow.devices.animations.AAnimation import (
     Command,
     FadeCommand,
     FlickerCommand,
@@ -24,7 +24,7 @@ class ServoCommand(Command):
         self.angle = angle
 
     def toMHCommand(self):
-        return {"servo": self.servo, "angle": self.angle}
+        return {"servo": [{"servo": self.servo, "angle": self.angle}]}
 
 
 class BaseServoCommand(ServoCommand):
@@ -52,7 +52,7 @@ class AMHAnimation(AAnimation):
     def setTransformer(self, transformer: COLOR_TRANSFORMER):
         self.transformer = transformer
 
-    def apply_transformer(self, color: RGB):
+    def apply_transformer(self, color: RGB) -> RGB | FlickerCommand | FadeCommand:
         if self.transformer:
             return self.transformer(color)
         return color

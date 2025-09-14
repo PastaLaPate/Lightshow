@@ -4,7 +4,7 @@ from itertools import cycle
 import numpy as np
 import random
 
-from devices.animations import RGB
+from lightshow.devices.animations import RGB
 from lightshow.devices.moving_head.moving_head_animations import (
     AMHAnimation,
     MHAnimationFrame,
@@ -33,8 +33,8 @@ class CircleAnimation(AMHAnimation):
         self.topAngleRange = (0, 70)
         self.base_angle_offset = base_angle_offset
 
-        self.boost_speed = 0.035
-        self.boost_time = 13  # 10 Frames
+        self.boost_speed = 0.06
+        self.boost_time = 25  # 10 Frames
         self.boost_progress = 1
         # easeInOutQuart
         self.boost_curve = lambda t: 1 - (

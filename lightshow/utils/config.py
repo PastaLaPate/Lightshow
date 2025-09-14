@@ -1,4 +1,29 @@
 import json
+import os
+import sys
+from typing import Any, Dict, Type, TypeVar, TypedDict
+
+from lightshow.devices import DEVICES_STR_TYPES
+from lightshow.devices.device import Device
+
+
+class DeviceConfigType(TypedDict):
+    type: Type[DEVICES_STR_TYPES]
+    props: Dict[str, Any]
+
+
+T = TypeVar("T")
+
+
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 
 class Config:
@@ -19,8 +44,9 @@ class Config:
         self.chunk_size = self.get("chunk_size", 1024)
         self.device_index = self.get("device_index", -2)  # Auto-detect if -1
         self.max_fps = self.get("max_fps", 30)
+        self.devices: Dict[str, DeviceConfigType] = self.get("devices", {})
 
-    def get(self, key, default=None):
+    def get(self, key, default: T = None) -> T:
         return self.settings.get(key, default)
 
     def save(self):
@@ -28,5 +54,10 @@ class Config:
             self.settings["chunk_size"] = self.chunk_size
             self.settings["device_index"] = self.device_index
             self.settings["max_fps"] = self.max_fps
+            self.settings["devices"] = self.devices
             json.dump(self.settings, f, indent=4)
         print(f"Configuration saved to {self.config_file}")
+
+
+global_config = Config()
+live_devices: Dict[str, Device] = {}
