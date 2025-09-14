@@ -2,6 +2,7 @@ import json
 import os
 import sys
 from typing import Any, Dict, Type, TypeVar, TypedDict
+from pathlib import Path
 
 from lightshow.devices import DEVICES_STR_TYPES
 from lightshow.devices.device import Device
@@ -28,7 +29,11 @@ def resource_path(relative_path):
 
 class Config:
     def __init__(self, config_file="config.json"):
-        self.config_file = config_file
+        self.config_folder = Path(os.getenv("LOCALAPPDATA") or ".\\") / ".LightShow"
+        if not self.config_folder.exists():
+            print("Config folder doesn't exists... Creating it...")
+            self.config_folder.mkdir()
+        self.config_file = self.config_folder / config_file
         self.settings = self.load_config_file()
         self.reload_config()
 
