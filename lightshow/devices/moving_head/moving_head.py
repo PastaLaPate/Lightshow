@@ -36,7 +36,7 @@ class MovingHead(Device):
     def __init__(self):
         self.id = id(self)
         self.ws = None
-        self.ws_url = "ws://192.168.1.59:81/ws"  # ESP32 URL
+        self.ws_url = "ws://192.168.1.24:81/ws"  # ESP32 URL
 
         self.device_name = ""  # Eg "Living Room Moving Head"
 

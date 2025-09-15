@@ -4,6 +4,6 @@ config.json
 /build
 /dist
 /audio/
-devices
+/devices
 /visualization
 .pdm-build

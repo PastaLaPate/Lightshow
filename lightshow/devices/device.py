@@ -10,6 +10,7 @@ class PacketType(Enum):
     NEW_MUSIC = 3  # Should be on when silent and off when the music starts
     DROP = 4
     TICK = 5
+    PAUSE = 6
 
 
 class PacketStatus(Enum):

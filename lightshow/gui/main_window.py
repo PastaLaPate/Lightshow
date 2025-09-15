@@ -3,6 +3,7 @@ import dearpygui.dearpygui as dpg
 import threading
 import traceback
 
+from lightshow.audio.audio_streams import AudioStreamHandler
 from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.gui.utils.message_box import post_ui_message, ui_queue
@@ -11,12 +12,17 @@ from lightshow.utils.config import Config, DeviceConfigType, live_devices, resou
 
 class UIManager:
     def __init__(
-        self, audio_listener, audio_handler, config: Config, audio_devices: List[str]
+        self,
+        audio_listener,
+        audio_handler: AudioStreamHandler,
+        config: Config,
+        audio_devices: List[str],
     ):
         self.listener = audio_listener
         self.audio_handler = audio_handler
         self.config = config
         self.audio_devices = audio_devices
+        self.audio_devices.append("-1: Autodetect used device")
         self.is_streaming = False
         self.audio_thread = None
 
@@ -173,6 +179,7 @@ class UIManager:
             live_devices[self.selected_device_id or ""].disconnect()
             del live_devices[self.selected_device_id or ""]
             dpg.configure_item("connect_button", label="Connect")
+            dpg.configure_item("delete_button", enabled=True)
             dpg.set_value("connection_status_text", "Status: Disconnected")
             return
 
@@ -186,7 +193,10 @@ class UIManager:
             if not device_type:
                 return
             live_devices[self.selected_device_id] = device_type()
+            for k, v in self.config.devices[self.selected_device_id]["props"].items():
+                setattr(live_devices[self.selected_device_id], k, v)
             dpg.configure_item("connect_button", label="Connecting", enabled=False)
+            dpg.configure_item("delete_button", enabled=False)
             dpg.show_item("connecting_loader")
             dpg.set_value("connection_status_text", "Status: Connecting...")
             threading.Thread()
@@ -194,11 +204,25 @@ class UIManager:
             # Simulate network delay in a non-blocking way
             def connection_finished(live_devices, selected_device_id):
                 live_devices[selected_device_id].connect(fatal_non_discovery=False)
+                dpg.configure_item("delete_button", enabled=False)
                 post_ui_message("FINISH_CONNECTION", self.connecting_device_id, None)
 
             threading.Thread(
                 target=connection_finished, args=[live_devices, self.selected_device_id]
             ).start()
+
+    def _delete_device(self):
+        if not self.selected_device_id:
+            return
+        if self.selected_device_id in live_devices:
+            live_devices[self.selected_device_id].disconnect()
+            del live_devices[self.selected_device_id]
+        if self.selected_device_id in self.config.devices:
+            del self.config.devices[self.selected_device_id]
+        self.selected_device_id = None
+        self._refresh_device_listbox()
+        dpg.configure_item("device_details_group", show=False)
+        dpg.configure_item("details_placeholder", show=True)
 
     def _create_layout(self):
         with dpg.window(label="Lightshow GUI", tag="main_window"):
@@ -253,7 +277,6 @@ class UIManager:
                             dpg.bind_item_font("top_pane_header", self.large_font)
                             dpg.add_listbox(
                                 items=[d for d in self.config.devices],
-                                label="Configured Devices",
                                 tag="device_listbox",
                                 callback=self._on_device_select,
                                 num_items=8,
@@ -303,6 +326,11 @@ class UIManager:
                                         show=False,
                                         style=1,
                                         radius=2,
+                                    )
+                                    dpg.add_button(
+                                        label="Delete",
+                                        tag="delete_button",
+                                        callback=self._delete_device,
                                     )
                                 dpg.add_text(
                                     "Status: Disconnected", tag="connection_status_text"
