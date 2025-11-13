@@ -40,7 +40,6 @@ class SpikeDetectorVisualizer:
         self.dpg_tags["drop"] = dpg.add_scatter_series(
             [], [], label="Drop", parent=parent_axis_tag
         )
-        dpg.set_axis_limits(parent_axis_tag, 0, self.expected_max)
 
     def dpg_update(self):
         """Updates the DearPyGui series with the latest data."""

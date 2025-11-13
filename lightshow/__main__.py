@@ -14,7 +14,15 @@ import lightshow.audio.detectors as detectors
 from lightshow.audio.audio_streams import AudioStreamHandler, AudioListener
 from lightshow.devices.device import PacketData, PacketStatus, PacketType
 from lightshow.gui.main_window import UIManager
+from lightshow.utils.tracks_infos import TracksInfoTracker
 from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
+
+from winrt.windows.media.control import (
+    GlobalSystemMediaTransportControlsSession,
+    GlobalSystemMediaTransportControlsSessionMediaProperties,
+    GlobalSystemMediaTransportControlsSessionPlaybackInfo,
+    GlobalSystemMediaTransportControlsSessionPlaybackStatus,
+)
 
 
 class MainAudioListener(AudioListener):
@@ -27,7 +35,41 @@ class MainAudioListener(AudioListener):
         self.drop_detector = detectors.DropDetector(30, 5)
         # Visualizer is created but not initialized with DPG items yet
         self.kick_visualizer = SpikeDetectorVisualizer(self.kick_detector)
+        self.track_tracker = TracksInfoTracker()
+        print("Adding track infos tracker")
+        self.track_tracker.add_track_changed_listener(self.on_track_changed)
+        self.track_tracker.add_playback_status_changed_listener(
+            self.on_playback_status_changed
+        )
         self.clear_state()
+
+    def on_track_changed(
+        self,
+        session: GlobalSystemMediaTransportControlsSession,
+        infos: GlobalSystemMediaTransportControlsSessionMediaProperties,
+    ):
+        print(f"Now playing {infos.title} ! (By {infos.artist})")
+        self.send_packet_to_devices(PacketData(PacketType.NEW_MUSIC, PacketStatus.ON))
+        self.clear_state()
+        self.send_packet_to_devices(PacketData(PacketType.NEW_MUSIC, PacketStatus.OFF))
+
+    def on_playback_status_changed(
+        self,
+        session: GlobalSystemMediaTransportControlsSession,
+        status: GlobalSystemMediaTransportControlsSessionPlaybackInfo,
+    ):
+        ps = status.playback_status
+        print(f"New status... {ps}")
+        if ps == GlobalSystemMediaTransportControlsSessionPlaybackStatus.PAUSED:
+            self.music_paused = True
+            self.paused_since = time_ns()
+            self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.ON))
+        elif ps == GlobalSystemMediaTransportControlsSessionPlaybackStatus.PLAYING:
+            self.music_paused = False
+            self.break_detector.clear_old_beats()
+            self.break_detector.clean_beats(time_ns() - self.paused_since)
+            self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.OFF))
+            self.paused_since = 0
 
     def clear_state(self):
         """Resets all detectors and visualizers to their initial state."""
@@ -36,6 +78,8 @@ class MainAudioListener(AudioListener):
         self.silence_detected = False
         self.silence_since = 0
         self.new_music = False
+        self.music_paused = False
+        self.paused_since = 0
         if hasattr(self, "kick_detector"):
             self.kick_detector.clear()
             self.break_detector.clear()
@@ -51,11 +95,14 @@ class MainAudioListener(AudioListener):
                 device.on(packet)
 
     def __call__(self, data):
+        if self.music_paused:
+            return True
+        """
         if self.silent_detector.detect(data):
             if not self.silence_detected:
                 self.silence_detected = True
                 self.silence_since = time_ns()
-            if time_ns() - self.silence_since > 1.5 * 1e9:
+            if time_ns() - self.silence_since > 5 * 1e9:
                 self.new_music = True
                 self.send_packet_to_devices(
                     PacketData(PacketType.NEW_MUSIC, PacketStatus.ON)
@@ -67,6 +114,9 @@ class MainAudioListener(AudioListener):
                 PacketData(PacketType.NEW_MUSIC, PacketStatus.OFF)
             )
             print("Music started, resuming kick and break detection.")
+        else:
+            self.silence_detected = False
+        """
 
         beat = self.kick_detector.detect(
             data, appendCurrentEnergy=not self.break_detected

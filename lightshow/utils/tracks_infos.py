@@ -1,41 +1,82 @@
 import asyncio
+import threading
+from typing import Callable
 from winrt.windows.media.control import (
     GlobalSystemMediaTransportControlsSessionManager,
     GlobalSystemMediaTransportControlsSession,
+    GlobalSystemMediaTransportControlsSessionMediaProperties,
+    GlobalSystemMediaTransportControlsSessionPlaybackInfo,
 )
 
-loop = None  # global loop reference
+type TrackChangedListener = Callable[
+    [
+        GlobalSystemMediaTransportControlsSession,
+        GlobalSystemMediaTransportControlsSessionMediaProperties,
+    ],
+    None,
+]
+type PlaybackStatusChangedListener = Callable[
+    [
+        GlobalSystemMediaTransportControlsSession,
+        GlobalSystemMediaTransportControlsSessionPlaybackInfo,
+    ],
+    None,
+]
 
 
-async def aplayback_handler(session: GlobalSystemMediaTransportControlsSession, event):
-    pb_infos = session.get_playback_info()
-    l = ["closed", "opened", "changing", "stopped", "playing", "paused"]
-    infos = await session.try_get_media_properties_async()
-    if not infos:
-        print(l[pb_infos.playback_status])
-    else:
-        print(f"NOW {l[pb_infos.playback_status]} ({infos.title or ''})")
+loop = asyncio.new_event_loop()
+threading.Thread(target=loop.run_forever, daemon=True).start()
 
 
-def playback_handler(session: GlobalSystemMediaTransportControlsSession, event):
-    # schedule the coroutine onto the main asyncio loop
-    asyncio.run_coroutine_threadsafe(aplayback_handler(session, event), loop)
+class TracksInfoTracker:
 
+    def __init__(self):
+        self.track_changed_listeners = []
+        self.playback_status_changed_listeners = []
+        self.manager = None
+        # schedule initialization safely
+        asyncio.run_coroutine_threadsafe(self.async_init(), loop)
 
-def handler(manager: GlobalSystemMediaTransportControlsSessionManager, session):
-    ses = manager.get_current_session()
-    if ses:
-        ses.add_playback_info_changed(playback_handler)
+    async def async_init(self):
+        self.manager = (
+            await GlobalSystemMediaTransportControlsSessionManager.request_async()
+        )
+        self.manager.add_current_session_changed(self.current_session_changed)
+        session = self.manager.get_current_session()
+        if session:
+            session.add_playback_info_changed(self.playback_status_changed)
 
+    def add_track_changed_listener(self, listener: TrackChangedListener):
+        self.track_changed_listeners.append(listener)
 
-async def main():
-    manager = await GlobalSystemMediaTransportControlsSessionManager.request_async()
-    manager.add_current_session_changed(handler)
-    while True:
-        await asyncio.sleep(1)
+    def add_playback_status_changed_listener(
+        self, listener: PlaybackStatusChangedListener
+    ):
+        self.playback_status_changed_listeners.append(listener)
 
+    def current_session_changed(
+        self, manager: GlobalSystemMediaTransportControlsSessionManager, event
+    ):
+        session = manager.get_current_session()
+        if session:
+            asyncio.run_coroutine_threadsafe(
+                self.async_current_session_changed(session, event),
+                loop,
+            )
+            session.add_playback_info_changed(self.playback_status_changed)
 
-if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(main())
+    async def async_current_session_changed(
+        self, session: GlobalSystemMediaTransportControlsSession, event
+    ):
+        infos = await session.try_get_media_properties_async()
+        if infos:
+            for listener in self.track_changed_listeners:
+                listener(session, infos)
+
+    def playback_status_changed(
+        self, session: GlobalSystemMediaTransportControlsSession, event
+    ):
+        status = session.get_playback_info()
+        if status:
+            for listener in self.playback_status_changed_listeners:
+                listener(session, status)

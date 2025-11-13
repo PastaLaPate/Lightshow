@@ -266,6 +266,7 @@ class UIManager:
                                 dpg.mvYAxis, label="Energy", tag="kick_y_axis"
                             ):
                                 self.listener.kick_visualizer.dpg_init("kick_y_axis")
+                                dpg.configure_item("kick_y_axis", auto_fit=True)
 
                     with dpg.group():
                         with dpg.child_window(
