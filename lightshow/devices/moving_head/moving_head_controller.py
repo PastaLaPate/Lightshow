@@ -40,8 +40,8 @@ TRIANGLE_ANIMATION = RegularPolygonAnimation(DEFAULT_RGBs, 3, (0, 60), (45, 135)
 # )  # {"base": [45, 90, 135], "top": [0, 60, 0]}
 # SQUARE_ANIMATION = ListAnimation(DEFAULT_RGBs, [0, 0, 60, 60], [45, 135, 135, 45])
 SQUARE_ANIMATION = RegularPolygonAnimation(DEFAULT_RGBs, 4, (0, 60), (45, 135))
-CIRCLE_ANIMATION = CircleAnimation(DEFAULT_RGBs, 0.01, 45)
-LEMNISCATE_ANIMATION = BernoulliLemniscateAnimation(DEFAULT_RGBs, 0.01, 45)
+CIRCLE_ANIMATION = CircleAnimation(DEFAULT_RGBs, 0.005, 45)
+LEMNISCATE_ANIMATION = BernoulliLemniscateAnimation(DEFAULT_RGBs, 0.005, 45)
 CIRCLE_BREAK_ANIMATION = BreakCircleAnimation(45)
 
 
@@ -121,7 +121,7 @@ class MovingHeadController:
         self.updateFromFrame(frm)
 
     def handlePacket(self, packet: PacketData):
-        if self.beats_since_anim_change > 14:
+        if self.beats_since_anim_change > 20:
             self.randomAnimation()
         match packet.packet_type:
             case PacketType.NEW_MUSIC:
