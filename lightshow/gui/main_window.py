@@ -45,7 +45,7 @@ class UIManager:
                     user_data=(modal_id, True),
                     callback=lambda s, a, u: (
                         dpg.delete_item(u[0]),
-                        selection_callback(s, a, u),
+                        selection_callback(s, a, u) if selection_callback else None,
                     ),
                     width=75,
                 )
@@ -152,7 +152,6 @@ class UIManager:
                         tag=prop_name,
                     )
 
-            # --- NEW: Update connection status UI based on selection ---
             dpg.hide_item("connecting_loader")
             dpg.configure_item("connect_button", enabled=True)
             if app_data in live_devices.keys() and live_devices[app_data].ready:
@@ -184,17 +183,18 @@ class UIManager:
             return
 
         # Handle connect
-        if self.selected_device_id and not self.connecting_device_id:
-            self.connecting_device_id = self.selected_device_id
-            device_type_name = self.config.devices[self.selected_device_id]["type"]
+        selected_device_id = self.selected_device_id
+        if selected_device_id and not self.connecting_device_id:
+            self.connecting_device_id = selected_device_id
+            device_type_name = self.config.devices[selected_device_id]["type"]
             device_type = [
                 t for t in self.device_types if t.DEVICE_TYPE_NAME == device_type_name
             ][0]
             if not device_type:
                 return
-            live_devices[self.selected_device_id] = device_type()
-            for k, v in self.config.devices[self.selected_device_id]["props"].items():
-                setattr(live_devices[self.selected_device_id], k, v)
+            live_devices[selected_device_id] = device_type()
+            for k, v in self.config.devices[selected_device_id]["props"].items():
+                setattr(live_devices[selected_device_id], k, v)
             dpg.configure_item("connect_button", label="Connecting", enabled=False)
             dpg.configure_item("delete_button", enabled=False)
             dpg.show_item("connecting_loader")
@@ -203,12 +203,24 @@ class UIManager:
 
             # Simulate network delay in a non-blocking way
             def connection_finished(live_devices, selected_device_id):
-                live_devices[selected_device_id].connect(fatal_non_discovery=False)
                 dpg.configure_item("delete_button", enabled=False)
-                post_ui_message("FINISH_CONNECTION", self.connecting_device_id, None)
+                try:
+                    live_devices[selected_device_id].connect(fatal_non_discovery=True)
+                    post_ui_message(
+                        "FINISH_CONNECTION", self.connecting_device_id, None
+                    )
+                except Exception as e:
+                    dpg.set_value("connection_status_text", "Status: Disconnected")
+                    dpg.hide_item("connecting_loader")
+                    dpg.configure_item("connect_button", label="Connect", enabled=True)
+                    self.connecting_device_id = None
+                    del live_devices[selected_device_id or ""]
+                    post_ui_message("Connection error", repr(e))
+                finally:
+                    dpg.configure_item("delete_button", enabled=True)
 
             threading.Thread(
-                target=connection_finished, args=[live_devices, self.selected_device_id]
+                target=connection_finished, args=[live_devices, selected_device_id]
             ).start()
 
     def _delete_device(self):
