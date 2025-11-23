@@ -27,7 +27,11 @@ def random_rainbow_color():
     )
 
 
-COLOR_TRANSFORMER = Callable[[RGB], FadeCommand | FlickerCommand]
+COLOR_TRANSFORMER = Callable[[RGB], RGB | FadeCommand | FlickerCommand]
+
+
+def nothingTransformer(color: RGB) -> RGB:
+    return color
 
 
 def toFadeBlack(color: RGB) -> FadeCommand:

@@ -26,6 +26,8 @@ from lightshow.devices.moving_head.moving_head_colors import (
     RAINBOW_KICK_COLORS,
     DEFAULT_RGBs,
     random_rainbow_color,
+    COLOR_TRANSFORMER,
+    nothingTransformer,
     startFlicker,
     toFadeBlack,
 )
@@ -83,6 +85,12 @@ class MovingHeadController:
             SQUARE_ANIMATION,
         ]
 
+        self.transformers: typing.List[COLOR_TRANSFORMER] = [
+            nothingTransformer,
+            toFadeBlack,
+            startFlicker,
+        ]
+
         self.color_mode_list = [RAINBOW_KICK_COLORS, random_rainbow_color]
 
     def init_state(self):
@@ -95,11 +103,12 @@ class MovingHeadController:
             self.current_anim, (ListAnimation, CircleAnimation, RegularPolygonAnimation)
         ):
             self.current_anim.setRGB(self.color_mode)
-        self.current_anim.setTransformer(startFlicker)
+        self.current_anim.setTransformer(random.choice(self.transformers))
+        """
         if len(self.beats_time) > 1:
             bpm = self.calcBPM()
             if bpm < 100:
-                self.current_anim.setTransformer(toFadeBlack)
+                self.current_anim.setTransformer(toFadeBlack)"""
 
     def calcBPM(self):
         # Convert nanoseconds to seconds by dividing by 1e9
