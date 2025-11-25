@@ -24,7 +24,7 @@ exe = EXE(
     a.datas,
     debug=False,
     runtime_tmpdir=None,
-    name="__main__",
+    name="lightshow",
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,

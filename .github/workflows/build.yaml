@@ -29,7 +29,7 @@ jobs:
         run: uv sync --locked --all-extras
 
       - name: Build with PyInstaller
-        run: uv run pyinstaller __main__.spec
+        run: uv run pyinstaller lightshow.spec
 
       - name: Create Release
         uses: softprops/action-gh-release@v2.4.2
