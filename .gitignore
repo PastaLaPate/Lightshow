@@ -7,3 +7,6 @@ config.json
 /devices
 /visualization
 .pdm-build
+/installer/*
+!/installer/lightshow.nsi
+!/installer/icons/*
