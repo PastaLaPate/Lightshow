@@ -95,6 +95,7 @@ class MainAudioListener(AudioListener):
                 device.on(packet)
 
     def __call__(self, data):
+        self.send_packet_to_devices(PacketData(PacketType.TICK, PacketStatus.ON))
         if self.music_paused:
             return True
         """
@@ -153,7 +154,6 @@ class MainAudioListener(AudioListener):
         self.kick_visualizer(
             data, beat_detected=beat, break_detected=mbreak, drop_detected=drop
         )
-        self.send_packet_to_devices(PacketData(PacketType.TICK, PacketStatus.ON))
         return True
 
 

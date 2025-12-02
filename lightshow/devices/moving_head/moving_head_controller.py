@@ -137,7 +137,6 @@ class MovingHeadController:
                 self.handleNewMusic(packet)
             case PacketType.BREAK:
                 self.handleBreak(packet)
-
         if self.breaking or self.waiting_music:
             self.tickFillingAnim()
             return
@@ -212,6 +211,7 @@ class MovingHeadController:
                 self.breaking = True
 
     def handleBeat(self, packet: PacketData):
+        print("Average fps ", self.calcAverageFPS(), end="\r")
         if packet.packet_status == PacketStatus.ON:
             self.beats_time.append(time.time_ns())
             if time.time_ns() < self.next_beat_cool:

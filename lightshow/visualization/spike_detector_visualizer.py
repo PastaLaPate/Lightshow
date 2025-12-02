@@ -14,6 +14,7 @@ class SpikeDetectorVisualizer:
         self.SpikeDetector = SpikeDetector
         self.energy_history = deque(maxlen=vizualisation_len)
         self.limit_history = deque(maxlen=vizualisation_len)
+        self.diff_history = deque(maxlen=vizualisation_len)
         self.global_index = 0
         self.expected_max = expectedMax
         self.dpg_tags = {}
@@ -27,6 +28,9 @@ class SpikeDetectorVisualizer:
         """Initializes DearPyGui series and stores their tags."""
         self.dpg_tags["energy"] = dpg.add_line_series(
             [], [], label="Energy", parent=parent_axis_tag
+        )
+        self.dpg_tags["diff"] = dpg.add_line_series(
+            [], [], label="Diff (-1, -4)", parent=parent_axis_tag
         )
         self.dpg_tags["limit"] = dpg.add_line_series(
             [], [], label="Limit", parent=parent_axis_tag
@@ -52,6 +56,7 @@ class SpikeDetectorVisualizer:
             for i in range(len(self.energy_history))
         ]
         dpg.set_value(self.dpg_tags["energy"], [x_data, list(self.energy_history)])
+        dpg.set_value(self.dpg_tags["diff"], [x_data, list(self.diff_history)])
         dpg.set_value(self.dpg_tags["limit"], [x_data, list(self.limit_history)])
 
         # Update scatter series
@@ -66,6 +71,14 @@ class SpikeDetectorVisualizer:
     ):
         current_energy = data.get_ps_mean(self.SpikeDetector.freq_range)
         self.energy_history.append(current_energy)
+        if len(self.energy_history) > 3:
+            self.diff_history.append(
+                self.energy_history[-1] - self.energy_history[-4]
+                if self.energy_history[-1] > self.energy_history[-4]
+                else 0
+            )
+        else:
+            self.diff_history.append(0)
 
         if len(self.SpikeDetector.energy_history) < 1:
             self.global_index += 1
