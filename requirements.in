@@ -1,6 +1,0 @@
-PyAudio
-PyAudioWPatch
-websocket-client
-matplotlib
-librosa
-dearpygui==2.0.0

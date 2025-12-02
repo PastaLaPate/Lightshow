@@ -114,6 +114,7 @@ class SpikeDetectorVisualizer:
     def clear(self):
         self.energy_history.clear()
         self.limit_history.clear()
+        self.diff_history.clear()
         for marker_type in self.marker_data:
             self.marker_data[marker_type]["indices"].clear()
             self.marker_data[marker_type]["energies"].clear()
