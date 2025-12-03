@@ -1,42 +1,23 @@
-import json
+import requests
+import socket
 from typing import Any, List, Literal, Tuple
-import websocket  # pip install websocket-client
 
 from lightshow.devices.animations.AAnimation import RGB, Command
 from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head_controller import MovingHeadController
 
-
-def deep_merge(dicts: List[dict]):
-    def _merge(d1, d2: dict):
-        result = dict(d1)
-        for k, v in d2.items():
-            if k in result:
-                if isinstance(result[k], list) and isinstance(v, list):
-                    result[k] = result[k] + v
-                elif isinstance(result[k], dict) and isinstance(v, dict):
-                    result[k] = _merge(result[k], v)
-                else:
-                    result[k] = v
-            else:
-                result[k] = v
-        return result
-
-    out = {}
-    for d in dicts:
-        out = _merge(out, d)
-    return out
-
-
 class MovingHead(Device):
     DEVICE_TYPE_NAME: Literal["LED Moving Head"] = "LED Moving Head"
 
-    EDITABLE_PROPS = [("ws_url", str)]
+    EDITABLE_PROPS = [("ip", str)]
 
     def __init__(self):
         self.id = id(self)
-        self.ws = None
-        self.ws_url = "ws://192.168.1.24:81/ws"  # ESP32 URL
+        
+        self.socket = None
+        self.ip = "192.168.1.XX"  # ESP32 IP
+        self.addr = (self.ip, 1234)
+        self.packetIndex = 0
 
         self.device_name = ""  # Eg "Living Room Moving Head"
 
@@ -48,64 +29,68 @@ class MovingHead(Device):
 
         super().__init__()
 
-    def connect_ws(self):
+    def test_connection(self):
+        result = requests.post(f"http://{self.ip}:81/resetIndexCounter")
+        return result.status_code == 200
+    
+    def connect_socket(self):
         """Establish a persistent WebSocket connection."""
         try:
-            self.ws = websocket.create_connection(self.ws_url)
-            print(f"Connected to WebSocket server at {self.ws_url}")
+            if self.test_connection():
+                self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                self.socket.settimeout(1)
+                self.addr = (self.ip, 1234)
+                self.packetIndex = 0
+                
+                print(f"Successfully tested connection to {self.ip}")
+            else:
+                raise Exception("Not received resetIndex, ip problem?")
         except Exception as e:
-            print(f"Error connecting to {self.ws_url}: {e}")
+            print(f"Error connecting to {self.ip}: {e}")
             self.ws = None
 
     def disconnect(self):
-        if self.ws:
-            self.ws.close()
+        self.test_connection()
         return super().disconnect()
 
     def scan_for_device(self):
-        self.connect_ws()
-        """Optionally verify the connection is active."""
-        return self.ws is not None
+        return self.test_connection()
 
     def init_device(self):
         """Initialize the device state (e.g. LED and base servo)."""
+        self.test_connection()
+        self.connect_socket()
         self.sendCommand(RGB(255, 255, 255))
         return True
 
-    def send_message(self, message: dict):
-        """Send a JSON message over the WebSocket connection.
+    def send_message(self, message: str):
+        """Send a JSON message over the UDP connection.
 
         If the connection is lost, this function will attempt to reconnect.
         """
-        if self.ws is None or not self.ws.connected:
-            self.connect()
-            if self.ws is None:
-                print("Failed to connect to WebSocket, cannot send message")
+        if not self.socket:
+            try:
+                self.connect_socket()
+            except Exception:
                 return
         try:
-            self.ws.send(json.dumps(message))
+            if self.socket:
+                self.packetIndex += 1
+                self.socket.sendto((f"{self.packetIndex};{message}").encode(), self.addr)
+            
         except Exception as e:
-            print("Error sending message, attempting to reconnect:", e)
-            self.ws.close()
-            self.ws = None
-            self.connect()
-            if self.ws:
-                try:
-                    self.ws.send(json.dumps(message))
-                except Exception as e:
-                    print("Reconnection failed, cannot send message:", e)
+            print("Error sending message :", e)
 
     def sendCommand(self, command: Command):
         # print(command.toMHCommand())
-        self.send_message(command.toMHCommand())
+        self.send_message(command.toUDP_MH_Command())
 
     def sendCommands(self, commands: List[Command]):
-        commands_dicts = [command.toMHCommand() for command in commands]
-        final_dict = deep_merge(commands_dicts)
-        self.send_message(final_dict)
+        commands_dicts = [command.toUDP_MH_Command() for command in commands]
+        self.send_message(";".join(commands_dicts))
 
     def on(self, packet):
-        if not self.ws:
+        if not self.socket:
             return
 
         self.controller.handlePacket(packet)
@@ -113,7 +98,7 @@ class MovingHead(Device):
 
     def save(self) -> Tuple[str, dict[str, Any]]:
         return self.DEVICE_TYPE_NAME, {
-            "ws_url": self.ws_url,
+            "ip": self.ip,
             "device_name": self.device_name,
             "base_offset": self.base_offset,
             "base_range": self.base_range,
@@ -124,7 +109,7 @@ class MovingHead(Device):
     def load(self, data: Tuple[str, dict[str, Any]]) -> bool:
         name, config = data
         self.device_name = name
-        self.ws_url = config.get("ws_url", self.ws_url)
+        self.ip = config.get("ip", self.ip)
         self.base_offset = config.get("base_offset", self.base_offset)
         self.base_range = tuple(config.get("base_range", self.base_range))
         self.top_offset = config.get("top_offset", self.top_offset)
@@ -133,4 +118,4 @@ class MovingHead(Device):
 
     @property
     def name(self):
-        return f"MovingHead #{self.id} ({self.device_name}) Connected to {self.ws_url}"
+        return f"MovingHead #{self.id} ({self.device_name}) Connected to {self.ip}"

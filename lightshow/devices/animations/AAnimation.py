@@ -6,7 +6,36 @@ class Command(ABC):
     @abstractmethod
     def toMHCommand(self) -> dict:
         pass
+    
+    @abstractmethod
+    def toUDP_MH_Command(self) -> str:
+        pass
+"""
 
+UDP Packet Structure:
+
+number (32 bits) : Packet ID
+args (in format key=value separated by ;) : Arguments
+
+Arguments:
+Servos:
+- bS : Base Servo Angle
+- tS : Top Servo Angle
+Base RGB:
+- r : LED Red Value (0-255)
+- g : LED Green Value (0-255)
+- b : LED Blue Value (0-255)
+
+Flicker:
+- fl : Flicker Duration (ms)
+
+Fade:
+- fa : Fade Duration (ms)
+- fr : From Red Value (0-255)
+- fg : From Green Value (0-255)
+- fb : From Blue Value (0-255)
+
+"""
 
 class RGB(Command):  # out of 255
     r: int
@@ -23,6 +52,9 @@ class RGB(Command):  # out of 255
 
     def toMHCommand(self):
         return {"led": self.rgbDict()}
+    
+    def toUDP_MH_Command(self) -> str:
+        return f"r={self.r};g={self.g};b={self.b}"
 
     @classmethod
     def fromTuple(cls, tuple: Tuple[int, int, int]):
@@ -51,6 +83,9 @@ class FlickerCommand(Command):
 
     def toMHCommand(self):
         return self.color.toMHCommand() | {"flicker": int(self.flicker)}
+    
+    def toUDP_MH_Command(self) -> str:
+        return self.color.toUDP_MH_Command() + f";fl={int(self.flicker)}"
 
 
 class FadeCommand(Command):
@@ -65,6 +100,9 @@ class FadeCommand(Command):
 
     def toMHCommand(self):
         return self.to.toMHCommand() | {"from": self.from_.rgbDict(), "fade": self.fade}
+    
+    def toUDP_MH_Command(self) -> str:
+        return self.from_.toUDP_MH_Command() + f";fa={int(self.fade)};fr={self.to.r};fg={self.to.g};fb={self.to.b}"
 
 
 class AAnimation(ABC):

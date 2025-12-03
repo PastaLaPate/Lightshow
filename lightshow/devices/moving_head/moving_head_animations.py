@@ -1,4 +1,3 @@
-from abc import abstractmethod
 from typing import Literal, TypedDict, Union
 
 from lightshow.devices.animations.AAnimation import (
@@ -25,7 +24,9 @@ class ServoCommand(Command):
 
     def toMHCommand(self):
         return {"servo": [{"servo": self.servo, "angle": self.angle}]}
-
+    
+    def toUDP_MH_Command(self) -> str:
+        return ("tS" if self.servo == "top" else "bS") + f"={self.angle}"
 
 class BaseServoCommand(ServoCommand):
     def __init__(self, angle: int):
@@ -45,7 +46,6 @@ class MHAnimationFrame(TypedDict):
 
 
 class AMHAnimation(AAnimation):
-    @abstractmethod
     def next(self, isTick=False) -> MHAnimationFrame:
         pass
 

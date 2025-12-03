@@ -28,7 +28,7 @@ class RegularPolygonAnimation(AMHAnimation):
     def setRGB(self, rgb: COLOR_MODE):
         self.rgb = cycle(rgb) if isinstance(rgb, list) else rgb
 
-    def next(self, isTick) -> MHAnimationFrame:
+    def next(self, isTick=False) -> MHAnimationFrame:
         if isTick:
             raise NotImplementedError("PolygonAnimation shouldn't be ticked.")
         self.cycle_progress += 1
