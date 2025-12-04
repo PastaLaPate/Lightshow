@@ -3,12 +3,12 @@ name = "lightshow"
 version = "0.1.0"
 description = ""
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "dearpygui>=2.1.0",
     "librosa>=0.11.0",
     "numpy>=2.2.6",
-    "pyaudio>=0.2.14",
+    "pyaudio>=0.2.11",
     "pyaudiowpatch>=0.2.12.7",
     "typing-extensions>=4.15.0",
     "websocket-client>=1.8.0",

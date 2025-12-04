@@ -8,14 +8,15 @@ from winrt.windows.media.control import (
     GlobalSystemMediaTransportControlsSessionPlaybackInfo,
 )
 
-type TrackChangedListener = Callable[
+TrackChangedListener = Callable[
     [
         GlobalSystemMediaTransportControlsSession,
         GlobalSystemMediaTransportControlsSessionMediaProperties,
     ],
     None,
 ]
-type PlaybackStatusChangedListener = Callable[
+
+PlaybackStatusChangedListener = Callable[
     [
         GlobalSystemMediaTransportControlsSession,
         GlobalSystemMediaTransportControlsSessionPlaybackInfo,
