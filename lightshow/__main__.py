@@ -98,34 +98,15 @@ class MainAudioListener(AudioListener):
         self.send_packet_to_devices(PacketData(PacketType.TICK, PacketStatus.ON))
         if self.music_paused:
             return True
-        """
-        if self.silent_detector.detect(data):
-            if not self.silence_detected:
-                self.silence_detected = True
-                self.silence_since = time_ns()
-            if time_ns() - self.silence_since > 5 * 1e9:
-                self.new_music = True
-                self.send_packet_to_devices(
-                    PacketData(PacketType.NEW_MUSIC, PacketStatus.ON)
-                )
-            return True
-        elif self.silence_detected and self.new_music:
-            self.clear_state()
-            self.send_packet_to_devices(
-                PacketData(PacketType.NEW_MUSIC, PacketStatus.OFF)
-            )
-            print("Music started, resuming kick and break detection.")
-        else:
-            self.silence_detected = False
-        """
 
         beat = self.kick_detector.detect(
-            data, appendCurrentEnergy=not self.break_detected
+            data, appendCurrentEnergy= not self.break_detected
         )
 
         if beat:
             if self.break_detected:
                 self.break_detected = False
+                self.kick_detector.reset_state()
                 self.break_detector.clear_old_beats()
                 self.break_detector.clean_beats(
                     time_ns() - self.break_detector.beats[-1]

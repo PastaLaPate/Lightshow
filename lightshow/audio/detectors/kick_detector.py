@@ -15,18 +15,24 @@ class KickDetector(SpikeDetector):
         )
         self.was_above = False
 
+    def reset_state(self):
+        """Reset detector state without clearing energy history."""
+        self.was_above = False
+        self.cooldown_counter = 0
+
     def detect(self, data, appendCurrentEnergy=True):
         current_energy = data.get_ps_mean(self.freq_range)
-        current_diff = 0
-        if len(self.energy_history) > 4:
-            current_diff = (
-                self.energy_history[-1] - self.energy_history[-4]
-                if self.energy_history[-1] > self.energy_history[-4]
-                else 0
-            )
 
         if appendCurrentEnergy:
             self.energy_history.append(current_energy)
+
+        current_diff = 0
+        if len(self.energy_history) > 4:
+            current_diff = (
+                current_energy - self.energy_history[-4]
+                if current_energy > self.energy_history[-4]
+                else 0
+            )
 
         if self.cooldown_counter > 0:
             self.cooldown_counter -= 1

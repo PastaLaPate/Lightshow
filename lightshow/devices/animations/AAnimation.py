@@ -102,7 +102,7 @@ class FadeCommand(Command):
         return self.to.toMHCommand() | {"from": self.from_.rgbDict(), "fade": self.fade}
     
     def toUDP_MH_Command(self) -> str:
-        return self.from_.toUDP_MH_Command() + f";fa={int(self.fade)};fr={self.to.r};fg={self.to.g};fb={self.to.b}"
+        return self.to.toUDP_MH_Command() + f";fa={int(self.fade)};fr={self.from_.r};fg={self.from_.g};fb={self.from_.b}"
 
 
 class AAnimation(ABC):
