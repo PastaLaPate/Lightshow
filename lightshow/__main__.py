@@ -33,8 +33,9 @@ class MainAudioListener(AudioListener):
         self.silent_detector = detectors.SilentDetector()
         self.break_detector = detectors.BreakDetector(30)
         self.drop_detector = detectors.DropDetector(30, 5)
-        # Visualizer is created but not initialized with DPG items yet
-        self.kick_visualizer = SpikeDetectorVisualizer(self.kick_detector)
+        # Defer visualizer creation until a QApplication exists
+        # (SpikeDetectorVisualizer is a QWidget and must be created after QApplication)
+        self.kick_visualizer = None
         self.track_tracker = TracksInfoTracker()
         print("Adding track infos tracker")
         self.track_tracker.add_track_changed_listener(self.on_track_changed)
@@ -84,6 +85,8 @@ class MainAudioListener(AudioListener):
             self.kick_detector.clear()
             self.break_detector.clear()
             self.drop_detector.clear()
+        # Only clear visualizer if it has been created (after QApplication exists)
+        if hasattr(self, "kick_visualizer") and self.kick_visualizer:
             self.kick_visualizer.clear()
 
     def send_packet_to_devices(self, packet: PacketData):
@@ -100,7 +103,7 @@ class MainAudioListener(AudioListener):
             return True
 
         beat = self.kick_detector.detect(
-            data, appendCurrentEnergy= not self.break_detected
+            data, appendCurrentEnergy=not self.break_detected
         )
 
         if beat:
@@ -151,6 +154,8 @@ def get_audio_devices() -> List[str]:
 
 def main():
     global ui_manager
+    from PyQt6.QtWidgets import QApplication
+
     audio_devices = get_audio_devices()
 
     # The AudioStreamHandler is now initialized but not started.
@@ -159,9 +164,19 @@ def main():
     listener = MainAudioListener(audio_handler)
     audio_handler.add_listener_on_init(listener)
 
-    # Create and run the GUI, passing all necessary components
+    # Create Qt application
+    app = QApplication(sys.argv)
+
+    # Now that a QApplication exists, create the visualizer QWidget
+    # and attach it to the listener. The visualizer depends on Qt widgets.
+    listener.kick_visualizer = SpikeDetectorVisualizer(listener.kick_detector)
+
+    # Create and show the GUI, passing all necessary components
     ui_manager = UIManager(listener, audio_handler, config.global_config, audio_devices)
-    ui_manager.run()
+    ui_manager.show()
+
+    # Run the application
+    sys.exit(app.exec())
 
 
 def terminate(sig, frame):

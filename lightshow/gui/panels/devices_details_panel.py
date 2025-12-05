@@ -1,137 +1,227 @@
-import dearpygui.dearpygui as dpg
 from typing import List, Type
+
+from PyQt6.QtWidgets import (
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QFrame,
+    QProgressBar,
+)
+
 from .base_panel import BasePanel
-from lightshow.utils.config import Config, DeviceConfigType, live_devices, resource_path
+from lightshow.utils.config import Config, live_devices
 from lightshow.devices.device import Device
+
 
 class DeviceDetailsPanel(BasePanel):
     """Panel for displaying and managing device configuration details."""
-    
+
     def __init__(self, config: Config, device_types: List[Type[Device]]):
         super().__init__()
         self.config = config
         self.device_types = device_types
         self.selected_device_id = None
-    
-    def create(self, large_font):
+
+        # UI Elements
+        self.device_name_input = None
+        self.device_type_label = None
+        self.props_layout = None
+        self.prop_widgets = {}
+        self.connect_button = None
+        self.delete_button = None
+        self.status_label = None
+        self.progress_bar = None
+        self.details_layout = None
+        self.placeholder_label = None
+
+    def create_qt_ui(self, layout: QVBoxLayout):
         """Create the device details panel UI elements."""
-        with dpg.child_window(label="Device Info", tag="bottom_pane"):
-            dpg.add_text("Device Details", tag="bottom_pane_header")
-            dpg.bind_item_font("bottom_pane_header", large_font)
-            dpg.add_text(
-                "Select a device to see its details.",
-                tag="details_placeholder",
-            )
-            
-            with dpg.group(tag="device_details_group", show=False):
-                dpg.add_input_text(
-                    label="Device Name",
-                    tag="device_name_input",
-                    callback=self._update_device_name_callback,
-                    on_enter=True,
-                )
-                dpg.add_text("", tag="device_type_text")
-                dpg.add_separator()
-                with dpg.group(horizontal=True):
-                    dpg.add_button(
-                        label="Connect",
-                        tag="connect_button",
-                        callback=self._connect_device_callback,
-                    )
-                    dpg.add_loading_indicator(
-                        tag="connecting_loader",
-                        show=False,
-                        style=1,
-                        radius=2,
-                    )
-                    dpg.add_button(
-                        label="Delete",
-                        tag="delete_button",
-                        callback=self._delete_device,
-                    )
-                dpg.add_text(
-                    "Status: Disconnected", tag="connection_status_text"
-                )
-                dpg.add_separator(tag="settings_first_sep")
-                with dpg.group(tag="settings"):
-                    pass
-                dpg.add_separator(tag="settings_sep")
-    
+        # Title
+        title_label = QLabel("Device Details")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        layout.addWidget(title_label)
+
+        # Placeholder
+        self.placeholder_label = QLabel("Select a device to see its details.")
+        layout.addWidget(self.placeholder_label)
+
+        # Details group (hidden by default)
+        self.details_layout = QVBoxLayout()
+
+        # Device name input
+        name_layout = QHBoxLayout()
+        name_layout.addWidget(QLabel("Device Name:"))
+        self.device_name_input = QLineEdit()
+        self.device_name_input.setReadOnly(True)
+        name_layout.addWidget(self.device_name_input)
+        self.details_layout.addLayout(name_layout)
+
+        # Device type
+        self.device_type_label = QLabel("Type: -")
+        self.details_layout.addWidget(self.device_type_label)
+
+        # Editable properties area (populated dynamically)
+        self.props_layout = QVBoxLayout()
+        self.details_layout.addLayout(self.props_layout)
+
+        separator = QFrame()
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
+        self.details_layout.addWidget(separator)
+
+        # Control buttons
+        button_layout = QHBoxLayout()
+
+        self.connect_button = QPushButton("Connect")
+        self.connect_button.clicked.connect(self._connect_device_callback)
+        button_layout.addWidget(self.connect_button)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMaximum(0)  # Makes it animate
+        self.progress_bar.setVisible(False)
+        button_layout.addWidget(self.progress_bar)
+
+        self.delete_button = QPushButton("Delete")
+        self.delete_button.clicked.connect(self._delete_device)
+        button_layout.addWidget(self.delete_button)
+
+        self.details_layout.addLayout(button_layout)
+
+        # Status
+        self.status_label = QLabel("Status: Disconnected")
+        self.details_layout.addWidget(self.status_label)
+
+        self.details_layout.addStretch()
+        layout.addLayout(self.details_layout)
+
+        # Hide details by default
+        self._set_details_visible(False)
+
+    def _set_details_visible(self, visible):
+        """Toggle visibility of details."""
+        self.placeholder_label.setVisible(not visible)
+        for i in range(self.details_layout.count()):
+            item = self.details_layout.itemAt(i)
+            if item and item.widget():
+                item.widget().setVisible(visible)
+            elif item and item.layout():
+                for j in range(item.layout().count()):
+                    sub_item = item.layout().itemAt(j)
+                    if sub_item and sub_item.widget():
+                        sub_item.widget().setVisible(visible)
+
     def show_for(self, device_id):
         """Display details for a specific device."""
         if not device_id or device_id not in self.config.devices:
-            dpg.hide_item("device_details_group")
-            dpg.show_item("details_placeholder")
+            self._set_details_visible(False)
             self.selected_device_id = None
             return
-        
+
         selected_device_obj = self.config.devices[device_id]
         self.selected_device_id = device_id
-        dpg.show_item("device_details_group")
-        dpg.hide_item("details_placeholder")
-        
-        dpg.set_value("device_name_input", device_id)
-        dpg.set_value("device_type_text", f"Type: {selected_device_obj['type']}")
-        
-        # Populate device-specific settings
-        dpg.delete_item("settings", children_only=True)
-        device_type = next(
-            (t for t in self.device_types 
-             if t.DEVICE_TYPE_NAME == selected_device_obj["type"]),
-            None
+        self._set_details_visible(True)
+
+        self.device_name_input.setText(device_id)
+        self.device_type_label.setText(f"Type: {selected_device_obj['type']}")
+
+        # Populate editable properties for this device type
+        # Clear existing prop widgets
+        self.prop_widgets.clear()
+        while self.props_layout.count():
+            item = self.props_layout.takeAt(0)
+            if item:
+                w = item.widget()
+                if w:
+                    w.deleteLater()
+                else:
+                    # if it's a layout, clear its children
+                    sub_layout = item.layout()
+                    if sub_layout:
+                        while sub_layout.count():
+                            si = sub_layout.takeAt(0)
+                            if si and si.widget():
+                                si.widget().deleteLater()
+
+        # Find device type class
+        device_type_name = selected_device_obj.get("type")
+        device_type_cls = next(
+            (t for t in self.device_types if t.DEVICE_TYPE_NAME == device_type_name),
+            None,
         )
-        if device_type:
-            for prop_name, prop_type in device_type.EDITABLE_PROPS:
-                if prop_type is str:
-                    def change(sender, app_data):
-                        self.config.devices[device_id]["props"][prop_name] = app_data
-                    
-                    dpg.add_input_text(
-                        label=prop_name,
-                        default_value=self.config.devices[device_id]["props"].get(
-                            prop_name, ""
-                        ),
-                        parent="settings",
-                        callback=change,
-                        tag=prop_name,
-                    )
-        
+        props = selected_device_obj.get("props", {})
+        if device_type_cls and hasattr(device_type_cls, "EDITABLE_PROPS"):
+            for prop_name, prop_type in getattr(device_type_cls, "EDITABLE_PROPS", []):
+                row = QHBoxLayout()
+                row.addWidget(QLabel(f"{prop_name}:"))
+                editor = QLineEdit()
+                editor.setText(str(props.get(prop_name, "")))
+
+                def make_handler(did, pname, ptype, edt):
+                    def handler():
+                        val = edt.text()
+                        # attempt to cast to declared type
+                        try:
+                            casted = ptype(val)
+                        except Exception:
+                            casted = val
+                        self.config.devices[did]["props"][pname] = casted
+
+                    return handler
+
+                editor.editingFinished.connect(
+                    make_handler(device_id, prop_name, prop_type, editor)
+                )
+                row.addWidget(editor)
+                self.props_layout.addLayout(row)
+                self.prop_widgets[prop_name] = editor
+
         # Update connection status UI
-        dpg.hide_item("connecting_loader")
-        dpg.configure_item("connect_button", enabled=True)
+        self.progress_bar.setVisible(False)
+        self.connect_button.setEnabled(True)
         if device_id in live_devices and live_devices[device_id].ready:
-            dpg.configure_item("connect_button", label="Disconnect")
-            dpg.set_value("connection_status_text", "Status: Connected")
+            self.connect_button.setText("Disconnect")
+            self.status_label.setText("Status: Connected")
         elif device_id in live_devices and not live_devices[device_id].ready:
-            dpg.configure_item("connect_button", label="Connecting", enabled=False)
-            dpg.show_item("connecting_loader")
-            dpg.set_value("connection_status_text", "Status: Connecting...")
+            self.connect_button.setText("Connecting")
+            self.connect_button.setEnabled(False)
+            self.progress_bar.setVisible(True)
+            self.status_label.setText("Status: Connecting...")
         else:
-            dpg.configure_item("connect_button", label="Connect")
-            dpg.set_value("connection_status_text", "Status: Disconnected")
-    
-    def _update_device_name_callback(self, sender, app_data):
-        """Handle device name changes."""
-        if not self.selected_device_id:
-            return
-        
-        new_name = dpg.get_value("device_name_input")
-        if not new_name:
-            dpg.set_value("device_name_input", self.selected_device_id)
-            return
-        if new_name == self.selected_device_id:
-            return
-        
-        self.config.devices[new_name] = self.config.devices[self.selected_device_id]
-        del self.config.devices[self.selected_device_id]
-        old_id = self.selected_device_id
-        self.selected_device_id = new_name
-        self.trigger("device_renamed", old_id, new_name)
-    
+            self.connect_button.setText("Connect")
+            self.status_label.setText("Status: Disconnected")
+
+    def set_connected(self, connected: bool):
+        """Update connected state."""
+        if connected:
+            self.connect_button.setText("Disconnect")
+            self.status_label.setText("Status: Connected")
+        else:
+            self.connect_button.setText("Connect")
+            self.status_label.setText("Status: Disconnected")
+
+    def set_connecting(self, connecting: bool):
+        """Update connecting state."""
+        self.progress_bar.setVisible(connecting)
+        self.connect_button.setEnabled(not connecting)
+        if connecting:
+            self.connect_button.setText("Connecting")
+            self.status_label.setText("Status: Connecting...")
+
+    def set_status(self, status: str):
+        """Set the status label text."""
+        self.status_label.setText(status)
+
+    def clear(self):
+        """Clear the details panel."""
+        self._set_details_visible(False)
+        self.selected_device_id = None
+
     def _connect_device_callback(self):
         """Handle connect button click."""
         self.trigger("connect_clicked", self.selected_device_id)
-    
+
     def _delete_device(self):
         """Handle delete button click."""
         self.trigger("delete_clicked", self.selected_device_id)

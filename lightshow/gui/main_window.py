@@ -1,19 +1,36 @@
-import dearpygui.dearpygui as dpg
 import threading
 import traceback
-
 from typing import List, Type
+
+from PyQt6.QtWidgets import (
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QMessageBox,
+    QSplitter,
+)
+from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
+
 from lightshow.audio.audio_streams import AudioStreamHandler
 from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head import MovingHead
-from lightshow.utils.config import Config, DeviceConfigType, live_devices, resource_path
-from lightshow.gui.utils.message_box import post_ui_message, ui_queue
-from lightshow.gui.panels import BasePanel, AudioPanel, DevicesPanel, DeviceDetailsPanel
+from lightshow.utils.config import Config, live_devices
+from lightshow.gui.panels import AudioPanel, DevicesPanel, DeviceDetailsPanel
 
 
-class UIManager:
-    """Orchestrates multiple UI panels with callback-based event handling."""
-    
+class UISignals(QObject):
+    """Signals for thread-safe communication with UI."""
+
+    finish_connection = pyqtSignal(str)
+    show_error = pyqtSignal(str, str)
+    show_info = pyqtSignal(str, str)
+    connection_status_changed = pyqtSignal(str)
+
+
+class UIManager(QMainWindow):
+    """Main Qt-based GUI manager for Lightshow."""
+
     def __init__(
         self,
         audio_listener,
@@ -21,41 +38,49 @@ class UIManager:
         config: Config,
         audio_devices: List[str],
     ):
+        super().__init__()
         self.listener = audio_listener
         self.audio_handler = audio_handler
         self.config = config
         self.device_types: List[Type[Device]] = [MovingHead]
-        
+        self.ui_signals = UISignals()
+
         # Initialize panels
-        self.audio_panel = AudioPanel(audio_listener, audio_handler, config, audio_devices)
+        self.audio_panel = AudioPanel(
+            audio_listener, audio_handler, config, audio_devices
+        )
         self.devices_panel = DevicesPanel(config, self.device_types)
         self.device_details = DeviceDetailsPanel(config, self.device_types)
-        
+
         # Register internal handlers
         self.audio_panel.register("start_stream", self._start_stream_callback)
         self.audio_panel.register("stop_stream", self._stop_stream_callback)
-        
+
         self.devices_panel.register("device_selected", self._on_device_select)
         self.devices_panel.register("device_added", lambda name: None)
-        
+
         self.device_details.register("connect_clicked", self._connect_device_callback)
         self.device_details.register("delete_clicked", self._delete_device)
         self.device_details.register("device_renamed", self._on_device_renamed)
-        
-        self._create_context()
 
-    
+        # Connect signals
+        self.ui_signals.finish_connection.connect(self._on_connection_finished)
+        self.ui_signals.show_error.connect(self._show_error_dialog)
+        self.ui_signals.show_info.connect(self._show_info_dialog)
+        self.ui_signals.connection_status_changed.connect(
+            self._on_connection_status_changed
+        )
+
+        # Setup UI
+        self._setup_ui()
+
+        # Timer for updating visualizations
+        self.update_timer = QTimer()
+        self.update_timer.timeout.connect(self._update_visualizations)
+        self.update_timer.start(50)  # 50ms interval (~20 FPS)
+
     def register(self, panel: str, event: str, callback):
-        """Public API to register custom callbacks on panels.
-        
-        Args:
-            panel: One of 'audio', 'devices', or 'details'
-            event: Event name (e.g., 'start_stream', 'device_selected')
-            callback: Callable to invoke when event triggers
-        
-        Raises:
-            ValueError: If panel name is unknown
-        """
+        """Public API to register custom callbacks on panels."""
         mapping = {
             "audio": self.audio_panel,
             "devices": self.devices_panel,
@@ -63,50 +88,43 @@ class UIManager:
         }
         target = mapping.get(panel)
         if not target:
-            raise ValueError(f"Unknown panel: {panel}. Must be one of {list(mapping.keys())}")
+            raise ValueError(
+                f"Unknown panel: {panel}. Must be one of {list(mapping.keys())}"
+            )
         target.register(event, callback)
 
-    def _show_info(self, title, message, selection_callback):
-        """Creates and shows a modal dialog."""
-        vpw, vph = dpg.get_viewport_client_width(), dpg.get_viewport_client_height()
-        with dpg.window(label=title, modal=True, no_close=True, tag=title) as modal_id:
-            dpg.add_text(message)
-            with dpg.group(horizontal=True):
-                dpg.add_button(
-                    label="Ok",
-                    callback=lambda s, a, modal_id=modal_id: (
-                        dpg.delete_item(modal_id),
-                        selection_callback(s, a, None) if selection_callback else None,
-                    ),
-                    width=75,
-                )
-        dpg.render_dearpygui_frame()
-        w, h = dpg.get_item_rect_size(title)
-        dpg.set_item_pos(title, [vpw // 2 - w // 2, vph // 2 - h // 2])
+    def _setup_ui(self):
+        """Set up the main UI layout."""
+        self.setWindowTitle("Lightshow GUI")
+        self.setGeometry(100, 100, 1280, 720)
 
-    def _process_ui_queue(self):
-        """Processes messages from other threads to show UI elements like modals."""
-        while not ui_queue.empty():
-            title, message, cb = ui_queue.get()
-            if title == "FINISH_CONNECTION":
-                device_id = message
-                dpg.hide_item("connecting_loader")
-                dpg.configure_item(
-                    "connect_button", label="Disconnect", enabled=True
-                )
-                dpg.set_value("connection_status_text", "Status: Connected")
-            else:
-                self._show_info(title, message, cb)
+        # Create central widget
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
 
-    def _create_context(self):
-        dpg.create_context()
-        dpg.configure_app(manual_callback_management=True)
-        dpg.create_viewport(title="Lightshow GUI", width=1280, height=720)
-        with dpg.font_registry():
-            font_path = resource_path("lightshow\\gui\\assets\\OpenSans-Regular.ttf")
-            print(font_path)
-            self.default_font = dpg.add_font(str(font_path), 20)
-            self.large_font = dpg.add_font(str(font_path), 40)
+        # Main layout
+        main_layout = QHBoxLayout(central_widget)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+
+        # Left side: Audio panel (65%)
+        left_widget = QWidget()
+        left_layout = QVBoxLayout(left_widget)
+        self.audio_panel.create_qt_ui(left_layout)
+
+        # Right side: Devices panel (35%)
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
+        self.devices_panel.create_qt_ui(right_layout)
+        self.device_details.create_qt_ui(right_layout)
+
+        # Add splitter
+        splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.addWidget(left_widget)
+        splitter.addWidget(right_widget)
+        splitter.setStretchFactor(0, 65)
+        splitter.setStretchFactor(1, 35)
+
+        main_layout.addWidget(splitter)
 
     def _on_device_select(self, device_name):
         """Handle device selection."""
@@ -121,50 +139,55 @@ class UIManager:
         """Handle connect/disconnect button click."""
         if not device_id:
             return
-        
+
         # Handle disconnect
         if device_id in live_devices and live_devices[device_id].ready:
             live_devices[device_id].disconnect()
             del live_devices[device_id]
-            dpg.configure_item("connect_button", label="Connect")
-            dpg.configure_item("delete_button", enabled=True)
-            dpg.set_value("connection_status_text", "Status: Disconnected")
+            self.device_details.set_connected(False)
+            self.ui_signals.connection_status_changed.emit("Disconnected")
             return
-        
+
         # Handle connect
         device_type_name = self.config.devices[device_id]["type"]
         device_type = next(
             (t for t in self.device_types if t.DEVICE_TYPE_NAME == device_type_name),
-            None
+            None,
         )
         if not device_type:
             return
-        
+
         live_devices[device_id] = device_type()
         for k, v in self.config.devices[device_id]["props"].items():
             setattr(live_devices[device_id], k, v)
-        
-        dpg.configure_item("connect_button", label="Connecting", enabled=False)
-        dpg.configure_item("delete_button", enabled=False)
-        dpg.show_item("connecting_loader")
-        dpg.set_value("connection_status_text", "Status: Connecting...")
-        
+
+        self.device_details.set_connecting(True)
+        self.ui_signals.connection_status_changed.emit("Connecting...")
+
         def connection_finished(live_devices, device_id):
             try:
                 live_devices[device_id].connect(fatal_non_discovery=True)
-                post_ui_message("FINISH_CONNECTION", device_id, None)
+                self.ui_signals.finish_connection.emit(device_id)
             except Exception as e:
-                dpg.set_value("connection_status_text", "Status: Disconnected")
-                dpg.hide_item("connecting_loader")
-                dpg.configure_item("connect_button", label="Connect", enabled=True)
-                del live_devices[device_id]
-                post_ui_message("Connection error", repr(e))
-            finally:
-                dpg.configure_item("delete_button", enabled=True)
-        
+                self.ui_signals.show_error.emit("Connection error", repr(e))
+                if device_id in live_devices:
+                    del live_devices[device_id]
+                self.device_details.set_connecting(False)
+                self.ui_signals.connection_status_changed.emit("Disconnected")
+
         threading.Thread(
-            target=connection_finished, args=[live_devices, device_id]
+            target=connection_finished, args=[live_devices, device_id], daemon=True
         ).start()
+
+    def _on_connection_finished(self, device_id):
+        """Handle successful connection."""
+        self.device_details.set_connecting(False)
+        self.device_details.set_connected(True)
+        self.ui_signals.connection_status_changed.emit("Connected")
+
+    def _on_connection_status_changed(self, status):
+        """Update connection status display."""
+        self.device_details.set_status(f"Status: {status}")
 
     def _delete_device(self, device_id):
         """Handle device deletion."""
@@ -177,10 +200,10 @@ class UIManager:
             del self.config.devices[device_id]
         self.device_details.selected_device_id = None
         self.devices_panel.refresh_list()
-        dpg.configure_item("device_details_group", show=False)
-        dpg.configure_item("details_placeholder", show=True)
+        self.device_details.clear()
 
     def _start_stream_callback(self):
+        """Start audio stream."""
         try:
             self.audio_handler.reinit_stream(self.config)
             self.listener.clear_state()
@@ -190,80 +213,39 @@ class UIManager:
             self.audio_panel.audio_thread.start()
             self.audio_panel.set_streaming(True)
         except Exception:
-            post_ui_message(
+            self.ui_signals.show_error.emit(
                 "Streaming Error",
                 f"Failed to start audio stream:\n\n{traceback.format_exc()}",
-                lambda s, a, u: None,
             )
             self.audio_panel.set_streaming(False)
 
     def _stop_stream_callback(self):
+        """Stop audio stream."""
         self.audio_handler.stop_stream()
         self.audio_panel.set_streaming(False)
 
-    def _create_layout(self):
-        with dpg.window(label="Lightshow GUI", tag="main_window"):
-            dpg.set_primary_window("main_window", True)
-            with dpg.table(
-                header_row=False, resizable=True, policy=dpg.mvTable_SizingStretchProp
-            ):
-                dpg.add_table_column(init_width_or_weight=0.65)
-                dpg.add_table_column(init_width_or_weight=0.35)
-                with dpg.table_row():
-                    with dpg.group():
-                        self.audio_panel.create(self.default_font)
-                    with dpg.group():
-                        self.devices_panel.create(self.large_font)
-                        self.device_details.create(self.large_font)
-        
-        dpg.bind_font(self.default_font)
-
-
-    def run(self):
-        dpg.setup_dearpygui()
-        self._create_layout()
-        dpg.show_viewport()
-
-        while dpg.is_dearpygui_running():
+    def _update_visualizations(self):
+        """Update visualizations in real-time."""
+        if self.audio_panel.is_streaming and self.audio_panel.visualizer:
             try:
-                jobs = dpg.get_callback_queue()
-                dpg.run_callbacks(jobs)
-                self._process_ui_queue()
-
-                if self.audio_panel.is_streaming:
-                    try:
-                        self.listener.kick_visualizer.dpg_update()
-                        current_time = self.listener.kick_visualizer.global_index
-                        dpg.set_axis_limits(
-                            "kick_x_axis", max(0, current_time - 1000), current_time
-                        )
-                    except Exception as e:
-                        self._stop_stream_callback()
-                        post_ui_message(
-                            "Streaming Error",
-                            f"An error occurred during streaming:\n\n{e}\n\n{traceback.format_exc()}",
-                            lambda s, a, u: None,
-                        )
-
-                dpg.render_dearpygui_frame()
+                # Update spike detector visualizer
+                self.audio_panel.visualizer.qt_update()
             except Exception as e:
-                if self.audio_panel.is_streaming:
-                    self._stop_stream_callback()
-                post_ui_message(
-                    "Unhandled Exception",
-                    f"An unexpected error occurred:\n\n{e}\n\n{traceback.format_exc()}",
-                    lambda s, a, u: None,
-                )
+                print(f"Visualization update error: {e}")
 
+    def _show_error_dialog(self, title, message):
+        """Show error dialog."""
+        QMessageBox.critical(self, title, message)
+
+    def _show_info_dialog(self, title, message):
+        """Show info dialog."""
+        QMessageBox.information(self, title, message)
+
+    def closeEvent(self, event):
+        """Handle window close event."""
+        self.update_timer.stop()
         if self.audio_panel.is_streaming:
             self._stop_stream_callback()
         self.audio_handler.close()
-        dpg.destroy_context()
         self.config.save()
-
-    def stop(self):
-        if self.audio_panel.is_streaming:
-            self._stop_stream_callback()
-        self.audio_handler.close()
-        dpg.destroy_context()
-        self.config.save()
+        event.accept()
