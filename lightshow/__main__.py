@@ -180,11 +180,22 @@ def main():
 
 
 def terminate(sig, frame):
-    print("Interupt signal caught! Stopping...")
-    ui_manager.stop()
+    print("Interrupt signal caught! Stopping gracefully...")
+    try:
+        ui_manager.stop()
+    except Exception as e:
+        print(f"Error during shutdown: {e}")
     sys.exit(0)
 
 
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, terminate)
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nKeyboardInterrupt caught, exiting...")
+        try:
+            ui_manager.stop()
+        except Exception:
+            pass
+        sys.exit(0)

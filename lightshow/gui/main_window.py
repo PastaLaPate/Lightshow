@@ -169,11 +169,13 @@ class UIManager(QMainWindow):
                 live_devices[device_id].connect(fatal_non_discovery=True)
                 self.ui_signals.finish_connection.emit(device_id)
             except Exception as e:
+                self.device_details.set_connecting(False)
+                self.device_details.connect_button.setText("Connect")
+                self.device_details.connect_button.setEnabled(True)
+                self.ui_signals.connection_status_changed.emit("Disconnected")
                 self.ui_signals.show_error.emit("Connection error", repr(e))
                 if device_id in live_devices:
                     del live_devices[device_id]
-                self.device_details.set_connecting(False)
-                self.ui_signals.connection_status_changed.emit("Disconnected")
 
         threading.Thread(
             target=connection_finished, args=[live_devices, device_id], daemon=True
@@ -241,11 +243,15 @@ class UIManager(QMainWindow):
         """Show info dialog."""
         QMessageBox.information(self, title, message)
 
-    def closeEvent(self, event):
-        """Handle window close event."""
+    def stop(self):
+        """Gracefully stop the application and clean up resources."""
         self.update_timer.stop()
         if self.audio_panel.is_streaming:
             self._stop_stream_callback()
         self.audio_handler.close()
         self.config.save()
+
+    def closeEvent(self, event):
+        """Handle window close event."""
+        self.stop()
         event.accept()
