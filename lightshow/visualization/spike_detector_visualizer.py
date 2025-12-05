@@ -222,9 +222,9 @@ class SpikeDetectorVisualizer(QWidget):
         box_y = plot_y + 8
 
         # semi-transparent background
-        painter.fillRect(box_x, box_y, box_w, box_h, QColor(20, 20, 20, 180))
-        painter.setPen(QPen(QColor(140, 140, 140), 1))
-        painter.drawRect(box_x, box_y, box_w, box_h)
+        painter.fillRect(box_x, box_y, box_w, box_h, QColor(60, 60, 60))
+        # painter.setPen(QPen(QColor(140, 140, 140), 1))
+        # painter.drawRect(box_x, box_y, box_w, box_h)
 
         # Draw each legend entry
         text_x = box_x + 28

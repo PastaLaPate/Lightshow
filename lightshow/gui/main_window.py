@@ -77,7 +77,7 @@ class UIManager(QMainWindow):
         # Timer for updating visualizations
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self._update_visualizations)
-        self.update_timer.start(50)  # 50ms interval (~20 FPS)
+        self.update_timer.start(int(1000 / 30))  # Target X Fps
 
     def register(self, panel: str, event: str, callback):
         """Public API to register custom callbacks on panels."""
