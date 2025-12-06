@@ -2,7 +2,15 @@ import threading
 from typing import List
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QLabel, QSplitter, QWidget
+from PyQt6.QtWidgets import (
+    QVBoxLayout,
+    QHBoxLayout,
+    QPushButton,
+    QComboBox,
+    QLabel,
+    QSplitter,
+    QWidget,
+)
 
 from .base_panel import BasePanel
 from lightshow.utils.config import Config
@@ -71,28 +79,29 @@ class AudioPanel(BasePanel):
 
         topLayout.addLayout(controls_layout)
 
-        
         # Add spike detector visualizer from listener
         if self.listener and hasattr(self.listener, "kick_visualizer"):
             self.visualizer = self.listener.kick_visualizer
             topLayout.addWidget(self.visualizer, 1)
-        
+
         logsWidget = QWidget()
         logs_layout = QVBoxLayout(logsWidget)
         self.logs.create_qt_ui(logs_layout)
-        
+
         splitter = QSplitter(Qt.Orientation.Vertical)
         splitter.addWidget(topWidget)
         splitter.addWidget(logsWidget)
         splitter.setStretchFactor(0, 70)
         splitter.setStretchFactor(1, 30)
         splitter.setHandleWidth(1)
-        splitter.setStyleSheet("""
+        splitter.setStyleSheet(
+            """
             QSplitter::handle {
                 background-color: #333;
             }                       
-        """)
-        
+        """
+        )
+
         layout.addWidget(splitter)
 
     def _stream_button_callback(self):

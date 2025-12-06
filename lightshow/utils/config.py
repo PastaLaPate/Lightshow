@@ -21,8 +21,8 @@ def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS # type: ignore
-        
+        base_path = sys._MEIPASS  # type: ignore
+
     except Exception:
         base_path = os.path.abspath(".")
 
@@ -45,7 +45,9 @@ class Config:
             with open(self.config_file, "r") as f:
                 return json.load(f)
         except FileNotFoundError:
-            self.logger.info(f"Config file {self.config_file} not found. Using default settings.")
+            self.logger.info(
+                f"Config file {self.config_file} not found. Using default settings."
+            )
             return {}
 
     def reload_config(self):

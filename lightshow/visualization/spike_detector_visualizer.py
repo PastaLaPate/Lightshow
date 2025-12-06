@@ -33,7 +33,7 @@ class SpikeDetectorVisualizer(QWidget):
             "break": {"x": [], "y": []},
             "drop": {"x": [], "y": []},
         }
-        
+
         pg.setConfigOption("useOpenGL", True)
         pg.setConfigOption("antialias", True)
 

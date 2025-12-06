@@ -127,11 +127,13 @@ class UIManager(QMainWindow):
         splitter.setStretchFactor(0, 65)
         splitter.setStretchFactor(1, 35)
         splitter.setHandleWidth(1)
-        splitter.setStyleSheet("""
+        splitter.setStyleSheet(
+            """
             QSplitter::handle {
                 background-color: #333;
             }                       
-        """)
+        """
+        )
 
         main_layout.addWidget(splitter)
 
@@ -241,8 +243,9 @@ class UIManager(QMainWindow):
         """Update visualizations in real-time."""
         # Process queued log messages from background threads
         from lightshow.utils.logger import LoggerCore
+
         LoggerCore().process_log_queue()
-        
+
         if self.audio_panel.is_streaming and self.audio_panel.visualizer:
             try:
                 # Update spike detector visualizer

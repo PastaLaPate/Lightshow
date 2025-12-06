@@ -8,6 +8,7 @@ from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head_controller import MovingHeadController
 from lightshow.utils.logger import Logger
 
+
 class MovingHead(Device):
     DEVICE_TYPE_NAME: Literal["LED Moving Head"] = "LED Moving Head"
 
@@ -16,7 +17,7 @@ class MovingHead(Device):
     def __init__(self):
         self.id = id(self)
         self.logger = Logger(f"MovingHead{{{self.id}}}")
-        
+
         self.socket = None
         self.ip = "192.168.1.XX"  # ESP32 IP
         self.addr = (self.ip, 1234)
@@ -29,7 +30,7 @@ class MovingHead(Device):
         self.base_range = (0, 180)
         self.top_offset = 0
         self.top_range = (0, 180)
-        
+
         # Packet queue for async processing
         self._packet_queue = []
         self._packet_lock = threading.Lock()
@@ -41,7 +42,7 @@ class MovingHead(Device):
     def test_connection(self):
         result = requests.post(f"http://{self.ip}:81/resetIndexCounter")
         return result.status_code == 200
-    
+
     def connect_socket(self):
         """Establish a persistent WebSocket connection."""
         try:
@@ -75,7 +76,7 @@ class MovingHead(Device):
         # Start packet processing thread
         self._start_packet_thread()
         return True
-    
+
     def _start_packet_thread(self):
         """Start the background thread for processing device packets."""
         if not self._packet_thread_running:
@@ -84,7 +85,7 @@ class MovingHead(Device):
                 target=self._process_packets, daemon=True
             )
             self._packet_thread.start()
-    
+
     def _process_packets(self):
         """Background thread that processes queued packets."""
         while self._packet_thread_running:
@@ -93,7 +94,7 @@ class MovingHead(Device):
                     packet = self._packet_queue.pop(0)
                 else:
                     packet = None
-            
+
             if packet:
                 self.controller.handlePacket(packet)
             else:
@@ -112,8 +113,10 @@ class MovingHead(Device):
         try:
             if self.socket:
                 self.packetIndex += 1
-                self.socket.sendto((f"{self.packetIndex};{message}").encode(), self.addr)
-            
+                self.socket.sendto(
+                    (f"{self.packetIndex};{message}").encode(), self.addr
+                )
+
         except Exception as e:
             self.logger.error(f"Error sending message : {e}")
 
@@ -128,11 +131,11 @@ class MovingHead(Device):
     def on(self, packet):
         if not self.socket:
             return
-        
+
         # Queue the packet for async processing instead of blocking
         with self._packet_lock:
             self._packet_queue.append(packet)
-        
+
         return super().on(packet)
 
     def save(self) -> Tuple[str, dict[str, Any]]:

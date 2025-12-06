@@ -223,7 +223,7 @@ class MovingHeadController:
             self.device.controller.current_fps = fps_value
             self.logger.info(f"Average fps : {fps_value}")
             self.last_fps_log_time = current_time
-        
+
         if packet.packet_status == PacketStatus.ON:
             self.beats_time.append(time.time_ns())
             if time.time_ns() < self.next_beat_cool:

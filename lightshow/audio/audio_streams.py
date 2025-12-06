@@ -135,7 +135,9 @@ class AudioStreamHandler(AAudioStreamHandler):
                 self.audio_capture.add_listener(listener)
             self.pending_listeners = []
         except Exception:
-            self.logger.error(f"Error happened during Initialization: {traceback.format_exc()}")
+            self.logger.error(
+                f"Error happened during Initialization: {traceback.format_exc()}"
+            )
             post_ui_message("Audio Initialization Error", traceback.format_exc())
 
     def setup_device(self):
@@ -176,7 +178,9 @@ class AudioStreamHandler(AAudioStreamHandler):
         self.device_index = default_device["index"]
         self.sample_rate = int(default_device["defaultSampleRate"])
         self.channels = default_device["maxInputChannels"]
-        self.logger.debug(f"Using device: {default_device['name']} (index: {self.device_index}) Sample Rate: {self.sample_rate} Hz Channels: {self.channels} Chunk size: {self.chunk_size}")
+        self.logger.debug(
+            f"Using device: {default_device['name']} (index: {self.device_index}) Sample Rate: {self.sample_rate} Hz Channels: {self.channels} Chunk size: {self.chunk_size}"
+        )
 
     def add_listener_on_init(
         self, listener: AudioListenerType
@@ -198,7 +202,9 @@ class AudioStreamHandler(AAudioStreamHandler):
             )
             self.stream.start_stream()
         except Exception:
-            self.logger.error(f"Failed to start the audio stream: {traceback.format_exc()}")
+            self.logger.error(
+                f"Failed to start the audio stream: {traceback.format_exc()}"
+            )
             post_ui_message("Audio Stream Error", traceback.format_exc())
 
     def stop_stream(self):

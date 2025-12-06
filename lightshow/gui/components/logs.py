@@ -22,19 +22,21 @@ class Logs(BasePanel):
 
         self.textBox = QTextEdit()
         self.textBox.setReadOnly(True)
-        self.textBox.setStyleSheet("""                  
+        self.textBox.setStyleSheet(
+            """                  
             QTextEdit {
                 background: #111;
                 color: #eee;
                 font-family: Consolas;
                 font-size: 12px;
             }
-        """)
+        """
+        )
         LoggerCore().attach_widget(self.textBox)
         frameLayout.addWidget(self.textBox)
-        
+
         self.clearButton = QPushButton("Clear")
         self.clearButton.clicked.connect(lambda: self.textBox.clear())
-        
+
         layout.addWidget(self.frame)
         layout.addWidget(self.clearButton)

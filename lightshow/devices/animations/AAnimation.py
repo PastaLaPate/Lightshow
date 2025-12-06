@@ -6,10 +6,12 @@ class Command(ABC):
     @abstractmethod
     def toMHCommand(self) -> dict:
         pass
-    
+
     @abstractmethod
     def toUDP_MH_Command(self) -> str:
         pass
+
+
 """
 
 UDP Packet Structure:
@@ -37,6 +39,7 @@ Fade:
 
 """
 
+
 class RGB(Command):  # out of 255
     r: int
     g: int
@@ -52,7 +55,7 @@ class RGB(Command):  # out of 255
 
     def toMHCommand(self):
         return {"led": self.rgbDict()}
-    
+
     def toUDP_MH_Command(self) -> str:
         return f"r={self.r};g={self.g};b={self.b}"
 
@@ -83,7 +86,7 @@ class FlickerCommand(Command):
 
     def toMHCommand(self):
         return self.color.toMHCommand() | {"flicker": int(self.flicker)}
-    
+
     def toUDP_MH_Command(self) -> str:
         return self.color.toUDP_MH_Command() + f";fl={int(self.flicker)}"
 
@@ -100,9 +103,12 @@ class FadeCommand(Command):
 
     def toMHCommand(self):
         return self.to.toMHCommand() | {"from": self.from_.rgbDict(), "fade": self.fade}
-    
+
     def toUDP_MH_Command(self) -> str:
-        return self.to.toUDP_MH_Command() + f";fa={int(self.fade)};fr={self.from_.r};fg={self.from_.g};fb={self.from_.b}"
+        return (
+            self.to.toUDP_MH_Command()
+            + f";fa={int(self.fade)};fr={self.from_.r};fg={self.from_.g};fb={self.from_.b}"
+        )
 
 
 class AAnimation(ABC):

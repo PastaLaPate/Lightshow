@@ -12,7 +12,12 @@ from lightshow.devices.moving_head.moving_head_colors import COLOR_MODE
 
 class RegularPolygonAnimation(AMHAnimation):
     def __init__(
-        self, rgb: COLOR_MODE, points_num=4, topRange=(0, 90), baseRange=(0, 90), angle_offset_cycle=15
+        self,
+        rgb: COLOR_MODE,
+        points_num=4,
+        topRange=(0, 90),
+        baseRange=(0, 90),
+        angle_offset_cycle=15,
     ):
         super().__init__()
         self.tickeable = False
