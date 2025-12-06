@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .base_panel import BasePanel
-from lightshow.utils.config import Config, live_devices
+from lightshow.utils import Config, live_devices
 from lightshow.devices.device import Device
 
 
@@ -101,16 +101,24 @@ class DeviceDetailsPanel(BasePanel):
 
     def _set_details_visible(self, visible):
         """Toggle visibility of details."""
-        self.placeholder_label.setVisible(not visible)
-        for i in range(self.details_layout.count()):
-            item = self.details_layout.itemAt(i)
-            if item and item.widget():
-                item.widget().setVisible(visible)
-            elif item and item.layout():
-                for j in range(item.layout().count()):
-                    sub_item = item.layout().itemAt(j)
-                    if sub_item and sub_item.widget():
-                        sub_item.widget().setVisible(visible)
+        if self.placeholder_label and self.details_layout:
+            self.placeholder_label.setVisible(not visible)
+            for i in range(self.details_layout.count()):
+                item = self.details_layout.itemAt(i)
+                if not item:
+                    continue
+                widget = item.widget()
+                layout = item.layout()
+                if widget:
+                    widget.setVisible(visible)
+                elif layout:
+                    for j in range(layout.count()):
+                        sub_item = layout.itemAt(j)
+                        if not sub_item:
+                            continue
+                        sub_item_widget = sub_item.widget()
+                        if sub_item_widget:
+                            sub_item_widget.setVisible(visible)
 
     def show_for(self, device_id):
         """Display details for a specific device."""
@@ -123,26 +131,39 @@ class DeviceDetailsPanel(BasePanel):
         self.selected_device_id = device_id
         self._set_details_visible(True)
 
+        if (
+            not self.device_name_input
+            or not self.device_type_label
+            or not self.progress_bar
+            or not self.connect_button
+            or not self.status_label
+        ):
+            return
+
         self.device_name_input.setText(device_id)
         self.device_type_label.setText(f"Type: {selected_device_obj['type']}")
 
         # Populate editable properties for this device type
         # Clear existing prop widgets
         self.prop_widgets.clear()
-        while self.props_layout.count():
-            item = self.props_layout.takeAt(0)
-            if item:
-                w = item.widget()
-                if w:
-                    w.deleteLater()
-                else:
-                    # if it's a layout, clear its children
-                    sub_layout = item.layout()
-                    if sub_layout:
-                        while sub_layout.count():
-                            si = sub_layout.takeAt(0)
-                            if si and si.widget():
-                                si.widget().deleteLater()
+        if self.props_layout:
+            while self.props_layout.count():
+                item = self.props_layout.takeAt(0)
+                if item:
+                    w = item.widget()
+                    if w:
+                        w.deleteLater()
+                    else:
+                        # if it's a layout, clear its children
+                        sub_layout = item.layout()
+                        if sub_layout:
+                            while sub_layout.count():
+                                si = sub_layout.takeAt(0)
+                                if not si:
+                                    return
+                                w = si.widget()
+                                if si and w:
+                                    w.deleteLater()
 
         # Find device type class
         device_type_name = selected_device_obj.get("type")
@@ -151,6 +172,9 @@ class DeviceDetailsPanel(BasePanel):
             None,
         )
         props = selected_device_obj.get("props", {})
+        if not isinstance(self.props_layout, QVBoxLayout):
+            return
+
         if device_type_cls and hasattr(device_type_cls, "EDITABLE_PROPS"):
             for prop_name, prop_type in getattr(device_type_cls, "EDITABLE_PROPS", []):
                 row = QHBoxLayout()
@@ -194,6 +218,8 @@ class DeviceDetailsPanel(BasePanel):
 
     def set_connected(self, connected: bool):
         """Update connected state."""
+        if not self.connect_button or not self.status_label:
+            return
         if connected:
             self.connect_button.setText("Disconnect")
             self.status_label.setText("Status: Connected")
@@ -203,6 +229,8 @@ class DeviceDetailsPanel(BasePanel):
 
     def set_connecting(self, connecting: bool):
         """Update connecting state."""
+        if not self.progress_bar or not self.connect_button or not self.status_label:
+            return
         self.progress_bar.setVisible(connecting)
         self.connect_button.setEnabled(not connecting)
         if connecting:
@@ -211,6 +239,8 @@ class DeviceDetailsPanel(BasePanel):
 
     def set_status(self, status: str):
         """Set the status label text."""
+        if not self.status_label:
+            return
         self.status_label.setText(status)
 
     def clear(self):

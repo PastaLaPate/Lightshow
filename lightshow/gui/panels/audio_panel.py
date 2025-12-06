@@ -114,14 +114,16 @@ class AudioPanel(BasePanel):
     def set_streaming(self, value: bool):
         """Update streaming state and UI."""
         self.is_streaming = value
-        self.stream_button.setText("Stop Stream" if value else "Start Stream")
-        self.device_combo.setEnabled(not value)
+        if self.stream_button and self.device_combo:
+            self.stream_button.setText("Stop Stream" if value else "Start Stream")
+            self.device_combo.setEnabled(not value)
 
     def _device_selection_callback(self):
         """Handle audio device selection."""
         try:
-            app_data = self.device_combo.currentText()
-            self.config.device_index = int(app_data.split(":")[0])
-            self.trigger("device_changed", app_data)
+            if self.device_combo:
+                app_data = self.device_combo.currentText()
+                self.config.device_index = int(app_data.split(":")[0])
+                self.trigger("device_changed", app_data)
         except Exception:
             pass

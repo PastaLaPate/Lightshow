@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
 )
 
 from .base_panel import BasePanel
-from lightshow.utils.config import Config
+from lightshow.utils import Config
 from lightshow.devices.device import Device
 
 
@@ -64,6 +64,8 @@ class DevicesPanel(BasePanel):
 
     def _on_device_select(self):
         """Handle device selection from listbox."""
+        if not self.device_listbox:
+            return
         current_item = self.device_listbox.currentItem()
         if current_item:
             device_name = current_item.text()
@@ -71,6 +73,8 @@ class DevicesPanel(BasePanel):
 
     def _add_device_callback(self):
         """Handle adding a new device."""
+        if not self.device_type_combo:
+            return
         device_type_name = self.device_type_combo.currentText()
         device_type = next(
             (t for t in self.device_types if t.DEVICE_TYPE_NAME == device_type_name),

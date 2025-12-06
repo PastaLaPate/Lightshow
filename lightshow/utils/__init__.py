@@ -1,4 +1,4 @@
-from .config import Config, global_config, resource_path
+from .config import Config, global_config, resource_path, live_devices
 from .colors import hsv_to_rgb
 from .logger import Logger
 from .tracks_infos import TracksInfoTracker
@@ -10,4 +10,5 @@ __all__ = [
     "resource_path",
     "Logger",
     "TracksInfoTracker",
+    "live_devices",
 ]
