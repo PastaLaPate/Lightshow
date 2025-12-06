@@ -1,11 +1,13 @@
 import threading
 from typing import List
 
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QLabel
+from PyQt6.QtCore import Qt
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QLabel, QSplitter, QWidget
 
 from .base_panel import BasePanel
 from lightshow.utils.config import Config
 from lightshow.audio.audio_streams import AudioStreamHandler
+from lightshow.gui.components.logs import Logs
 
 
 class AudioPanel(BasePanel):
@@ -31,12 +33,15 @@ class AudioPanel(BasePanel):
         self.stream_button = None
         self.device_combo = None
         self.visualizer = None
+        self.logs = Logs()
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the audio panel UI elements."""
         # Title
+        topWidget = QWidget()
+        topLayout = QVBoxLayout(topWidget)
         title_label = QLabel("Audio")
-        layout.addWidget(title_label)
+        topLayout.addWidget(title_label)
 
         # Control buttons and combo
         controls_layout = QHBoxLayout()
@@ -64,14 +69,31 @@ class AudioPanel(BasePanel):
         self.device_combo.currentTextChanged.connect(self._device_selection_callback)
         controls_layout.addWidget(self.device_combo)
 
-        layout.addLayout(controls_layout)
+        topLayout.addLayout(controls_layout)
 
+        
         # Add spike detector visualizer from listener
         if self.listener and hasattr(self.listener, "kick_visualizer"):
             self.visualizer = self.listener.kick_visualizer
-            layout.addWidget(self.visualizer, 1)
-
-        layout.addStretch()
+            topLayout.addWidget(self.visualizer, 1)
+        
+        logsWidget = QWidget()
+        logs_layout = QVBoxLayout(logsWidget)
+        self.logs.create_qt_ui(logs_layout)
+        
+        splitter = QSplitter(Qt.Orientation.Vertical)
+        splitter.addWidget(topWidget)
+        splitter.addWidget(logsWidget)
+        splitter.setStretchFactor(0, 70)
+        splitter.setStretchFactor(1, 30)
+        splitter.setHandleWidth(1)
+        splitter.setStyleSheet("""
+            QSplitter::handle {
+                background-color: #333;
+            }                       
+        """)
+        
+        layout.addWidget(splitter)
 
     def _stream_button_callback(self):
         """Handle stream button clicks."""

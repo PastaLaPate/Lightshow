@@ -32,6 +32,7 @@ from lightshow.devices.moving_head.moving_head_colors import (
     toFadeBlack,
 )
 from lightshow.utils.config import global_config
+from lightshow.utils.logger import Logger
 
 if typing.TYPE_CHECKING:
     from lightshow.devices.moving_head.moving_head import MovingHead
@@ -51,6 +52,7 @@ class MovingHeadController:
     def __init__(self, device: "MovingHead"):
         self.device = device
         self.waiting_music = False
+        self.logger = Logger(f"MovingHeadController{{{device.id}}}")
 
         # =====================
         #      Cooldowns
@@ -68,6 +70,8 @@ class MovingHeadController:
 
         self.beats_since_anim_change = 0
         self.beats_time = deque(maxlen=30)  # last 30 beats to calculate average for BPM
+        self.last_fps_log_time = 0  # Throttle FPS logging
+        self.current_fps = 0  # Store current FPS for display
 
         self.max_fps = global_config.max_fps or 60
         self.frame_time = 1 / self.max_fps * 1e9  # For nanoseconds
@@ -211,7 +215,15 @@ class MovingHeadController:
                 self.breaking = True
 
     def handleBeat(self, packet: PacketData):
-        print("Average fps ", self.calcAverageFPS(), end="\r")
+        # Throttle FPS logging to every 2 seconds
+        current_time = time.time_ns()
+        if current_time - self.last_fps_log_time > 2 * 1e9:
+            # Store FPS in a way that can be accessed for display
+            fps_value = self.calcAverageFPS()
+            self.device.controller.current_fps = fps_value
+            self.logger.info(f"Average fps : {fps_value}")
+            self.last_fps_log_time = current_time
+        
         if packet.packet_status == PacketStatus.ON:
             self.beats_time.append(time.time_ns())
             if time.time_ns() < self.next_beat_cool:

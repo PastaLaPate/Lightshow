@@ -14,7 +14,7 @@ import lightshow.audio.detectors as detectors
 from lightshow.audio.audio_streams import AudioStreamHandler, AudioListener
 from lightshow.devices.device import PacketData, PacketStatus, PacketType
 from lightshow.gui.main_window import UIManager
-from lightshow.utils.tracks_infos import TracksInfoTracker
+from lightshow.utils import TracksInfoTracker, Logger
 from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
 
 from winrt.windows.media.control import (
@@ -28,16 +28,14 @@ from winrt.windows.media.control import (
 class MainAudioListener(AudioListener):
     def __init__(self, AudioHandler: AudioStreamHandler):
         super().__init__(AudioHandler)
-        # self.mh = MovingHead()
+        self.logger = Logger("AudioListener")
         self.kick_detector = detectors.KickDetector(AudioHandler)
         self.silent_detector = detectors.SilentDetector()
         self.break_detector = detectors.BreakDetector(30)
         self.drop_detector = detectors.DropDetector(30, 5)
-        # Defer visualizer creation until a QApplication exists
-        # (SpikeDetectorVisualizer is a QWidget and must be created after QApplication)
         self.kick_visualizer = None
         self.track_tracker = TracksInfoTracker()
-        print("Adding track infos tracker")
+        self.logger.info("Adding track infos tracker")
         self.track_tracker.add_track_changed_listener(self.on_track_changed)
         self.track_tracker.add_playback_status_changed_listener(
             self.on_playback_status_changed
@@ -49,7 +47,7 @@ class MainAudioListener(AudioListener):
         session: GlobalSystemMediaTransportControlsSession,
         infos: GlobalSystemMediaTransportControlsSessionMediaProperties,
     ):
-        print(f"Now playing {infos.title} ! (By {infos.artist})")
+        self.logger.info(f"Now playing {infos.title} ! (By {infos.artist})")
         self.send_packet_to_devices(PacketData(PacketType.NEW_MUSIC, PacketStatus.ON))
         self.clear_state()
         self.send_packet_to_devices(PacketData(PacketType.NEW_MUSIC, PacketStatus.OFF))
@@ -60,7 +58,7 @@ class MainAudioListener(AudioListener):
         status: GlobalSystemMediaTransportControlsSessionPlaybackInfo,
     ):
         ps = status.playback_status
-        print(f"New status... {ps}")
+        self.logger.info(f"New playback status : {ps}")
         if ps == GlobalSystemMediaTransportControlsSessionPlaybackStatus.PAUSED:
             self.music_paused = True
             self.paused_since = time_ns()

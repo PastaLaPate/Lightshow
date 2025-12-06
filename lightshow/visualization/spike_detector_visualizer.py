@@ -33,10 +33,14 @@ class SpikeDetectorVisualizer(QWidget):
             "break": {"x": [], "y": []},
             "drop": {"x": [], "y": []},
         }
+        
+        pg.setConfigOption("useOpenGL", True)
+        pg.setConfigOption("antialias", True)
 
         # Setup pyqtgraph plot
         self.plot = pg.PlotWidget(title="Spike Detector")
         self.plot.setBackground("#1e1e1e")
+        self.plot.setAntialiasing(True)
         self.plot.showGrid(x=True, y=True, alpha=0.3)
         self.plot.addLegend(offset=(10, 10))
 
@@ -49,6 +53,9 @@ class SpikeDetectorVisualizer(QWidget):
         self.energy_curve = self.plot.plot([], [], pen=pen_energy, name="Energy")
         self.diff_curve = self.plot.plot([], [], pen=pen_diff, name="Diff")
         self.limit_curve = self.plot.plot([], [], pen=pen_limit, name="Limit")
+        self.energy_curve.setZValue(30)
+        self.diff_curve.setZValue(20)
+        self.limit_curve.setZValue(10)
 
         # Scatter items for markers
         self.marker_items = {
@@ -63,6 +70,7 @@ class SpikeDetectorVisualizer(QWidget):
             ),
         }
         for name, item in self.marker_items.items():
+            item.setZValue(40)
             self.plot.addItem(item)
 
         layout = QVBoxLayout()

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from lightshow.devices import DEVICES_STR_TYPES
 from lightshow.devices.device import Device
+from lightshow.utils.logger import Logger
 
 
 class DeviceConfigType(TypedDict):
@@ -20,7 +21,8 @@ def resource_path(relative_path):
     """Get absolute path to resource, works for dev and for PyInstaller"""
     try:
         # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
+        base_path = sys._MEIPASS # type: ignore
+        
     except Exception:
         base_path = os.path.abspath(".")
 
@@ -30,8 +32,9 @@ def resource_path(relative_path):
 class Config:
     def __init__(self, config_file="config.json"):
         self.config_folder = Path(os.getenv("LOCALAPPDATA") or ".\\") / ".LightShow"
+        self.logger = Logger("ConfigManager")
         if not self.config_folder.exists():
-            print("Config folder doesn't exists... Creating it...")
+            self.logger.info("Config folder doesn't exists... Creating it...")
             self.config_folder.mkdir()
         self.config_file = self.config_folder / config_file
         self.settings = self.load_config_file()
@@ -42,7 +45,7 @@ class Config:
             with open(self.config_file, "r") as f:
                 return json.load(f)
         except FileNotFoundError:
-            print(f"Config file {self.config_file} not found. Using default settings.")
+            self.logger.info(f"Config file {self.config_file} not found. Using default settings.")
             return {}
 
     def reload_config(self):
@@ -61,7 +64,7 @@ class Config:
             self.settings["max_fps"] = self.max_fps
             self.settings["devices"] = self.devices
             json.dump(self.settings, f, indent=4)
-        print(f"Configuration saved to {self.config_file}")
+        self.logger.info(f"Configuration saved to {self.config_file}")
 
 
 global_config = Config()

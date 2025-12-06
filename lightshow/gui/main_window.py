@@ -17,6 +17,7 @@ from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.utils.config import Config, live_devices
 from lightshow.gui.panels import AudioPanel, DevicesPanel, DeviceDetailsPanel
+from lightshow.utils.logger import Logger
 
 
 class UISignals(QObject):
@@ -39,6 +40,7 @@ class UIManager(QMainWindow):
         audio_devices: List[str],
     ):
         super().__init__()
+        self.logger = Logger("UIManager")
         self.listener = audio_listener
         self.audio_handler = audio_handler
         self.config = config
@@ -94,6 +96,7 @@ class UIManager(QMainWindow):
         target.register(event, callback)
 
     def _setup_ui(self):
+        self.logger.info("Setting up the UI Layout.")
         """Set up the main UI layout."""
         self.setWindowTitle("Lightshow GUI")
         self.setGeometry(100, 100, 1280, 720)
@@ -123,6 +126,12 @@ class UIManager(QMainWindow):
         splitter.addWidget(right_widget)
         splitter.setStretchFactor(0, 65)
         splitter.setStretchFactor(1, 35)
+        splitter.setHandleWidth(1)
+        splitter.setStyleSheet("""
+            QSplitter::handle {
+                background-color: #333;
+            }                       
+        """)
 
         main_layout.addWidget(splitter)
 
@@ -139,6 +148,7 @@ class UIManager(QMainWindow):
         """Handle connect/disconnect button click."""
         if not device_id:
             return
+        self.logger.info(f"Connecting to device {device_id}")
 
         # Handle disconnect
         if device_id in live_devices and live_devices[device_id].ready:
@@ -170,8 +180,9 @@ class UIManager(QMainWindow):
                 self.ui_signals.finish_connection.emit(device_id)
             except Exception as e:
                 self.device_details.set_connecting(False)
-                self.device_details.connect_button.setText("Connect")
-                self.device_details.connect_button.setEnabled(True)
+                if self.device_details.connect_button:
+                    self.device_details.connect_button.setText("Connect")
+                    self.device_details.connect_button.setEnabled(True)
                 self.ui_signals.connection_status_changed.emit("Disconnected")
                 self.ui_signals.show_error.emit("Connection error", repr(e))
                 if device_id in live_devices:
@@ -228,12 +239,16 @@ class UIManager(QMainWindow):
 
     def _update_visualizations(self):
         """Update visualizations in real-time."""
+        # Process queued log messages from background threads
+        from lightshow.utils.logger import LoggerCore
+        LoggerCore().process_log_queue()
+        
         if self.audio_panel.is_streaming and self.audio_panel.visualizer:
             try:
                 # Update spike detector visualizer
                 self.audio_panel.visualizer.qt_update()
             except Exception as e:
-                print(f"Visualization update error: {e}")
+                self.logger.error(f"Visualization update error: {e}")
 
     def _show_error_dialog(self, title, message):
         """Show error dialog."""
@@ -251,7 +266,8 @@ class UIManager(QMainWindow):
         self.audio_handler.close()
         self.config.save()
 
-    def closeEvent(self, event):
+    def closeEvent(self, a0):
         """Handle window close event."""
         self.stop()
-        event.accept()
+        if a0:
+            a0.accept()

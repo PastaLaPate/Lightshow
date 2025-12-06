@@ -14,6 +14,7 @@ from lightshow.audio.audio_types import (
 )
 from lightshow.gui.utils.message_box import post_ui_message
 from lightshow.utils.config import Config
+from lightshow.utils.logger import Logger
 
 
 class AudioCapture(AAudioCapture):
@@ -90,6 +91,7 @@ class AudioStreamHandler(AAudioStreamHandler):
     """
 
     def __init__(self, processor: Type[Processor], config: Config):
+        self.logger = Logger("AudioStreamHandler")
         self.chunk_size = config.chunk_size or 1024
         self.pyaudio_instance = pyaudio.PyAudio()
         self.processor_class = processor
@@ -102,6 +104,7 @@ class AudioStreamHandler(AAudioStreamHandler):
 
     def reinit_stream(self, config: Config):
         """Initializes or re-initializes the stream with a new configuration."""
+        self.logger.info("Initializing the stream")
         try:
             if hasattr(self, "stream") and self.stream and self.stream.is_active():
                 self.stop_stream()
@@ -127,12 +130,12 @@ class AudioStreamHandler(AAudioStreamHandler):
             for listener in self.device_change_listeners:
                 listener(self.audio_capture)
             self.audio_capture.listeners = old_listeners
+            self.logger.info("Adding the listeners")
             for listener in self.pending_listeners:
-                print("Adding listener")
                 self.audio_capture.add_listener(listener)
             self.pending_listeners = []
         except Exception:
-            print("init error")
+            self.logger.error(f"Error happened during Initialization: {traceback.format_exc()}")
             post_ui_message("Audio Initialization Error", traceback.format_exc())
 
     def setup_device(self):
@@ -173,9 +176,7 @@ class AudioStreamHandler(AAudioStreamHandler):
         self.device_index = default_device["index"]
         self.sample_rate = int(default_device["defaultSampleRate"])
         self.channels = default_device["maxInputChannels"]
-        print(
-            f"Using device: {default_device['name']} (index: {self.device_index}) Sample Rate: {self.sample_rate} Hz Channels: {self.channels} Chunk size: {self.chunk_size}"
-        )
+        self.logger.debug(f"Using device: {default_device['name']} (index: {self.device_index}) Sample Rate: {self.sample_rate} Hz Channels: {self.channels} Chunk size: {self.chunk_size}")
 
     def add_listener_on_init(
         self, listener: AudioListenerType
@@ -197,10 +198,11 @@ class AudioStreamHandler(AAudioStreamHandler):
             )
             self.stream.start_stream()
         except Exception:
-            print("Failed to start audio stream")
+            self.logger.error(f"Failed to start the audio stream: {traceback.format_exc()}")
             post_ui_message("Audio Stream Error", traceback.format_exc())
 
     def stop_stream(self):
+        self.logger.info("Stopping stream")
         if hasattr(self, "stream") and self.stream is not None:
             if self.stream.is_active():
                 self.stream.stop_stream()
