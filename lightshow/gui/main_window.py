@@ -15,6 +15,7 @@ from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
 from lightshow.audio.audio_streams import AudioStreamHandler
 from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head import MovingHead
+from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.utils.config import Config, live_devices
 from lightshow.gui.panels import AudioPanel, DevicesPanel, DeviceDetailsPanel
 from lightshow.utils.logger import Logger
@@ -53,6 +54,7 @@ class UIManager(QMainWindow):
         )
         self.devices_panel = DevicesPanel(config, self.device_types)
         self.device_details = DeviceDetailsPanel(config, self.device_types)
+        self.manual_packets = ManualPacketsSenderPanel()
 
         # Register internal handlers
         self.audio_panel.register("start_stream", self._start_stream_callback)
@@ -64,6 +66,8 @@ class UIManager(QMainWindow):
         self.device_details.register("connect_clicked", self._connect_device_callback)
         self.device_details.register("delete_clicked", self._delete_device)
         self.device_details.register("device_renamed", self._on_device_renamed)
+
+        self.manual_packets.register("send_manual_packet", self._send_packet_callback)
 
         # Connect signals
         self.ui_signals.finish_connection.connect(self._on_connection_finished)
@@ -123,11 +127,17 @@ class UIManager(QMainWindow):
         device_details = QVBoxLayout(device_details_w)
         self.device_details.create_qt_ui(device_details)
 
+        manual_packets_w = QWidget()
+        manual_packets = QVBoxLayout(manual_packets_w)
+        self.manual_packets.create_qt_ui(manual_packets)
+
         right_widget = QSplitter(Qt.Orientation.Vertical)
         right_widget.addWidget(devices_list_w)
         right_widget.addWidget(device_details_w)
-        right_widget.setStretchFactor(0, 60)
+        right_widget.addWidget(manual_packets_w)
+        right_widget.setStretchFactor(0, 40)
         right_widget.setStretchFactor(1, 40)
+        right_widget.setStretchFactor(2, 20)
         right_widget.setHandleWidth(1)
         right_widget.setStyleSheet(
             """
@@ -154,7 +164,7 @@ class UIManager(QMainWindow):
 
         main_layout.addWidget(splitter)
         splitter.setSizes([65, 35])
-        right_widget.setSizes([60, 40])
+        right_widget.setSizes([40, 40, 20])
 
     def _on_device_select(self, device_name):
         """Handle device selection."""
@@ -260,6 +270,12 @@ class UIManager(QMainWindow):
         """Stop audio stream."""
         self.audio_handler.stop_stream()
         self.audio_panel.set_streaming(False)
+
+    def _send_packet_callback(self, packet_data):
+        self.logger.info(
+            f"Sending manual packet: {packet_data.packet_type}, {packet_data.packet_status}"
+        )
+        self.listener.send_packet_to_devices(packet_data)
 
     def _update_visualizations(self):
         """Update visualizations in real-time."""

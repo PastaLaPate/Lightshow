@@ -6,7 +6,7 @@ from .CircleAnimation import CircleAnimation
 
 class BreakCircleAnimation(CircleAnimation):
     def __init__(self, base_angle_offset=0):
-        super().__init__([RGB(255, 255, 255)], 0.005, base_angle_offset)
+        super().__init__([RGB(255, 255, 255)], 0.35, base_angle_offset)
         self.change_color_on_tick = True
         self.hue = 0
 

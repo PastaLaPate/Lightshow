@@ -42,8 +42,8 @@ TRIANGLE_ANIMATION = RegularPolygonAnimation(DEFAULT_RGBs, 3, (0, 60), (45, 135)
 # )  # {"base": [45, 90, 135], "top": [0, 60, 0]}
 # SQUARE_ANIMATION = ListAnimation(DEFAULT_RGBs, [0, 0, 60, 60], [45, 135, 135, 45])
 SQUARE_ANIMATION = RegularPolygonAnimation(DEFAULT_RGBs, 4, (0, 60), (45, 135))
-CIRCLE_ANIMATION = CircleAnimation(DEFAULT_RGBs, 0.5, 45)
-LEMNISCATE_ANIMATION = BernoulliLemniscateAnimation(DEFAULT_RGBs, 0.5, 45)
+CIRCLE_ANIMATION = CircleAnimation(DEFAULT_RGBs, 0.3, 45)
+LEMNISCATE_ANIMATION = BernoulliLemniscateAnimation(DEFAULT_RGBs, 0.3, 45)
 CIRCLE_BREAK_ANIMATION = BreakCircleAnimation(45)
 BOUNCE_ANIMATION = BounceAnimation(DEFAULT_RGBs)
 
@@ -110,7 +110,8 @@ class MovingHeadController:
 
     def update_anim_color_mode(self):
         if isinstance(
-            self.current_anim, (ListAnimation, CircleAnimation, RegularPolygonAnimation)
+            self.current_anim,
+            (ListAnimation, CircleAnimation, RegularPolygonAnimation, BounceAnimation),
         ):
             self.current_anim.setRGB(self.color_mode)
         self.current_anim.setTransformer(random.choice(self.transformers))
@@ -182,7 +183,10 @@ class MovingHeadController:
         return 1 / np.mean(time_diffs)
 
     def tickFillingAnim(self):
-        self.updateFromFrame(CIRCLE_BREAK_ANIMATION.next(True))
+        self.updateFromFrame(
+            CIRCLE_BREAK_ANIMATION.next(True, time.time_ns() / 1e9 - self.last_tick)
+        )
+        self.last_tick = time.time_ns() / 1e9
 
     def tickCurrentAnim(self):
         if time.time_ns() < self.next_beat_cool:
