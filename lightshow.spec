@@ -34,6 +34,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon="lightshow/gui/assets/lightshow_icon.ico",
 )
 coll = COLLECT(
     exe,

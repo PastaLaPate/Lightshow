@@ -1,20 +1,19 @@
-from collections import deque
 import random
 import time
 import typing
+from collections import deque
 
 import numpy as np
-
 
 from lightshow.devices.animations.AAnimation import RGB, FlickerCommand
 from lightshow.devices.device import PacketData, PacketStatus, PacketType
 from lightshow.devices.moving_head.animations import (
+    BernoulliLemniscateAnimation,
+    BounceAnimation,
+    BreakCircleAnimation,
     CircleAnimation,
     ListAnimation,
     RegularPolygonAnimation,
-    BreakCircleAnimation,
-    BernoulliLemniscateAnimation,
-    BounceAnimation,
 )
 from lightshow.devices.moving_head.moving_head_animations import (
     QUART_OUT,
@@ -22,11 +21,11 @@ from lightshow.devices.moving_head.moving_head_animations import (
     MHAnimationFrame,
 )
 from lightshow.devices.moving_head.moving_head_colors import (
+    COLOR_TRANSFORMER,
     RAINBOW_KICK_COLORS,
     DEFAULT_RGBs,
-    random_rainbow_color,
-    COLOR_TRANSFORMER,
     nothingTransformer,
+    random_rainbow_color,
     startFlicker,
     toFadeBlack,
 )

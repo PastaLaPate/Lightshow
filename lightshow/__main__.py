@@ -2,27 +2,29 @@
 Real-time audio spectrum visualization with kick detection.
 """
 
-import sys
-from typing import List
-from pyaudio import PyAudio
-from time import time_ns
+import os
 import signal
+import sys
+from time import time_ns
+from typing import List
 
-import lightshow.utils.config as config
-from lightshow.audio.processors import SpectrumProcessor
-import lightshow.audio.detectors as detectors
-from lightshow.audio.audio_streams import AudioStreamHandler, AudioListener
-from lightshow.devices.device import PacketData, PacketStatus, PacketType
-from lightshow.gui.main_window import UIManager
-from lightshow.utils import TracksInfoTracker, Logger
-from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
-
+from pyaudio import PyAudio
 from winrt.windows.media.control import (
     GlobalSystemMediaTransportControlsSession,
     GlobalSystemMediaTransportControlsSessionMediaProperties,
     GlobalSystemMediaTransportControlsSessionPlaybackInfo,
     GlobalSystemMediaTransportControlsSessionPlaybackStatus,
 )
+
+import lightshow.audio.detectors as detectors
+import lightshow.utils.config as config
+from lightshow.audio.audio_streams import AudioListener, AudioStreamHandler
+from lightshow.audio.processors import SpectrumProcessor
+from lightshow.devices.device import PacketData, PacketStatus, PacketType
+from lightshow.gui.main_window import UIManager
+from lightshow.utils import Logger, TracksInfoTracker
+from lightshow.utils.config import resource_path
+from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
 
 
 class MainAudioListener(AudioListener):
@@ -152,8 +154,9 @@ def get_audio_devices() -> List[str]:
 
 def main():
     global ui_manager
-    from PyQt6.QtWidgets import QApplication
     from PyQt6.QtCore import QTimer
+    from PyQt6.QtGui import QIcon
+    from PyQt6.QtWidgets import QApplication
 
     audio_devices = get_audio_devices()
 
@@ -165,6 +168,16 @@ def main():
 
     # Create Qt application
     app = QApplication(sys.argv)
+
+    if os.name == "nt":
+        # Workaround to set app user model id on Windows for proper taskbar icon display
+        import ctypes
+
+        myappid = "pastalapate.lightshow"
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
+    ICON_PATH = resource_path("lightshow/gui/assets/lightshow_icon.png")
+    app.setWindowIcon(QIcon(ICON_PATH))
     timer = QTimer()
     timer.start(500)
     timer.timeout.connect(lambda: None)
@@ -175,6 +188,7 @@ def main():
 
     # Create and show the GUI, passing all necessary components
     ui_manager = UIManager(listener, audio_handler, config.global_config, audio_devices)
+    ui_manager.setWindowIcon(QIcon(ICON_PATH))
     ui_manager.show()
 
     # Run the application

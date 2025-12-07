@@ -2,22 +2,22 @@ import threading
 import traceback
 from typing import List, Type
 
+from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
 from PyQt6.QtWidgets import (
-    QMainWindow,
-    QWidget,
-    QVBoxLayout,
     QHBoxLayout,
+    QMainWindow,
     QMessageBox,
     QSplitter,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QObject
 
 from lightshow.audio.audio_streams import AudioStreamHandler
 from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head import MovingHead
+from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.utils.config import Config, live_devices
-from lightshow.gui.panels import AudioPanel, DevicesPanel, DeviceDetailsPanel
 from lightshow.utils.logger import Logger
 
 

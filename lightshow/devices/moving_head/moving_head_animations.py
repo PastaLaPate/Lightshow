@@ -1,11 +1,11 @@
 from typing import Literal, TypedDict, Union
 
 from lightshow.devices.animations.AAnimation import (
+    RGB,
+    AAnimation,
     Command,
     FadeCommand,
     FlickerCommand,
-    AAnimation,
-    RGB,
 )
 from lightshow.devices.moving_head.moving_head_colors import COLOR_TRANSFORMER
 
