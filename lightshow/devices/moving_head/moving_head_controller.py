@@ -42,8 +42,8 @@ TRIANGLE_ANIMATION = RegularPolygonAnimation(DEFAULT_RGBs, 3, (0, 60), (45, 135)
 # )  # {"base": [45, 90, 135], "top": [0, 60, 0]}
 # SQUARE_ANIMATION = ListAnimation(DEFAULT_RGBs, [0, 0, 60, 60], [45, 135, 135, 45])
 SQUARE_ANIMATION = RegularPolygonAnimation(DEFAULT_RGBs, 4, (0, 60), (45, 135))
-CIRCLE_ANIMATION = CircleAnimation(DEFAULT_RGBs, 0.005, 45)
-LEMNISCATE_ANIMATION = BernoulliLemniscateAnimation(DEFAULT_RGBs, 0.005, 45)
+CIRCLE_ANIMATION = CircleAnimation(DEFAULT_RGBs, 0.5, 45)
+LEMNISCATE_ANIMATION = BernoulliLemniscateAnimation(DEFAULT_RGBs, 0.5, 45)
 CIRCLE_BREAK_ANIMATION = BreakCircleAnimation(45)
 BOUNCE_ANIMATION = BounceAnimation(DEFAULT_RGBs)
 

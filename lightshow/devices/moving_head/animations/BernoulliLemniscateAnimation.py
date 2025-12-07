@@ -7,12 +7,12 @@ class BernoulliLemniscateAnimation(CircleAnimation):
     def __init__(
         self,
         rgb,
-        speed=0.01,
+        speed=0.5,
         base_angle_offset=0,
     ):
         super().__init__(rgb, speed, base_angle_offset)
-        self.boost_speed = 0.045
-        self.boost_time = 17
+        self.boost_speed = 1.7
+        self.boost_time = 0.4
         self.topAngleRange = (10, 40)
 
     def nextCurve(self, t):
