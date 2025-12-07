@@ -60,6 +60,9 @@ class MovingHeadController:
         self.next_beat_cool = 0  # In ns Time before a new beat can be processed
         self.cooldown_time = 0.1 * 1e9  # Cooldown time in nanoseconds (0.3 seconds)
 
+        # In seconds
+        self.last_tick = time.time_ns() / 1e9
+
         # =====================
         #     Break related
         # =====================
@@ -83,10 +86,10 @@ class MovingHeadController:
 
     def init_lists(self):
         self.anim_list: typing.List[AMHAnimation] = [
-            # TRIANGLE_ANIMATION,
-            # CIRCLE_ANIMATION,
-            # LEMNISCATE_ANIMATION,
-            # SQUARE_ANIMATION,
+            TRIANGLE_ANIMATION,
+            CIRCLE_ANIMATION,
+            LEMNISCATE_ANIMATION,
+            SQUARE_ANIMATION,
             BOUNCE_ANIMATION,
         ]
 
@@ -135,7 +138,8 @@ class MovingHeadController:
         self.update_anim_color_mode()
         self.device.current_anim = self.current_anim.__class__.__name__
         self.device.showed_props_update()
-        frm = self.current_anim.next(False)
+        frm = self.current_anim.next(False, time.time_ns() / 1e9 - self.last_tick)
+        self.last_tick = time.time_ns() / 1e9
         self.updateFromFrame(frm)
 
     def handlePacket(self, packet: PacketData):
@@ -184,7 +188,10 @@ class MovingHeadController:
         if time.time_ns() < self.next_beat_cool:
             # Skip tick
             return False
-        self.updateFromFrame(self.current_anim.next(True))
+        self.updateFromFrame(
+            self.current_anim.next(True, time.time_ns() / 1e9 - self.last_tick)
+        )
+        self.last_tick = time.time_ns() / 1e9
 
     def handleNewMusic(self, packet: PacketData):
         if packet.packet_status == PacketStatus.ON:
@@ -236,7 +243,8 @@ class MovingHeadController:
                 return False
             self.beats_since_anim_change += 1
             self.next_beat_cool += self.cooldown_time
-            frame = self.current_anim.next(False)
+            frame = self.current_anim.next(False, time.time_ns() / 1e9 - self.last_tick)
+            self.last_tick = time.time_ns() / 1e9
             self.updateFromFrame(frame)
             # bpm = self.calcBPM()
             # print(f"bpm: {bpm}")

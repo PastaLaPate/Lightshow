@@ -47,7 +47,7 @@ class MHAnimationFrame(TypedDict):
 
 
 class AMHAnimation(AAnimation):
-    def next(self, isTick=False) -> MHAnimationFrame:
+    def next(self, isTick=False, dt=0) -> MHAnimationFrame:
         pass
 
     def setTransformer(self, transformer: COLOR_TRANSFORMER):

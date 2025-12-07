@@ -47,7 +47,8 @@ class CircleAnimation(AMHAnimation):
     def setRGB(self, rgb: List[RGB] | Callable[[], RGB]):
         self.rgb = cycle(rgb) if isinstance(rgb, list) else rgb
 
-    def next(self, isTick=False) -> MHAnimationFrame:
+    # dt in seconds
+    def next(self, isTick=False, dt=0.0) -> MHAnimationFrame:
         rgb = self.last_color
         if not isTick:
             self.boost_progress = 0

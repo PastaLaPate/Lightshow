@@ -116,8 +116,9 @@ class AAnimation(ABC):
         self.tickeable = False
         self.reversed = False
 
+    # dt: time since last frame in s
     @abstractmethod
-    def next(self, isTick: bool = False) -> Any:
+    def next(self, isTick: bool = False, dt: float = 0) -> Any:
         pass
 
     def isTickeable(self) -> bool:

@@ -35,7 +35,7 @@ class ListAnimation(AMHAnimation):
     def setRGB(self, rgb: COLOR_MODE):
         self.rgb = cycle(rgb) if isinstance(rgb, list) else rgb
 
-    def next(self, isTick=False) -> MHAnimationFrame:
+    def next(self, isTick=False, dt=0.0) -> MHAnimationFrame:
         if isTick:
             raise NotImplementedError("ListAnimation shouldn't be ticked.")
         self.cycle_progress += 1
