@@ -153,6 +153,7 @@ def get_audio_devices() -> List[str]:
 def main():
     global ui_manager
     from PyQt6.QtWidgets import QApplication
+    from PyQt6.QtCore import QTimer
 
     audio_devices = get_audio_devices()
 
@@ -164,6 +165,9 @@ def main():
 
     # Create Qt application
     app = QApplication(sys.argv)
+    timer = QTimer()
+    timer.start(500)
+    timer.timeout.connect(lambda: None)
 
     # Now that a QApplication exists, create the visualizer QWidget
     # and attach it to the listener. The visualizer depends on Qt widgets.

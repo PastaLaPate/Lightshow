@@ -49,6 +49,7 @@ class AudioPanel(BasePanel):
         topWidget = QWidget()
         topLayout = QVBoxLayout(topWidget)
         title_label = QLabel("Audio")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
         topLayout.addWidget(title_label)
 
         # Control buttons and combo

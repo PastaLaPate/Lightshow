@@ -34,7 +34,7 @@ class CircleAnimation(AMHAnimation):
         self.base_angle_offset = base_angle_offset
 
         self.boost_speed = 0.045
-        self.boost_time = 20
+        self.boost_time = 17
         self.boost_progress = 1
         # easeInOutQuart
         self.boost_curve = lambda t: 1 - t  # (
