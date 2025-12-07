@@ -12,6 +12,12 @@ from lightshow.utils.logger import Logger
 class MovingHead(Device):
     DEVICE_TYPE_NAME: Literal["LED Moving Head"] = "LED Moving Head"
 
+    SHOWED_PROPS = [
+        "udp_address",
+        "base_servo_range",
+        "top_servo_range",
+        "current_anim",
+    ]
     EDITABLE_PROPS = [("ip", str)]
 
     def __init__(self):
@@ -20,16 +26,20 @@ class MovingHead(Device):
 
         self.socket = None
         self.ip = "192.168.1.XX"  # ESP32 IP
+        self.udp_address = f"{self.ip}:1234"
         self.addr = (self.ip, 1234)
         self.packetIndex = 0
 
         self.device_name = ""  # Eg "Living Room Moving Head"
 
+        self.current_anim = "None"
         self.controller = MovingHeadController(self)
         self.base_offset = 0
         self.base_range = (0, 180)
+        self.base_servo_range = f"({self.base_range[0]},{self.base_range[1]})"
         self.top_offset = 0
         self.top_range = (0, 180)
+        self.top_servo_range = f"({self.top_range[0]},{self.top_range[1]})"
 
         # Packet queue for async processing
         self._packet_queue = []
@@ -51,12 +61,14 @@ class MovingHead(Device):
                 self.socket.settimeout(1)
                 self.addr = (self.ip, 1234)
                 self.packetIndex = 0
+                self.udp_address = f"{self.ip}:1234"
+                self.showed_props_update()
                 self.logger.info(f"Successfully tested connection to {self.ip}")
             else:
                 raise Exception("Not received resetIndex, ip problem?")
         except Exception as e:
             self.logger.error(f"Error connecting to {self.ip}: {e}")
-            self.ws = None
+            self.socket = None
 
     def disconnect(self):
         self._packet_thread_running = False

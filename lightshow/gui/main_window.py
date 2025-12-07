@@ -196,8 +196,11 @@ class UIManager(QMainWindow):
 
     def _on_connection_finished(self, device_id):
         """Handle successful connection."""
+        if self.device_details.selected_device_id != device_id:
+            return
         self.device_details.set_connecting(False)
         self.device_details.set_connected(True)
+        self.device_details.show_for(device_id)
         self.ui_signals.connection_status_changed.emit("Connected")
 
     def _on_connection_status_changed(self, status):

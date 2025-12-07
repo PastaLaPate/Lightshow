@@ -8,14 +8,13 @@ import numpy as np
 
 from lightshow.devices.animations.AAnimation import RGB, FlickerCommand
 from lightshow.devices.device import PacketData, PacketStatus, PacketType
-from lightshow.devices.moving_head.animations import BreakCircleAnimation
-from lightshow.devices.moving_head.animations.BernoulliLemniscateAnimation import (
-    BernoulliLemniscateAnimation,
-)
-from lightshow.devices.moving_head.animations.CircleAnimation import CircleAnimation
-from lightshow.devices.moving_head.animations.ListAnimation import ListAnimation
-from lightshow.devices.moving_head.animations.RegularPolygonAnimation import (
+from lightshow.devices.moving_head.animations import (
+    CircleAnimation,
+    ListAnimation,
     RegularPolygonAnimation,
+    BreakCircleAnimation,
+    BernoulliLemniscateAnimation,
+    BounceAnimation,
 )
 from lightshow.devices.moving_head.moving_head_animations import (
     QUART_OUT,
@@ -46,6 +45,7 @@ SQUARE_ANIMATION = RegularPolygonAnimation(DEFAULT_RGBs, 4, (0, 60), (45, 135))
 CIRCLE_ANIMATION = CircleAnimation(DEFAULT_RGBs, 0.005, 45)
 LEMNISCATE_ANIMATION = BernoulliLemniscateAnimation(DEFAULT_RGBs, 0.005, 45)
 CIRCLE_BREAK_ANIMATION = BreakCircleAnimation(45)
+BOUNCE_ANIMATION = BounceAnimation(DEFAULT_RGBs)
 
 
 class MovingHeadController:
@@ -83,10 +83,11 @@ class MovingHeadController:
 
     def init_lists(self):
         self.anim_list: typing.List[AMHAnimation] = [
-            TRIANGLE_ANIMATION,
-            CIRCLE_ANIMATION,
-            LEMNISCATE_ANIMATION,
-            SQUARE_ANIMATION,
+            # TRIANGLE_ANIMATION,
+            # CIRCLE_ANIMATION,
+            # LEMNISCATE_ANIMATION,
+            # SQUARE_ANIMATION,
+            BOUNCE_ANIMATION,
         ]
 
         self.transformers: typing.List[COLOR_TRANSFORMER] = [
@@ -101,6 +102,8 @@ class MovingHeadController:
         self.current_anim = random.choice(self.anim_list)
         self.color_mode = random.choice(self.color_mode_list)
         self.update_anim_color_mode()
+        self.device.current_anim = self.current_anim.__class__.__name__
+        self.device.showed_props_update()
 
     def update_anim_color_mode(self):
         if isinstance(
@@ -123,13 +126,15 @@ class MovingHeadController:
 
     def randomAnimation(self):
         self.current_anim = random.choice(
-            [x for x in self.anim_list if x != self.current_anim]
+            [x for x in self.anim_list if x != self.current_anim] or self.anim_list
         )
         self.color_mode = random.choice(
             [x for x in self.color_mode_list if x != self.color_mode]
         )
         self.beats_since_anim_change = 0
         self.update_anim_color_mode()
+        self.device.current_anim = self.current_anim.__class__.__name__
+        self.device.showed_props_update()
         frm = self.current_anim.next(False)
         self.updateFromFrame(frm)
 

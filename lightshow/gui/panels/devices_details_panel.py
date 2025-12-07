@@ -35,6 +35,10 @@ class DeviceDetailsPanel(BasePanel):
         self.progress_bar = None
         self.details_layout = None
         self.placeholder_label = None
+        # Showed props (runtime/debug info) UI
+        self.showed_props_layout = None
+        self.showed_prop_labels: dict[str, QLabel] = {}
+        self._current_live_device = None
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the device details panel UI elements."""
@@ -61,6 +65,10 @@ class DeviceDetailsPanel(BasePanel):
         # Device type
         self.device_type_label = QLabel("Type: -")
         self.details_layout.addWidget(self.device_type_label)
+
+        # Runtime / debug properties shown by the live device
+        self.showed_props_layout = QVBoxLayout()
+        self.details_layout.addLayout(self.showed_props_layout)
 
         # Editable properties area (populated dynamically)
         self.props_layout = QVBoxLayout()
@@ -175,6 +183,101 @@ class DeviceDetailsPanel(BasePanel):
         if not isinstance(self.props_layout, QVBoxLayout):
             return
 
+        # Populate showed (runtime) properties section
+        # Clear existing showed props widgets
+        self.showed_prop_labels.clear()
+        if self.showed_props_layout:
+            while self.showed_props_layout.count():
+                item = self.showed_props_layout.takeAt(0)
+                if item:
+                    w = item.widget()
+                    if w:
+                        w.deleteLater()
+                    else:
+                        sub_layout = item.layout()
+                        if sub_layout:
+                            while sub_layout.count():
+                                si = sub_layout.takeAt(0)
+                                if not si:
+                                    break
+                                w = si.widget()
+                                if w:
+                                    w.deleteLater()
+
+        device_type_name = selected_device_obj.get("type")
+        device_type_cls = next(
+            (t for t in self.device_types if t.DEVICE_TYPE_NAME == device_type_name),
+            None,
+        )
+
+        # If there is a live device instance, attach a showed_props listener
+        # First detach listener from previous live device (if any)
+        try:
+            if self._current_live_device and hasattr(
+                self._current_live_device, "set_showed_props_listener"
+            ):
+                self._current_live_device.set_showed_props_listener(None)
+        except Exception:
+            pass
+        self._current_live_device = None
+
+        # If device class defines SHOWED_PROPS, create labels for them
+        if device_type_cls and hasattr(device_type_cls, "SHOWED_PROPS"):
+            for pname in getattr(device_type_cls, "SHOWED_PROPS", []):
+                pname: str = pname
+                formatted = pname.replace("_", " ").title()
+                row = QHBoxLayout()
+                row.addWidget(QLabel(f"{formatted}:"))
+                value_label = QLabel("")
+                # initialize from saved props when available
+                try:
+                    initial = props.get(pname, "")
+                except Exception:
+                    initial = ""
+                value_label.setText(str(initial))
+                row.addWidget(value_label)
+                self.showed_props_layout.addLayout(row)
+                self.showed_prop_labels[pname] = value_label
+
+        # Attach live device listener if available
+        live_dev = None
+        try:
+            if device_id in live_devices:
+                live_dev = live_devices[device_id]
+        except Exception:
+            live_dev = None
+
+        if live_dev:
+            # initialize/override labels from current live device attributes
+            for pname, lab in self.showed_prop_labels.items():
+                try:
+                    val = getattr(live_dev, pname, None)
+                    if val is None:
+                        # fallback to saved props if live attribute missing
+                        val = props.get(pname, "")
+                except Exception:
+                    val = props.get(pname, "")
+                lab.setText(str(val))
+
+            # register listener to update labels from device
+            def _on_update(prop, value):
+                lab = self.showed_prop_labels.get(prop)
+                if lab:
+                    lab.setText(str(value))
+
+            try:
+                if hasattr(live_dev, "set_showed_props_listener"):
+                    live_dev.set_showed_props_listener(_on_update)
+                    self._current_live_device = live_dev
+                    # Trigger an immediate update from the device in case it already
+                    # has values to report (ensures UI shows udp_address etc.)
+                    try:
+                        live_dev.showed_props_update()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
         if device_type_cls and hasattr(device_type_cls, "EDITABLE_PROPS"):
             for prop_name, prop_type in getattr(device_type_cls, "EDITABLE_PROPS", []):
                 row = QHBoxLayout()
@@ -245,6 +348,16 @@ class DeviceDetailsPanel(BasePanel):
 
     def clear(self):
         """Clear the details panel."""
+        # detach showed props listener if set
+        try:
+            if self._current_live_device and hasattr(
+                self._current_live_device, "set_showed_props_listener"
+            ):
+                self._current_live_device.set_showed_props_listener(None)
+        except Exception:
+            pass
+        self._current_live_device = None
+
         self._set_details_visible(False)
         self.selected_device_id = None
 
