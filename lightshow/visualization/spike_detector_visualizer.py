@@ -1,7 +1,7 @@
 from collections import deque
 
 import pyqtgraph as pg
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.audio import detectors
 

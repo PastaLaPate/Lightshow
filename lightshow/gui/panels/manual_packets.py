@@ -1,5 +1,5 @@
 from PyQt6.QtCore import QSize
-from PyQt6.QtWidgets import QVBoxLayout, QGridLayout, QPushButton, QSizePolicy
+from PyQt6.QtWidgets import QGridLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout
 
 from lightshow.devices.device import PacketData, PacketStatus, PacketType
 
@@ -33,6 +33,9 @@ class ManualPacketsSenderPanel(BasePanel):
         ]
 
     def create_qt_ui(self, layout: QVBoxLayout):
+        title_label = QLabel("Manual Packet Sender")
+        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+
         grid = QGridLayout()
         for i, (label, packet) in enumerate(self.buttons):
             button = Button(label)
@@ -40,4 +43,6 @@ class ManualPacketsSenderPanel(BasePanel):
                 lambda _, p=packet: self.trigger("send_manual_packet", p)
             )
             grid.addWidget(button, i // 3, i % 3)
+
+        layout.addWidget(title_label)
         layout.addLayout(grid)

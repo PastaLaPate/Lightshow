@@ -135,8 +135,8 @@ class UIManager(QMainWindow):
         right_widget.addWidget(devices_list_w)
         right_widget.addWidget(device_details_w)
         right_widget.addWidget(manual_packets_w)
-        right_widget.setStretchFactor(0, 40)
-        right_widget.setStretchFactor(1, 40)
+        right_widget.setStretchFactor(0, 30)
+        right_widget.setStretchFactor(1, 50)
         right_widget.setStretchFactor(2, 20)
         right_widget.setHandleWidth(1)
         right_widget.setStyleSheet(
@@ -164,7 +164,7 @@ class UIManager(QMainWindow):
 
         main_layout.addWidget(splitter)
         splitter.setSizes([65, 35])
-        right_widget.setSizes([40, 40, 20])
+        right_widget.setSizes([30, 50, 20])
 
     def _on_device_select(self, device_name):
         """Handle device selection."""

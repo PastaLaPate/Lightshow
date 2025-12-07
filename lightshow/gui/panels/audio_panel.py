@@ -3,19 +3,24 @@ from typing import List
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
-    QVBoxLayout,
-    QHBoxLayout,
-    QPushButton,
     QComboBox,
+    QHBoxLayout,
     QLabel,
+    QPushButton,
     QSplitter,
+    QVBoxLayout,
     QWidget,
 )
+from winrt.windows.media.control import (
+    GlobalSystemMediaTransportControlsSession,
+    GlobalSystemMediaTransportControlsSessionMediaProperties,
+)
 
-from .base_panel import BasePanel
-from lightshow.utils.config import Config
 from lightshow.audio.audio_streams import AudioStreamHandler
 from lightshow.gui.components.logs import Logs
+from lightshow.utils.config import Config
+
+from .base_panel import BasePanel
 
 
 class AudioPanel(BasePanel):
@@ -30,6 +35,7 @@ class AudioPanel(BasePanel):
     ):
         super().__init__()
         self.listener = listener
+        listener.track_tracker.add_track_changed_listener(self.on_track_changed)
         self.audio_handler = audio_handler
         self.config = config
         self.audio_devices = audio_devices.copy()
@@ -40,6 +46,7 @@ class AudioPanel(BasePanel):
         # UI Elements
         self.stream_button = None
         self.device_combo = None
+        self.playing_label = None
         self.visualizer = None
         self.logs = Logs()
 
@@ -79,6 +86,9 @@ class AudioPanel(BasePanel):
         controls_layout.addWidget(self.device_combo)
 
         topLayout.addLayout(controls_layout)
+
+        self.playing_label = QLabel("No track playing")
+        topLayout.addWidget(self.playing_label)
 
         # Add spike detector visualizer from listener
         if self.listener and hasattr(self.listener, "kick_visualizer"):
@@ -128,3 +138,11 @@ class AudioPanel(BasePanel):
                 self.trigger("device_changed", app_data)
         except Exception:
             pass
+
+    def on_track_changed(
+        self,
+        session: GlobalSystemMediaTransportControlsSession,
+        infos: GlobalSystemMediaTransportControlsSessionMediaProperties,
+    ):
+        if self.playing_label:
+            self.playing_label.setText(f"Playing: {infos.title} - {infos.artist}")
