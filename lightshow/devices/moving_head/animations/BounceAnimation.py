@@ -1,5 +1,5 @@
 from itertools import cycle
-from lightshow.devices.animations.AAnimation import RGB
+from lightshow.devices.animations.AAnimation import RGB, FadeCommand
 from lightshow.devices.moving_head.moving_head_animations import (
     AMHAnimation,
     BaseServoCommand,
@@ -22,9 +22,9 @@ class BounceAnimation(AMHAnimation):
         self.velocity = 0
         self.base_range = (0, 120)
         self.top_range = (0, 50)
-        self.y_f = lambda x: 0.5 + 3 * (
-            0.45 * x - 0.45 * x**2
-        )  # Sketchy parabola function
+        self.y_f = (
+            lambda x: 0.7 - 2 * (x - 0.5) ** 2
+        )  # Sketchy parabola function .7-2 (x-.5)^(2)
 
         self.color = RGB(255, 255, 255)
 
@@ -55,6 +55,13 @@ class BounceAnimation(AMHAnimation):
             (self.top_range[1] - self.top_range[0]) * self.y_f(self.cycle_progress)
             + self.top_range[0]
         )  # Parabolic interpolation
+        if isinstance(self.color, FadeCommand) and isTick:
+            if (
+                self.color.to.r != 0 and self.color.to.g != 0 and self.color.to.b != 0
+            ):  # Not black
+                self.color = self.color.to
+            else:
+                self.color = self.color.from_
         return MHAnimationFrame(
             duration=0,
             rgb=self.color,
