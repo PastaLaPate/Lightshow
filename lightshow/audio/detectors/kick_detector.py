@@ -6,7 +6,7 @@ class KickDetector(SpikeDetector):
     def __init__(self, AudioHandler: AudioStreamHandler):
         super().__init__(
             AudioHandler,
-            2,
+            1.75,
             20,
             [0, 2],
             DetectionType.UPPER,

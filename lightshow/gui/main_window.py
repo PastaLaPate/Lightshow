@@ -115,10 +115,27 @@ class UIManager(QMainWindow):
         self.audio_panel.create_qt_ui(left_layout)
 
         # Right side: Devices panel (35%)
-        right_widget = QWidget()
-        right_layout = QVBoxLayout(right_widget)
-        self.devices_panel.create_qt_ui(right_layout)
-        self.device_details.create_qt_ui(right_layout)
+        devices_list_w = QWidget()
+        devices_list = QVBoxLayout(devices_list_w)
+        self.devices_panel.create_qt_ui(devices_list)
+
+        device_details_w = QWidget()
+        device_details = QVBoxLayout(device_details_w)
+        self.device_details.create_qt_ui(device_details)
+
+        right_widget = QSplitter(Qt.Orientation.Vertical)
+        right_widget.addWidget(devices_list_w)
+        right_widget.addWidget(device_details_w)
+        right_widget.setStretchFactor(0, 60)
+        right_widget.setStretchFactor(1, 40)
+        right_widget.setHandleWidth(1)
+        right_widget.setStyleSheet(
+            """
+            QSplitter::handle {
+                background-color: #333;
+            }                       
+        """
+        )
 
         # Add splitter
         splitter = QSplitter(Qt.Orientation.Horizontal)
@@ -136,6 +153,8 @@ class UIManager(QMainWindow):
         )
 
         main_layout.addWidget(splitter)
+        splitter.setSizes([65, 35])
+        right_widget.setSizes([60, 40])
 
     def _on_device_select(self, device_name):
         """Handle device selection."""

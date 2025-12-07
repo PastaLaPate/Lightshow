@@ -12,6 +12,7 @@ from lightshow.utils.logger import Logger
 class MovingHead(Device):
     DEVICE_TYPE_NAME: Literal["LED Moving Head"] = "LED Moving Head"
 
+    ADDITIONAL_INFOS = []
     EDITABLE_PROPS = [("ip", str)]
 
     def __init__(self):

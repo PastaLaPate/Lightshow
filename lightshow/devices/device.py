@@ -30,6 +30,7 @@ class PacketData:
 class Device(ABC):
     DEVICE_TYPE_NAME = "DUMMY DEVICE"
 
+    ADDITIONAL_INFOS = []
     EDITABLE_PROPS = []
 
     def __init__(self):
