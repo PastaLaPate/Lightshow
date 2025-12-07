@@ -6,6 +6,7 @@ config.json
 /audio/
 /devices
 /visualization
+/lightshow.egg-info
 .pdm-build
 /installer/*
 !/installer/lightshow.nsi
