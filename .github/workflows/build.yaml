@@ -50,22 +50,30 @@ jobs:
 
       - name: Get previous release tag
         id: prev_release
+        shell: pwsh
         run: |
-          TAG=$(gh api repos/${{ github.repository }}/releases --jq ".[0].tag_name" || echo "")
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          $tag = gh api repos/${{ github.repository }}/releases --jq ".[0].tag_name" 2>$null
+          if (-not $tag) {
+            $tag = ""
+          }
+          echo "tag=$tag" >> $env:GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate changelog
         id: changelog
+        shell: pwsh
         run: |
-          if [ -z "${{ steps.prev_release.outputs.tag }}" ]; then
-            echo "No previous release found. Showing commits from start."
-            git log --pretty=format:"- %s (%h)" > CHANGELOG.md
-          else
-            echo "Previous release: ${{ steps.prev_release.outputs.tag }}"
-            git log ${{ steps.prev_release.outputs.tag }}..HEAD --pretty=format:"- %s (%h)" > CHANGELOG.md
-          fi
+          $format = "- %s (%h) by %an"
+
+          if ("${{ steps.prev_release.outputs.tag }}" -eq "") {
+            Write-Host "No previous release. Using all commits."
+            git log --pretty=format:"$format" | Out-File CHANGELOG.md -Encoding utf8
+          } else {
+            Write-Host "Previous release: ${{ steps.prev_release.outputs.tag }}"
+            git log ${{ steps.prev_release.outputs.tag }}..HEAD --pretty=format:"$format" | Out-File CHANGELOG.md -Encoding utf8
+          }
+
       - name: Create Release
         uses: softprops/action-gh-release@v2.4.2
         with:
