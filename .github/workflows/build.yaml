@@ -48,8 +48,27 @@ jobs:
         run: |
           cd installer && makensis /DPRODUCT_VERSION=${{ github.run_number }} lightshow.nsi
 
+      - name: Get previous release tag
+        id: prev_release
+        run: |
+          TAG=$(gh api repos/${{ github.repository }}/releases --jq ".[0].tag_name" || echo "")
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          if [ -z "${{ steps.prev_release.outputs.tag }}" ]; then
+            echo "No previous release found. Showing commits from start."
+            git log --pretty=format:"- %s (%h)" > CHANGELOG.md
+          else
+            echo "Previous release: ${{ steps.prev_release.outputs.tag }}"
+            git log ${{ steps.prev_release.outputs.tag }}..HEAD --pretty=format:"- %s (%h)" > CHANGELOG.md
+          fi
       - name: Create Release
         uses: softprops/action-gh-release@v2.4.2
         with:
           tag_name: v${{ github.run_number }}
           files: installer/lightshow-setup-win-${{ github.run_number }}.exe
+          body_path: CHANGELOG.md
