@@ -151,8 +151,8 @@ class UIManager(QMainWindow):
         splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.addWidget(left_widget)
         splitter.addWidget(right_widget)
-        splitter.setStretchFactor(0, 65)
-        splitter.setStretchFactor(1, 35)
+        splitter.setStretchFactor(0, 650)
+        splitter.setStretchFactor(1, 350)
         splitter.setHandleWidth(1)
         splitter.setStyleSheet(
             """
@@ -163,8 +163,8 @@ class UIManager(QMainWindow):
         )
 
         main_layout.addWidget(splitter)
-        splitter.setSizes([65, 35])
-        right_widget.setSizes([30, 50, 20])
+        splitter.setSizes([650, 350])
+        right_widget.setSizes([300, 500, 200])
 
     def _on_device_select(self, device_name):
         """Handle device selection."""

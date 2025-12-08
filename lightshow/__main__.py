@@ -189,6 +189,7 @@ def main():
     # Create and show the GUI, passing all necessary components
     ui_manager = UIManager(listener, audio_handler, config.global_config, audio_devices)
     ui_manager.setWindowIcon(QIcon(ICON_PATH))
+    ui_manager.resize(800, 600)
     ui_manager.show()
 
     # Run the application
