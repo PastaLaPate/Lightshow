@@ -21,6 +21,7 @@ dependencies = [
     "pyinstaller>=6.16.0",
     "matplotlib>=3.8.0",
     "pyqtgraph>=0.14.0",
+    "qtpynodeeditor[pyqt6]>=0.3.3",
 ]
 
 [build-system]

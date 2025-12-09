@@ -11,7 +11,7 @@ class BernoulliLemniscateAnimation(CircleAnimation):
         base_angle_offset=0,
     ):
         super().__init__(rgb, speed, base_angle_offset)
-        self.boost_speed = 2
+        self.boost_speed = 2.5
         self.boost_time = 0.4
         self.topAngleRange = (10, 40)
 
@@ -41,4 +41,5 @@ class BernoulliLemniscateAnimation(CircleAnimation):
 
     def reverse(self):
         # DO NOT REVERSE
+        pass
         pass

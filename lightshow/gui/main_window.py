@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 from lightshow.audio.audio_streams import AudioStreamHandler
 from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head import MovingHead
+from lightshow.gui.node_editor.node_window import NodeWindow
 from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.utils.config import Config, live_devices
@@ -47,6 +48,9 @@ class UIManager(QMainWindow):
         self.config = config
         self.device_types: List[Type[Device]] = [MovingHead]
         self.ui_signals = UISignals()
+
+        self.node_window = NodeWindow()
+        self.node_window.show()
 
         # Initialize panels
         self.audio_panel = AudioPanel(
