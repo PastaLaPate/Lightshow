@@ -2,8 +2,8 @@ import threading
 import traceback
 from typing import List, Type
 
-from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import QObject, Qt, QTimer, Signal
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
     QMessageBox,
@@ -25,10 +25,10 @@ from lightshow.utils.logger import Logger
 class UISignals(QObject):
     """Signals for thread-safe communication with UI."""
 
-    finish_connection = pyqtSignal(str)
-    show_error = pyqtSignal(str, str)
-    show_info = pyqtSignal(str, str)
-    connection_status_changed = pyqtSignal(str)
+    finish_connection = Signal(str)
+    show_error = Signal(str, str)
+    show_info = Signal(str, str)
+    connection_status_changed = Signal(str)
 
 
 class UIManager(QMainWindow):

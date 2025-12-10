@@ -1,5 +1,6 @@
 import traceback
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 
 class BasePanel(QWidget):
@@ -25,4 +26,6 @@ class BasePanel(QWidget):
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create Qt UI elements. Override in subclasses."""
+        pass
+        pass
         pass

@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QTextEdit, QFrame, QVBoxLayout, QPushButton
+from PySide6.QtWidgets import QFrame, QPushButton, QTextEdit, QVBoxLayout
 
 from lightshow.gui.panels.base_panel import BasePanel
 from lightshow.utils.logger import LoggerCore

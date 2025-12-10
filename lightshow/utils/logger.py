@@ -1,9 +1,10 @@
 import datetime
 import os
-from pathlib import Path
 import threading
+from pathlib import Path
 from queue import Queue
-from PyQt6.QtWidgets import QTextEdit
+
+from PySide6.QtWidgets import QTextEdit
 
 
 class LoggerCore:
@@ -124,4 +125,6 @@ class Logger:
         self.core.emit("WARN", self.cls_name, msg)
 
     def error(self, msg):
+        self.core.emit("ERROR", self.cls_name, msg)
+        self.core.emit("ERROR", self.cls_name, msg)
         self.core.emit("ERROR", self.cls_name, msg)

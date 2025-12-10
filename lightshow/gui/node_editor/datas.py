@@ -1,9 +1,7 @@
-import threading
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
 
-from qtpynodeeditor import NodeData, NodeDataType
-
+"""
 DecimalType = NodeDataType(id="decimal", name="Decimal")
 StringType = NodeDataType(id="string", name="String")
 IntegerType = NodeDataType(id="integer", name="Integer")
@@ -11,27 +9,21 @@ ColorType = NodeDataType(id="color", name="Color")
 ColorGradientType = NodeDataType(id="color_gradient", name="Color Gradient")
 BooleanType = NodeDataType(id="boolean", name="Boolean")
 AnimationType = NodeDataType(id="animation", name="Animation")
+"""
 
 T = TypeVar("T")
 
 
-class CustomNodeData(NodeData, Generic[T], ABC):
+class NodeDataType(Generic[T], ABC):
+    id: str
+    name: str
     default_value: T
-    data_type: NodeDataType
 
-    def __init__(self, value: T) -> None:
-        self._lock = threading.RLock()
-        self._value = value
+    color: str = "#FFFFFF"  # Default color for this data type in hex format
 
-    @property
-    def lock(self) -> threading.RLock:
-        return self._lock
-
-    def value(self) -> T:
-        return self._value
-
+    @staticmethod
     @abstractmethod
-    def value_as_text(self) -> str:
+    def value_as_text(value: T) -> str:
         pass
 
     @staticmethod
@@ -45,12 +37,15 @@ class CustomNodeData(NodeData, Generic[T], ABC):
         pass
 
 
-class BooleanData(CustomNodeData[bool]):
-    data_type = BooleanType
+class BooleanData(NodeDataType[bool]):
     default_value = False
+    id = "boolean"
+    name = "Boolean"
+    color = "#FF5100"
 
-    def value_as_text(self) -> str:
-        return "True" if self._value else "False"
+    @staticmethod
+    def value_as_text(value) -> str:
+        return "True" if value else "False"
 
     @staticmethod
     def validate(value: str) -> bool:
@@ -61,12 +56,15 @@ class BooleanData(CustomNodeData[bool]):
         return value.lower() == "true" or value == "1"
 
 
-class DecimalData(CustomNodeData[float]):
-    data_type = DecimalType
+class DecimalData(NodeDataType[float]):
     default_value = 0.0
+    id = "decimal"
+    name = "Decimal"
+    color = "#00FF15"
 
-    def value_as_text(self) -> str:
-        return "%g" % self._value
+    @staticmethod
+    def value_as_text(value) -> str:
+        return "%g" % value
 
     @staticmethod
     def validate(value: str) -> bool:
@@ -81,12 +79,15 @@ class DecimalData(CustomNodeData[float]):
         return float(value)
 
 
-class IntegerData(CustomNodeData[int]):
-    data_type = IntegerType
+class IntegerData(NodeDataType[int]):
     default_value = 0
+    id = "int"
+    name = "Integer"
+    color = "#0099FF"
 
-    def integer_as_text(self) -> str:
-        return str(self._value)
+    @staticmethod
+    def integer_as_text(value) -> str:
+        return str(value)
 
     @staticmethod
     def validate(value: str) -> bool:

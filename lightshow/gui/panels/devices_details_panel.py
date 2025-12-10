@@ -1,18 +1,19 @@
 from typing import List, Type
 
-from PyQt6.QtWidgets import (
-    QVBoxLayout,
+from PySide6.QtWidgets import (
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QPushButton,
-    QFrame,
     QProgressBar,
+    QPushButton,
+    QVBoxLayout,
 )
 
-from .base_panel import BasePanel
-from lightshow.utils import Config, live_devices
 from lightshow.devices.device import Device
+from lightshow.utils import Config, live_devices
+
+from .base_panel import BasePanel
 
 
 class DeviceDetailsPanel(BasePanel):

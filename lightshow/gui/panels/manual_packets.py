@@ -1,5 +1,5 @@
-from PyQt6.QtCore import QSize
-from PyQt6.QtWidgets import QGridLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout
+from PySide6.QtCore import QSize
+from PySide6.QtWidgets import QGridLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout
 
 from lightshow.devices.device import PacketData, PacketStatus, PacketType
 
@@ -45,4 +45,5 @@ class ManualPacketsSenderPanel(BasePanel):
             grid.addWidget(button, i // 3, i % 3)
 
         layout.addWidget(title_label)
+        layout.addLayout(grid)
         layout.addLayout(grid)

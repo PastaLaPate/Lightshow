@@ -154,9 +154,9 @@ def get_audio_devices() -> List[str]:
 
 def main():
     global ui_manager
-    from PyQt6.QtCore import QTimer
-    from PyQt6.QtGui import QIcon
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtCore import QTimer
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import QApplication
 
     audio_devices = get_audio_devices()
 

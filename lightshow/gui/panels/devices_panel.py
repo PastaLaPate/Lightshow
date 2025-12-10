@@ -1,17 +1,18 @@
 from typing import List, Type
 
-from PyQt6.QtWidgets import (
-    QVBoxLayout,
+from PySide6.QtWidgets import (
+    QComboBox,
     QHBoxLayout,
     QLabel,
     QListWidget,
-    QComboBox,
     QPushButton,
+    QVBoxLayout,
 )
 
-from .base_panel import BasePanel
-from lightshow.utils import Config
 from lightshow.devices.device import Device
+from lightshow.utils import Config
+
+from .base_panel import BasePanel
 
 
 class DevicesPanel(BasePanel):
