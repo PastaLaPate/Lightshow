@@ -86,7 +86,7 @@ class IntegerData(NodeDataType[int]):
     color = "#0099FF"
 
     @staticmethod
-    def integer_as_text(value) -> str:
+    def value_as_text(value) -> str:
         return str(value)
 
     @staticmethod

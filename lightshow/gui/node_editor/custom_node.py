@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Set, Type, TypeVar
+from typing import Any, Dict, Set, Type, TypeVar
 
-from NodeGraphQt import BaseNode, Port
+from NodeGraphQt import BaseNode, NodeBaseWidget
 from NodeGraphQt.constants import PortTypeEnum
 from NodeGraphQt.errors import PortRegistrationError
-from NodeGraphQt.base.port import PortModel
+from PySide6.QtWidgets import QLabel
 
 from lightshow.gui.node_editor.datas import NodeDataType
 from lightshow.gui.node_editor.typed_port import TypedPort
@@ -18,8 +18,8 @@ class CustomNode(BaseNode, ABC):
 
     def __init__(self, qgraphics_item=None):
         super().__init__(qgraphics_item)
-        self._cache = None          # stores the last computed output
-        self._dirty = True          # must be recomputed
+        self._cache = None  # stores the last computed output
+        self._dirty = True  # must be recomputed
         """
         self.input_port_connected.connect(lambda *args: self.mark_dirty())
         self.property_changed.connect(lambda *args: self.mark_dirty())"""
@@ -80,7 +80,7 @@ class CustomNode(BaseNode, ABC):
         self._outputs.append(port)
         self.model.outputs[port.name()] = port.model
         return port
-    
+
     def evaluate(self) -> Dict[str, Any]:
         """Safely compute this node’s outputs."""
         return self._safe_compute(set())
@@ -93,8 +93,8 @@ class CustomNode(BaseNode, ABC):
             {output_port_name: value}
         """
         raise NotImplementedError
-    
-    def _safe_compute(self, visited: Set['CustomNode']) -> Dict[str, Any]:
+
+    def _safe_compute(self, visited: Set["CustomNode"]) -> Dict[str, Any]:
         # cycle detection
         if self in visited:
             raise RuntimeError(f"Cycle detected at node '{self.name()}'!")
@@ -117,28 +117,32 @@ class CustomNode(BaseNode, ABC):
         self._cache = output
         self._dirty = False
         return output
-    
-    def _evaluate_input_port(self, port: Port, visited: Set['CustomNode']):
+
+    def _evaluate_input_port(self, port: TypedPort, visited: Set["CustomNode"]):
         """Return value from what this input port is connected to."""
         conns = port.connected_ports()
         if not conns:
-            return None
+            return port.data_type.default_value
 
         src_port = conns[0]
         src_node = src_port.node()
 
         # only CustomNode supports evaluation
         if not isinstance(src_node, CustomNode):
-            return None
+            return port.data_type.default_value
+
+        if not isinstance(src_port, TypedPort):
+            return port.data_type.default_value
 
         upstream_output = src_node._safe_compute(visited)
 
         # If upstream has 1 output, use that value
-        if len(upstream_output) == 1:
-            return next(iter(upstream_output.values()))
-
-        # Otherwise match output port by name
-        return upstream_output.get(src_port.name(), None)
+        out = (
+            next(iter(upstream_output.values()))
+            if len(upstream_output) == 1
+            else upstream_output.get(src_port.name(), None)
+        )
+        return out if out is not None else src_port.data_type.default_value
 
     def mark_dirty(self):
         """Call this whenever parameters or ports change."""
@@ -150,3 +154,55 @@ class CustomNode(BaseNode, ABC):
                     node = other.node()
                     if isinstance(node, CustomNode):
                         node.mark_dirty()
+
+
+class DisplayNodeWidget(NodeBaseWidget):
+    def __init__(self, parent=None, name=None, label="", default=""):
+        super().__init__(parent, name, label)
+        self._wlabel = QLabel(default)
+        self._wlabel.setMinimumSize(100, 25)
+        self.set_custom_widget(self._wlabel)
+
+    def set_value(self, text):
+        self._wlabel.setText(text)
+
+    def get_value(self):
+        return self._wlabel.text()
+
+
+class DisplayNode(CustomNode, ABC):
+
+    DATA_TYPE: Type[NodeDataType]
+
+    def __init__(self, qgraphics_item=None):
+        super().__init__(qgraphics_item)
+        self.v_in = self.add_typed_input(
+            data_type=self.DATA_TYPE,
+            name=self.DATA_TYPE.name + " In",
+            multi_input=False,
+            display_name=True,
+        )
+
+        widget = DisplayNodeWidget(
+            self._view,
+            "display",
+            "Result",
+            self.DATA_TYPE.value_as_text(self.DATA_TYPE.default_value),
+        )
+        self._label = widget._wlabel
+        self.add_custom_widget(widget)
+
+    def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        key = self.DATA_TYPE.name + " In"
+        value = inputs.get(key, None)
+        text = self.DATA_TYPE.value_as_text("" if value is None else value)
+        self._label.setText(text)
+        return {}
+
+    def mark_dirty(self):
+        super().mark_dirty()
+        # auto-refresh the shown value
+        try:
+            self.evaluate()
+        except RuntimeError:
+            pass
