@@ -1,33 +1,21 @@
+from typing import Any, Dict
 from PySide6.QtWidgets import QCheckBox
-from qtpy.QtWidgets import QWidget
-from qtpynodeeditor import NodeDataModel, PortType
+from lightshow.gui.node_editor.custom_node import CustomNode
 
 from lightshow.gui.node_editor.datas import BooleanData
 
 
-class BooleanNodeDataModel(NodeDataModel):
-    name = "Boolean Source"
-    caption_visible = False
-    num_ports = {
-        PortType.input: 0,
-        PortType.output: 1,
-    }
-    port_caption = {"output": {0: "Output"}}
-    data_type = BooleanData.data_type
+class BooleanNodeDataModel(CustomNode):
+    __identifier__ = "io.github.pastalapate"
 
-    def __init__(self, style=None, parent=None):
-        super().__init__(style, parent)
-        self._value = False
-        self.checkbox = QCheckBox()
-        self.checkbox.setChecked(False)
+    NODE_NAME = "Boolean Test"
 
-    @property
-    def value(self) -> bool:
-        return self._value
+    def __init__(self):
 
-    def embedded_widget(self) -> QWidget:
-        return self.checkbox
-
-    def on_checkbox_toggled(self, state):
-        self._value = state
-        self.data_updated.emit(0)
+        super(BooleanNodeDataModel, self).__init__()
+        self.add_checkbox('in_cb', '', "Out", False)
+        self.add_typed_output(BooleanData, name="bool_out")
+    
+    def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        return {"bool_out": self.get_property("in_cb")}
+    
