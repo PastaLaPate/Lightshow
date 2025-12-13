@@ -86,7 +86,7 @@ class IntegerData(NodeDataType[int]):
     color = "#0099FF"
 
     @staticmethod
-    def value_as_text(value) -> str:
+    def value_as_text(value: int) -> str:
         return str(value)
 
     @staticmethod
@@ -100,3 +100,26 @@ class IntegerData(NodeDataType[int]):
     @staticmethod
     def parse(value: str) -> int:
         return int(value)
+
+
+class StringData(NodeDataType[str]):
+    default_value = ""
+    id = "string"
+    name = "String"
+    color = "#FF00DD"
+
+    @staticmethod
+    def value_as_text(value: str) -> str:
+        return value
+
+    @staticmethod
+    def validate(value: str) -> bool:
+        try:
+            str(value)
+            return True
+        except ValueError:
+            return False
+
+    @staticmethod
+    def parse(value: str) -> str:
+        return str(value)

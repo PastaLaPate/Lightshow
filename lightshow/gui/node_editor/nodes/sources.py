@@ -3,11 +3,18 @@ from typing import Any, Dict
 from NodeGraphQt import NodeGraph
 
 from lightshow.gui.node_editor.custom_node import CustomNode
-from lightshow.gui.node_editor.datas import BooleanData, DecimalData, IntegerData
+from lightshow.gui.node_editor.datas import (
+    BooleanData,
+    DecimalData,
+    IntegerData,
+    StringData,
+)
 
 
 def register_sources(graph: NodeGraph):
-    graph.register_nodes([BooleanSourceNode, IntegerSourceNode, FloatSourceNode])
+    graph.register_nodes(
+        [BooleanSourceNode, IntegerSourceNode, FloatSourceNode, StringSourceNode]
+    )
 
 
 class BooleanSourceNode(CustomNode):
@@ -17,11 +24,11 @@ class BooleanSourceNode(CustomNode):
 
     def __init__(self, qgraphics_item=None):
         super().__init__(qgraphics_item)
-        self.add_checkbox("in_cb", "", "Out", False)
-        self.add_typed_output(BooleanData, name="bool_out", multi_output=True)
+        self.add_checkbox("in_cb", "", "Value", False)
+        self.add_typed_output(BooleanData, name="Out", multi_output=True)
 
     def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
-        return {"bool_out": self.get_property("in_cb")}
+        return {"Out": self.get_property("in_cb")}
 
 
 class IntegerSourceNode(CustomNode):
@@ -32,15 +39,13 @@ class IntegerSourceNode(CustomNode):
     def __init__(self, qgraphics_item=None):
         super().__init__(qgraphics_item)
         self.add_text_input("in_text", "", "0", "Integer val here")
-        self.add_typed_output(IntegerData, name="int_out", multi_output=True)
+        self.add_typed_output(IntegerData, name="Out", multi_output=True)
 
     def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         value = self.get_property("in_text")
         value = value if isinstance(value, str) else ""
 
-        return {
-            "int_out": IntegerData.parse(value) if IntegerData.validate(value) else 0
-        }
+        return {"Out": IntegerData.parse(value) if IntegerData.validate(value) else 0}
 
 
 class FloatSourceNode(CustomNode):
@@ -51,14 +56,31 @@ class FloatSourceNode(CustomNode):
     def __init__(self, qgraphics_item=None):
         super().__init__(qgraphics_item)
         self.add_text_input("in_text", "", "0.0", "Float val here")
-        self.add_typed_output(DecimalData, name="float_out", multi_output=True)
+        self.add_typed_output(DecimalData, name="Out", multi_output=True)
 
     def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         value = self.get_property("in_text")
         value = value if isinstance(value, str) else ""
 
         return {
-            "float_out": (
-                DecimalData.parse(value) if DecimalData.validate(value) else 0.0
-            )
+            "Out": (DecimalData.parse(value) if DecimalData.validate(value) else 0.0)
+        }
+
+
+class StringSourceNode(CustomNode):
+    __identifier__ = "io.github.pastalapate.sources"
+
+    NODE_NAME = "String Source"
+
+    def __init__(self, qgraphics_item=None):
+        super().__init__(qgraphics_item)
+        self.add_text_input("in_text", "", "", "Text here")
+        self.add_typed_output(StringData, name="Out", multi_output=True)
+
+    def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        value = self.get_property("in_text")
+        value = value if isinstance(value, str) else ""
+
+        return {
+            "Out": (StringData.parse(value) if StringData.validate(value) else "0.0")
         }

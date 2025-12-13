@@ -197,6 +197,7 @@ class DisplayNodeWidget(NodeBaseWidget):
 
 class DisplayNode(CustomNode, ABC):
 
+    __identifier__ = "io.github.pastalapate.displays"
     DATA_TYPE: Type[NodeDataType]
 
     def __init__(self, qgraphics_item=None):
