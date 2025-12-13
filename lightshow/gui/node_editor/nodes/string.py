@@ -3,11 +3,11 @@ from typing import Any, Dict
 from NodeGraphQt import NodeGraph
 
 from lightshow.gui.node_editor.custom_node import CustomNode
-from lightshow.gui.node_editor.datas import IntegerData, StringData
+from lightshow.gui.node_editor.datas import BooleanData, IntegerData, StringData
 
 
 def register_string_operations(graph: NodeGraph):
-    graph.register_nodes([ConcenateStrings, StringLen])
+    graph.register_nodes([ConcenateStrings, StringLen, InString])
 
 
 class ConcenateStrings(CustomNode):
@@ -43,5 +43,9 @@ class InString(CustomNode):
 
     def __init__(self, qgraphics_item=None):
         super().__init__(qgraphics_item)
-        self.add_typed_input(StringData, "Find string x")
-        self.add_typed_input(StringData, "In string y")
+        self.add_typed_input(StringData, "Is X")
+        self.add_typed_input(StringData, "In Y")
+        self.add_typed_output(BooleanData, "Is X in Y")
+
+    def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
+        return {"Is X in Y": inputs["Is X"] in inputs["In Y"]}

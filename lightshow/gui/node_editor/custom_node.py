@@ -4,8 +4,9 @@ from typing import Any, Dict, Set, Type, TypeVar
 from NodeGraphQt import BaseNode, NodeBaseWidget
 from NodeGraphQt.constants import PortTypeEnum
 from NodeGraphQt.errors import PortRegistrationError
+from NodeGraphQt.qgraphics.node_base import NodeItem
 from NodeGraphQt.widgets.node_widgets import NodeButton
-from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QGraphicsTextItem, QLabel
 
 from lightshow.gui.node_editor.datas import NodeDataType
 from lightshow.gui.node_editor.typed_port import TypedPort, TypedPortItem
@@ -21,9 +22,10 @@ class CustomNode(BaseNode, ABC):
         super().__init__(qgraphics_item)
         self._cache = None  # stores the last computed output
         self._dirty = True  # must be recomputed
-        """
-        self.input_port_connected.connect(lambda *args: self.mark_dirty())
-        self.property_changed.connect(lambda *args: self.mark_dirty())"""
+        if isinstance(self._view, NodeItem):
+            font = self._view._text_item.font()
+            font.setPixelSize(20)
+            self._view._text_item.setFont(font)
 
     def generate_typed_port(
         self,
@@ -40,7 +42,17 @@ class CustomNode(BaseNode, ABC):
         view.multi_connection = multi
         view.display_name = display_name
         view.locked = locked
-        return self._view._add_port(view)
+        self._view._add_port(view)
+        text = None
+        if port_type.value == PortTypeEnum.IN.value:
+            text = self._view._input_items[view]
+        elif port_type.value == PortTypeEnum.OUT.value:
+            text = self._view._output_items[view]
+        if isinstance(text, QGraphicsTextItem):
+            font = text.font()
+            font.setPointSize(12)
+            text.setFont(font)
+        return view
 
     def add_typed_input(
         self,

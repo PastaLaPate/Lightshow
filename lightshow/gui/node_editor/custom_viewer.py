@@ -4,10 +4,11 @@ from typing import Type
 from NodeGraphQt.base.factory import NodeFactory
 from NodeGraphQt.constants import PortTypeEnum
 from NodeGraphQt.qgraphics.node_base import NodeItem
+from NodeGraphQt.qgraphics.pipe import PipeItem
 from NodeGraphQt.qgraphics.port import PortItem
 from NodeGraphQt.widgets.viewer import NodeViewer
 from PySide6.QtCore import QModelIndex, Qt, Signal
-from PySide6.QtGui import QCursor, QStandardItem, QStandardItemModel
+from PySide6.QtGui import QCursor, QKeyEvent, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QDialog,
@@ -19,6 +20,31 @@ from PySide6.QtWidgets import (
 from lightshow.gui.node_editor.custom_node import CustomNode
 from lightshow.gui.node_editor.datas import NodeDataType
 from lightshow.gui.node_editor.typed_port import TypedPort, TypedPortItem
+
+
+class SearchLineEdit(QLineEdit):
+    nav_down = Signal()
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        key = event.key()
+
+        if key == Qt.Key.Key_Down:
+            self.nav_down.emit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+
+class SearchTree(QTreeView):
+    return_key = Signal()
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        key = event.key()
+        if key == Qt.Key.Key_Return:
+            self.return_key.emit()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
 
 class CustomTabSearchTreeWidget(QDialog):
@@ -44,19 +70,21 @@ class CustomTabSearchTreeWidget(QDialog):
         self._node_factory = node_factory
 
         # ---------------- Line edit for search ----------------
-        self.line_edit = QLineEdit()
+        self.line_edit = SearchLineEdit()
         self.line_edit.setPlaceholderText("Search...")
+        self.line_edit.nav_down.connect(self._on_nav_down)
         self.line_edit.textChanged.connect(self._on_text_changed)
         self.line_edit.returnPressed.connect(self._on_return_pressed)
 
         # ---------------- Tree view ----------------
-        self.tree = QTreeView()
+        self.tree = SearchTree()
         self.tree.setIndentation(12)
         self.tree.setHeaderHidden(True)
         self.model = QStandardItemModel()
         self.tree.setModel(self.model)
         self.tree.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tree.clicked.connect(self._on_item_double_clicked)
+        self.tree.return_key.connect(self._on_return_pressed)
 
         # ---------------- Layout ----------------
         layout = QVBoxLayout(self)
@@ -183,6 +211,10 @@ class CustomTabSearchTreeWidget(QDialog):
         self.tree.setCurrentIndex(index)
         self.tree.scrollTo(index, QAbstractItemView.ScrollHint.PositionAtCenter)
 
+    def _on_nav_down(self):
+        self.tree.setFocus()
+        self.tree.setCurrentIndex(self.tree.indexBelow(self.tree.currentIndex()))
+
     # ---------------- Fuzzy search ----------------
     def _on_text_changed(self, text):
         """Filter tree based on fuzzy search"""
@@ -282,6 +314,29 @@ class CustomNodeViewer(NodeViewer):
         self._node_factory = value
         self._search_widget._node_factory = value
 
+    def establish_connection(self, start_port, end_port):
+        """
+        establish a new pipe connection.
+        (adds a new pipe item to draw between 2 ports)
+        """
+        pipe = PipeItem()
+        if isinstance(start_port, TypedPortItem):
+            pipe._color = (
+                *tuple(
+                    int(start_port._data_type.color.lstrip("#")[i : i + 2], 16)
+                    for i in (0, 2, 4)
+                ),
+                255,
+            )  # Hex to rgb + 255 for alpha
+            pipe.reset()
+        self.scene().addItem(pipe)
+        pipe.set_connections(start_port, end_port)
+        pipe.draw_path(pipe.input_port, pipe.output_port)
+        if start_port.node.selected or end_port.node.selected:
+            pipe.highlight()
+        if not start_port.node.visible or not end_port.node.visible:
+            pipe.hide()
+
     def apply_live_connection(self, event):
         """
         triggered mouse press/release event for the scene.
@@ -293,7 +348,7 @@ class CustomNodeViewer(NodeViewer):
             event (QtWidgets.QGraphicsSceneMouseEvent):
                 The event handler from the QtWidgets.QGraphicsScene
         """
-        if not self._LIVE_PIPE.isVisible():
+        if not self._LIVE_PIPE.isVisible() or not self._start_port:
             return
 
         self._start_port.hovered = False
