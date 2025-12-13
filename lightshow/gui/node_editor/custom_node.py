@@ -2,10 +2,11 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, Set, Type, TypeVar
 
 from NodeGraphQt import BaseNode, NodeBaseWidget
-from NodeGraphQt.constants import PortTypeEnum
+from NodeGraphQt.constants import PortEnum, PortTypeEnum
 from NodeGraphQt.errors import PortRegistrationError
 from NodeGraphQt.qgraphics.node_base import NodeItem
 from NodeGraphQt.widgets.node_widgets import NodeButton
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QGraphicsTextItem, QLabel
 
 from lightshow.gui.node_editor.datas import NodeDataType
@@ -16,16 +17,86 @@ T = TypeVar("T")
 """Adapted from https://github.com/jchanvfx/NodeGraphQt"""
 
 
+class CustomNodeItem(NodeItem):
+
+    def __init__(self, name="node", parent=None):
+        super().__init__(name, parent)
+        font = self._text_item.font()
+        font.setPixelSize(20)
+        self._text_item.setFont(font)
+
+    def _align_ports_horizontal(self, v_offset):
+        width = self._width
+        txt_offset = PortEnum.CLICK_FALLOFF.value - 2
+        spacing = 1
+
+        # adjust input position
+        inputs = [p for p in self.inputs if p.isVisible()]
+        if inputs:
+            port_width = inputs[0].boundingRect().width()
+            port_height = inputs[0].boundingRect().height()
+            port_x = (port_width / 2) * -1
+            port_y = v_offset
+            for port in inputs:
+                port.setPos(port_x, port_y)
+                port_y += port_height + spacing
+        # adjust input text position
+        for port, text in self._input_items.items():
+            if port.isVisible():
+                txt_x = port.boundingRect().width() / 2 - txt_offset
+                text.setPos(txt_x, port.y())
+
+        # adjust output position
+        outputs = [p for p in self.outputs if p.isVisible()]
+        if outputs:
+            port_width = outputs[0].boundingRect().width()
+            port_height = outputs[0].boundingRect().height()
+            port_x = width - (port_width / 2)
+            port_y = v_offset
+            for port in outputs:
+                port.setPos(port_x, port_y)
+                port_y += port_height + spacing
+        # adjust output text position
+        for port, text in self._output_items.items():
+            if port.isVisible():
+                txt_width = text.boundingRect().width() - txt_offset
+                txt_x = port.x() - txt_width
+                text.setPos(txt_x, port.y())
+
+    def _add_port(self, port):
+        """
+        Adds a port qgraphics item into the node.
+
+        Args:
+            port (PortItem): port item.
+
+        Returns:
+            PortItem: port qgraphics item.
+        """
+        text = QGraphicsTextItem(port.name, self)
+        text.document().setDefaultTextOption(
+            Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignVCenter
+        )
+        font = text.font()
+        font.setPointSize(12)
+        text.setFont(font)
+        text.setVisible(port.display_name)
+        text.setCacheMode(QGraphicsTextItem.CacheMode.DeviceCoordinateCache)
+        if port.port_type == PortTypeEnum.IN.value:
+            self._input_items[port] = text
+        elif port.port_type == PortTypeEnum.OUT.value:
+            self._output_items[port] = text
+        if self.scene():
+            self.post_init()
+        return port
+
+
 class CustomNode(BaseNode, ABC):
 
     def __init__(self, qgraphics_item=None):
-        super().__init__(qgraphics_item)
+        super().__init__(CustomNodeItem)
         self._cache = None  # stores the last computed output
         self._dirty = True  # must be recomputed
-        if isinstance(self._view, NodeItem):
-            font = self._view._text_item.font()
-            font.setPixelSize(20)
-            self._view._text_item.setFont(font)
 
     def generate_typed_port(
         self,
@@ -43,15 +114,6 @@ class CustomNode(BaseNode, ABC):
         view.display_name = display_name
         view.locked = locked
         self._view._add_port(view)
-        text = None
-        if port_type.value == PortTypeEnum.IN.value:
-            text = self._view._input_items[view]
-        elif port_type.value == PortTypeEnum.OUT.value:
-            text = self._view._output_items[view]
-        if isinstance(text, QGraphicsTextItem):
-            font = text.font()
-            font.setPointSize(12)
-            text.setFont(font)
         return view
 
     def add_typed_input(

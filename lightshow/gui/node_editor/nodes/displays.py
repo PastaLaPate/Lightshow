@@ -3,6 +3,7 @@ from NodeGraphQt import NodeGraph
 from lightshow.gui.node_editor.custom_node import DisplayNode
 from lightshow.gui.node_editor.datas import (
     BooleanData,
+    ColorData,
     DecimalData,
     IntegerData,
     StringData,
@@ -10,7 +11,9 @@ from lightshow.gui.node_editor.datas import (
 
 
 def register_displays(graph: NodeGraph):
-    graph.register_nodes([BooleanDisplay, IntegerDisplay, FloatDisplay, StringDisplay])
+    graph.register_nodes(
+        [BooleanDisplay, IntegerDisplay, FloatDisplay, StringDisplay, ColorDisplay]
+    )
 
 
 class BooleanDisplay(DisplayNode):
@@ -31,3 +34,8 @@ class FloatDisplay(DisplayNode):
 class StringDisplay(DisplayNode):
     NODE_NAME = "String Display"
     DATA_TYPE = StringData
+
+
+class ColorDisplay(DisplayNode):
+    NODE_NAME = "Color Display"
+    DATA_TYPE = ColorData

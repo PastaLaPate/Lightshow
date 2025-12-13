@@ -6,6 +6,7 @@ from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.gui.node_editor.custom_viewer import CustomNodeViewer
+from lightshow.gui.node_editor.nodes.colors import register_colors
 from lightshow.gui.node_editor.nodes.string import register_string_operations
 
 from .custom_node import CustomNode
@@ -69,6 +70,7 @@ class NodeWindow(QWidget):
         register_displays(self.graph)
         register_math_nodes(self.graph)
         register_string_operations(self.graph)
+        register_colors(self.graph)
         self.graph.register_node(NotGate)
         self.viewer.node_factory = self.graph._node_factory
         hotkey_path = Path(BASE_PATH, "hotkeys", "hotkeys.json")
