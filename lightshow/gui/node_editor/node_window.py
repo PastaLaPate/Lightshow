@@ -2,10 +2,11 @@ from pathlib import Path
 from typing import Any, Dict
 
 from NodeGraphQt import NodeGraph
+from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QVBoxLayout, QWidget
-from Qt import QtWidgets
 
 from lightshow.gui.node_editor.custom_viewer import CustomNodeViewer
+from lightshow.gui.node_editor.nodes.string import register_string_operations
 
 from .custom_node import CustomNode
 from .datas import BooleanData
@@ -62,18 +63,19 @@ class NotGate(CustomNode):
 class NodeWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.viewer = CustomNodeViewer(parent=self, undo_stack=QtWidgets.QUndoStack())
+        self.viewer = CustomNodeViewer(parent=self, undo_stack=QUndoStack())
         self.graph = NodeGraph(viewer=self.viewer)
         register_sources(self.graph)
         register_displays(self.graph)
         register_math_nodes(self.graph)
+        register_string_operations(self.graph)
         self.graph.register_node(NotGate)
         self.viewer.node_factory = self.graph._node_factory
         hotkey_path = Path(BASE_PATH, "hotkeys", "hotkeys.json")
         self.graph.set_context_menu_from_file(hotkey_path, "graph")
         hook_graph_signals(self.graph)
         layout = QVBoxLayout()
-        layout.addWidget(self.graph.widget)
+        layout.addWidget(self.graph.widget)  # type: ignore
         self.setLayout(layout)
 
         self.setWindowTitle("Node Editor")

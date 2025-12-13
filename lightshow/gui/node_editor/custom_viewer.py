@@ -6,7 +6,7 @@ from NodeGraphQt.constants import PortTypeEnum
 from NodeGraphQt.qgraphics.node_base import NodeItem
 from NodeGraphQt.qgraphics.port import PortItem
 from NodeGraphQt.widgets.viewer import NodeViewer
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QModelIndex, Qt, Signal
 from PySide6.QtGui import QCursor, QStandardItem, QStandardItemModel
 from PySide6.QtWidgets import (
     QAbstractItemView,
@@ -116,7 +116,6 @@ class CustomTabSearchTreeWidget(QDialog):
     def build_tree(self):
         self.model.clear()
         root = self.model.invisibleRootItem()
-
         # build raw namespace tree
         tree = {}
         for display_name, full_type in self._filtered_node_dict.items():
@@ -142,7 +141,7 @@ class CustomTabSearchTreeWidget(QDialog):
             return ".".join(parts), cur
 
         # build Qt tree
-        def add_branch(parent, subtree):
+        def add_branch(parent: QStandardItem, subtree):
             # add nodes
             for name, node_type in subtree.get("_nodes", {}).items():
                 item = QStandardItem(name)
@@ -169,36 +168,50 @@ class CustomTabSearchTreeWidget(QDialog):
 
         self.tree.expandToDepth(0)
 
+    def select_first(self):
+        if not getattr(self, "_visible_indexes", None):
+            return
+
+        index = self._visible_indexes[0]
+
+        # ensure all parents are expanded
+        parent = index.parent()
+        while parent.isValid():
+            self.tree.expand(parent)
+            parent = parent.parent()
+
+        self.tree.setCurrentIndex(index)
+        self.tree.scrollTo(index, QAbstractItemView.ScrollHint.PositionAtCenter)
+
     # ---------------- Fuzzy search ----------------
     def _on_text_changed(self, text):
         """Filter tree based on fuzzy search"""
         matcher = text.lower()
+        self._visible_indexes = []
 
         def apply_filter(item):
             visible = False
+
             for i in range(item.rowCount()):
                 child = item.child(i)
                 if apply_filter(child):
                     visible = True
 
-            # Leaf node
             node_type = item.data(Qt.ItemDataRole.UserRole)
             if node_type and matcher in item.text().lower():
                 visible = True
+                self._visible_indexes.append(item.index())
 
-            # Show/hide row
-            parent_index = (
-                item.parent().index()
-                if item.parent()
-                else self.model.index(0, 0).parent()
-            )
+            parent_index = item.parent().index() if item.parent() else QModelIndex()
             self.tree.setRowHidden(item.row(), parent_index, not visible)
             return visible
 
         root = self.model.invisibleRootItem()
         for i in range(root.rowCount()):
             apply_filter(root.child(i))
+
         self.tree.expandAll()
+        self.select_first()
 
     # ---------------- Keyboard/Return ----------------
     def _on_return_pressed(self):
@@ -453,6 +466,11 @@ class CustomNodeViewer(NodeViewer):
         if clear:
             self._search_widget._clear_node_dict_filter()
             self._search_widget.build_tree()
+        cursor = QCursor.pos()
+        self._search_widget.adjustSize()
+        self._search_widget.show()
+        self._search_widget.move(cursor)
+        self._search_widget.build_tree()
         cursor = QCursor.pos()
         self._search_widget.adjustSize()
         self._search_widget.show()
