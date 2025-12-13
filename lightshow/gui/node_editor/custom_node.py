@@ -8,7 +8,7 @@ from NodeGraphQt.widgets.node_widgets import NodeButton
 from PySide6.QtWidgets import QLabel
 
 from lightshow.gui.node_editor.datas import NodeDataType
-from lightshow.gui.node_editor.typed_port import TypedPort
+from lightshow.gui.node_editor.typed_port import TypedPort, TypedPortItem
 
 T = TypeVar("T")
 
@@ -25,6 +25,23 @@ class CustomNode(BaseNode, ABC):
         self.input_port_connected.connect(lambda *args: self.mark_dirty())
         self.property_changed.connect(lambda *args: self.mark_dirty())"""
 
+    def generate_typed_port(
+        self,
+        port_type: PortTypeEnum,
+        data_type: Type[NodeDataType[T]],
+        name: str = "input",
+        multi=False,
+        display_name=True,
+        locked=False,
+    ):
+        view = TypedPortItem(data_type, self._view)
+        view.name = name
+        view.port_type = port_type.value
+        view.multi_connection = multi
+        view.display_name = display_name
+        view.locked = locked
+        return self._view._add_port(view)
+
     def add_typed_input(
         self,
         data_type: Type[NodeDataType[T]],
@@ -38,8 +55,13 @@ class CustomNode(BaseNode, ABC):
                 'port name "{}" already registered.'.format(name)
             )
 
-        view = self.view.add_input(
-            name=name, multi_port=multi_input, display_name=display_name, locked=locked
+        view = self.generate_typed_port(
+            PortTypeEnum.IN,
+            data_type,
+            name,
+            multi_input,
+            display_name,
+            locked,
         )
 
         port = TypedPort(self, view, data_type)
@@ -65,11 +87,13 @@ class CustomNode(BaseNode, ABC):
                 'port name "{}" already registered.'.format(name)
             )
 
-        view = self.view.add_output(
-            name=name,
-            multi_port=multi_output,
-            display_name=display_name,
-            locked=locked,
+        view = self.generate_typed_port(
+            PortTypeEnum.OUT,
+            data_type,
+            name,
+            multi_output,
+            display_name,
+            locked,
         )
 
         port = TypedPort(self, view, data_type)

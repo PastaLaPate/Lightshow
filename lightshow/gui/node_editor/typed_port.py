@@ -8,8 +8,14 @@ from lightshow.gui.node_editor.datas import NodeDataType
 T = TypeVar("T")
 
 
+class TypedPortItem(PortItem):
+    def __init__(self, data_type: Type[NodeDataType[T]], parent=None):
+        super().__init__(parent)
+        self._data_type = data_type
+
+
 class TypedPort(Port):
-    def __init__(self, node, port: PortItem, data_type: Type[NodeDataType[T]]):
+    def __init__(self, node, port: TypedPortItem, data_type: Type[NodeDataType[T]]):
         # Color conversion from hell
         port.color = (
             *tuple(int(data_type.color.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)),
