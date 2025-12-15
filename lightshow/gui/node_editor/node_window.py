@@ -79,6 +79,7 @@ class NodeWindow(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self.graph.widget)  # type: ignore
         self.setLayout(layout)
+        self.setStyleSheet('QWidget {font: "Roboto Mono"}')
 
         self.setWindowTitle("Node Editor")
         self.resize(800, 600)

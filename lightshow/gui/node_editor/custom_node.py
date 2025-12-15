@@ -260,6 +260,9 @@ class DisplayNodeWidget(NodeBaseWidget):
         super().__init__(parent, name, label)
         self._wlabel = QLabel(default)
         self._wlabel.setMinimumSize(100, 25)
+        font = self._wlabel.font()
+        font.setKerning(False)
+        self._wlabel.setFont(font)
         self.set_custom_widget(self._wlabel)
 
     def set_value(self, text):
