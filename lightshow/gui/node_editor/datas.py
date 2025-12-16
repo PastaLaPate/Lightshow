@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Generic, TypedDict, TypeVar
+from typing import Any, Generic, List, TypedDict, TypeVar
 
 """
 DecimalType = NodeDataType(id="decimal", name="Decimal")
@@ -148,3 +148,41 @@ class ColorData(NodeDataType[Color]):
     @staticmethod
     def parse(value: str) -> Color:
         return ColorData.default_value
+
+
+class GenericData(NodeDataType[Any]):
+    default_value = None
+    id = "generic"
+    name = "Generic"
+    color = "#FFFFFF"
+
+    @staticmethod
+    def value_as_text(value):
+        return str(value)
+
+    @staticmethod
+    def validate(value):
+        return True
+
+    @staticmethod
+    def parse(value: str):
+        return None
+
+
+class ArrayData(NodeDataType[List[T]], Generic[T]):
+    id = "array"
+    name = "Array"
+    color = "#FFFFFF"
+    default_value: List[T] = []
+
+    @staticmethod
+    def value_as_text(value: List[T]) -> str:
+        return f"[{', '.join(map(str, value))}]"
+
+    @staticmethod
+    def validate(value: str) -> bool:
+        return True
+
+    @staticmethod
+    def parse(value: str) -> List[T]:
+        return []

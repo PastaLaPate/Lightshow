@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from lightshow.gui.node_editor.custom_node import CustomNode
-from lightshow.gui.node_editor.datas import NodeDataType
+from lightshow.gui.node_editor.datas import GenericData, NodeDataType
 from lightshow.gui.node_editor.typed_port import TypedPort, TypedPortItem
 
 
@@ -285,7 +285,7 @@ class CustomTabSearchTreeWidget(QDialog):
             for port in ports:
                 if not isinstance(port, TypedPort):
                     continue
-                if port.data_type == data_type:
+                if port.data_type == data_type and port.data_type != GenericData:
                     should_add = True
                     break
             if should_add:

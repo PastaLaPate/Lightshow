@@ -6,6 +6,9 @@ from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.gui.node_editor.custom_viewer import CustomNodeViewer
+from lightshow.gui.node_editor.generic_node import GenericNode
+from lightshow.gui.node_editor.nodes.arrays import register_arrays
+from lightshow.gui.node_editor.nodes.boolean import register_gates
 from lightshow.gui.node_editor.nodes.colors import register_colors
 from lightshow.gui.node_editor.nodes.string import register_string_operations
 
@@ -49,7 +52,6 @@ class NotGate(CustomNode):
     NODE_NAME = "Not Gate"
 
     def __init__(self):
-
         super(NotGate, self).__init__()
 
         # create an input port.
@@ -59,6 +61,20 @@ class NotGate(CustomNode):
 
     def compute(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         return {"bool_out": not inputs["bool_in"]}
+
+
+class TestGenericNode(GenericNode):
+    __identifier__ = "io.github.pastalapate"
+    NODE_NAME = "TestGeneric"
+
+    def __init__(self, qgraphics_item=None):
+        super().__init__(qgraphics_item)
+
+        self.add_generic_input(name="test1")
+        self.add_generic_output(name="test2")
+
+    def compute(self, inputs):
+        return {"test2": inputs["test1"]}
 
 
 class NodeWindow(QWidget):
@@ -71,7 +87,10 @@ class NodeWindow(QWidget):
         register_math_nodes(self.graph)
         register_string_operations(self.graph)
         register_colors(self.graph)
+        register_gates(self.graph)
+        register_arrays(self.graph)
         self.graph.register_node(NotGate)
+        self.graph.register_nodes([TestGenericNode])
         self.viewer.node_factory = self.graph._node_factory
         hotkey_path = Path(BASE_PATH, "hotkeys", "hotkeys.json")
         self.graph.set_context_menu_from_file(hotkey_path, "graph")

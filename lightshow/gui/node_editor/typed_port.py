@@ -1,12 +1,40 @@
-from typing import Type, TypeVar
+from typing import Type, TypeVar, get_origin, get_args, Any
 
 from NodeGraphQt import Port
 from NodeGraphQt.qgraphics.port import PortEnum, PortItem
 from PySide6 import QtCore, QtGui
 
-from lightshow.gui.node_editor.datas import NodeDataType
+from lightshow.gui.node_editor.datas import GenericData, NodeDataType
 
 T = TypeVar("T")
+
+
+def _split_type(t):
+    origin = get_origin(t) or t
+    args = get_args(t)
+    return origin, args
+
+
+def _array_types_compatible(a, b):
+    a_origin, a_args = _split_type(a)
+    b_origin, b_args = _split_type(b)
+
+    # Not the same container type
+    if a_origin is not b_origin:
+        return False
+
+    # Non-generic container (ArrayData without args)
+    if not a_args or not b_args:
+        return True
+
+    a_t = a_args[0]
+    b_t = b_args[0]
+
+    # Any matches everything
+    if a_t is Any or b_t is Any:
+        return True
+
+    return a_t is b_t
 
 
 class TypedPortItem(PortItem):
@@ -21,6 +49,35 @@ class TypedPortItem(PortItem):
     def color(self, color=(0, 0, 0, 255)):
         self._color = color
         self.update()
+
+    @PortItem.locked.setter
+    def locked(self, value=False):
+        self._locked = value
+        conn_type = "multi" if self._multi_connection else "single"
+        tooltip = "{}: {} ({})".format(self.name, self._data_type.name, conn_type)
+        if value:
+            tooltip += " (L)"
+        self.setToolTip(tooltip)
+
+    @property
+    def data_type(self):
+        return self._data_type
+
+    @data_type.setter
+    def data_type(self, ndata_t: Type[NodeDataType[T]]):
+        self._data_type = ndata_t
+        conn_type = "multi" if self._multi_connection else "single"
+        self.setToolTip(
+            "{}: {} ({})".format(self.name, self._data_type.name, conn_type)
+        )
+
+    @PortItem.multi_connection.setter
+    def multi_connection(self, mode):
+        self._multi_connection = mode
+        conn_type = "multi" if mode else "single"
+        self.setToolTip(
+            "{}: {} ({})".format(self.name, self._data_type.name, conn_type)
+        )
 
     def paint(self, painter, option, widget):
         """
@@ -99,11 +156,36 @@ class TypedPort(Port):
             255,
         )  # Hex to rgb + 255 for alpha
         super().__init__(node, port)
-        self.data_type = data_type
+        self.__view = port
+        self._data_type = data_type
+
+    @property
+    def data_type(self):
+        return self._data_type
+
+    @data_type.setter
+    def data_type(self, val: Type[NodeDataType[T]]):
+        self._data_type = val
+        self.__view.data_type = val
+        self.__view.color = (
+            *tuple(int(val.color.lstrip("#")[i : i + 2], 16) for i in (0, 2, 4)),
+            255,
+        )
 
     def connect_to(self, port=None, push_undo=True, emit_signal=True):
         if not isinstance(port, TypedPort):
             raise TypeError("Can only connect to another TypedPort")
-        if self.data_type != port.data_type:
+
+        # reject Generic ↔ Generic
+        if self.data_type is GenericData and port.data_type is GenericData:
             return
-        return super().connect_to(port, push_undo, emit_signal)
+
+        # allow Generic ↔ anything
+        if self.data_type is GenericData or port.data_type is GenericData:
+            return super().connect_to(port, push_undo, emit_signal)
+
+        # handle ArrayData[T]
+        if _array_types_compatible(self.data_type, port.data_type):
+            return super().connect_to(port, push_undo, emit_signal)
+
+        return

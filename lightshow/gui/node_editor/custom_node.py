@@ -18,7 +18,6 @@ T = TypeVar("T")
 
 
 class CustomNodeItem(NodeItem):
-
     def __init__(self, name="node", parent=None):
         super().__init__(name, parent)
         font = self._text_item.font()
@@ -92,7 +91,6 @@ class CustomNodeItem(NodeItem):
 
 
 class CustomNode(BaseNode, ABC):
-
     def __init__(self, qgraphics_item=None):
         super().__init__(CustomNodeItem)
         self._cache = None  # stores the last computed output
@@ -222,26 +220,31 @@ class CustomNode(BaseNode, ABC):
         conns = port.connected_ports()
         if not conns:
             return port.data_type.default_value
+        output_list = []
+        for src_port in conns:
+            src_node = src_port.node()
 
-        src_port = conns[0]
-        src_node = src_port.node()
+            # only CustomNode supports evaluation
+            if not isinstance(src_node, CustomNode):
+                return port.data_type.default_value
 
-        # only CustomNode supports evaluation
-        if not isinstance(src_node, CustomNode):
-            return port.data_type.default_value
+            if not isinstance(src_port, TypedPort):
+                return port.data_type.default_value
 
-        if not isinstance(src_port, TypedPort):
-            return port.data_type.default_value
+            upstream_output = src_node._safe_compute(visited)
 
-        upstream_output = src_node._safe_compute(visited)
-
-        # If upstream has 1 output, use that value
-        out = (
-            next(iter(upstream_output.values()))
-            if len(upstream_output) == 1
-            else upstream_output.get(src_port.name(), None)
+            # If upstream has 1 output, use that value
+            out = (
+                next(iter(upstream_output.values()))
+                if len(upstream_output) == 1
+                else upstream_output.get(src_port.name(), None)
+            )
+            output_list.append(out)
+        return (
+            (output_list if len(output_list) > 1 else output_list[0])
+            if len(output_list) > 0
+            else port.data_type.default_value
         )
-        return out if out is not None else src_port.data_type.default_value
 
     def mark_dirty(self):
         """Call this whenever parameters or ports change."""
@@ -273,7 +276,6 @@ class DisplayNodeWidget(NodeBaseWidget):
 
 
 class DisplayNode(CustomNode, ABC):
-
     __identifier__ = "io.github.pastalapate.displays"
     DATA_TYPE: Type[NodeDataType]
 
@@ -315,7 +317,6 @@ class DisplayNode(CustomNode, ABC):
         return {}
 
     def on_force_recompute(self):
-
         # mark this node and whole upstream graph dirty
         def mark_upstream(node):
             if not isinstance(node, CustomNode):

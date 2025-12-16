@@ -5,7 +5,7 @@ from typing import Any, Dict, Type, TypeVar, TypedDict
 from pathlib import Path
 
 from lightshow.devices import DEVICES_STR_TYPES
-from lightshow.devices.device import Device
+from lightshow.devices.utils.device import Device
 from lightshow.utils.logger import Logger
 
 
