@@ -285,7 +285,11 @@ class CustomTabSearchTreeWidget(QDialog):
             for port in ports:
                 if not isinstance(port, TypedPort):
                     continue
-                if port.data_type == data_type and port.data_type != GenericData:
+                if (
+                    port.data_type == data_type
+                    or port.data_type == GenericData
+                    or data_type == GenericData
+                ):
                     should_add = True
                     break
             if should_add:

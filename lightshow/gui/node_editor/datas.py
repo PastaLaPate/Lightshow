@@ -37,6 +37,25 @@ class NodeDataType(Generic[T], ABC):
         pass
 
 
+class ExecData(NodeDataType[None]):
+    default_value = None
+    id = "exec"
+    name = "Exec"
+    color = "#FFFFFF"
+
+    @staticmethod
+    def value_as_text(value):
+        return ""
+
+    @staticmethod
+    def validate(value):
+        return True
+
+    @staticmethod
+    def parse(value):
+        return None
+
+
 class BooleanData(NodeDataType[bool]):
     default_value = False
     id = "boolean"

@@ -2,18 +2,19 @@ from pathlib import Path
 from typing import Any, Dict
 
 from NodeGraphQt import NodeGraph
+from NodeGraphQt.widgets.node_widgets import NodeButton
 from PySide6.QtGui import QUndoStack
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.gui.node_editor.custom_viewer import CustomNodeViewer
-from lightshow.gui.node_editor.generic_node import GenericNode
+from lightshow.gui.node_editor.executable_node import ExecutableNode
 from lightshow.gui.node_editor.nodes.arrays import register_arrays
 from lightshow.gui.node_editor.nodes.boolean import register_gates
 from lightshow.gui.node_editor.nodes.colors import register_colors
 from lightshow.gui.node_editor.nodes.string import register_string_operations
 
 from .custom_node import CustomNode
-from .datas import BooleanData
+from .datas import BooleanData, StringData
 from .nodes.displays import register_displays
 from .nodes.math import register_math_nodes
 from .nodes.sources import register_sources
@@ -25,20 +26,20 @@ def hook_graph_signals(graph):
     @graph.port_connected.connect
     def on_port_connected(in_port, out_port):
         node = in_port.node()
-        if isinstance(node, CustomNode):
+        if isinstance(node, CustomNode) and not isinstance(node, ExecutableNode):
             node.mark_dirty()
             node.evaluate()
 
     @graph.port_disconnected.connect
     def on_port_disconnected(in_port, out_port):
         node = in_port.node()
-        if isinstance(node, CustomNode):
+        if isinstance(node, CustomNode) and not isinstance(node, ExecutableNode):
             node.mark_dirty()
             node.evaluate()
 
     @graph.property_changed.connect
     def on_property_changed(node, prop_name, value):
-        if isinstance(node, CustomNode):
+        if isinstance(node, CustomNode) and not isinstance(node, ExecutableNode):
             node.mark_dirty()
             node.evaluate()
 
@@ -63,18 +64,36 @@ class NotGate(CustomNode):
         return {"bool_out": not inputs["bool_in"]}
 
 
-class TestGenericNode(GenericNode):
+class TestExecutable(ExecutableNode):
     __identifier__ = "io.github.pastalapate"
-    NODE_NAME = "TestGeneric"
+
+    NODE_NAME = "Test executable"
 
     def __init__(self, qgraphics_item=None):
-        super().__init__(qgraphics_item)
-
-        self.add_generic_input(name="test1")
-        self.add_generic_output(name="test2")
+        super().__init__(qgraphics_item, True, True)
+        self.add_typed_input(StringData, "To print", False, True)
+        self.add_typed_output(StringData, "Input + a", False, True)
 
     def compute(self, inputs):
-        return {"test2": inputs["test1"]}
+        print(inputs["To print"])
+        return {"Input + a": inputs["To print"] + "a"}
+
+
+class StartExecutable(ExecutableNode):
+    __identifier__ = "io.github.pastalapate"
+
+    NODE_NAME = "StartExecutable"
+
+    def __init__(self, qgraphics_item=None):
+        super().__init__(qgraphics_item, False, True)
+        self.add_button("start", "Start", "Start")
+        self.create_property("start", "Start")
+        button = self.get_widget("start")
+        if isinstance(button, NodeButton):
+            button.value_changed.connect(self.next)
+
+    def compute(self, inputs):
+        return {}
 
 
 class NodeWindow(QWidget):
@@ -90,7 +109,7 @@ class NodeWindow(QWidget):
         register_gates(self.graph)
         register_arrays(self.graph)
         self.graph.register_node(NotGate)
-        self.graph.register_nodes([TestGenericNode])
+        self.graph.register_nodes([StartExecutable, TestExecutable])
         self.viewer.node_factory = self.graph._node_factory
         hotkey_path = Path(BASE_PATH, "hotkeys", "hotkeys.json")
         self.graph.set_context_menu_from_file(hotkey_path, "graph")

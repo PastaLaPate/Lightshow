@@ -3,8 +3,9 @@ from typing import Type, TypeVar, get_origin, get_args, Any
 from NodeGraphQt import Port
 from NodeGraphQt.qgraphics.port import PortEnum, PortItem
 from PySide6 import QtCore, QtGui
+from PySide6.QtGui import QPainter
 
-from lightshow.gui.node_editor.datas import GenericData, NodeDataType
+from lightshow.gui.node_editor.datas import ExecData, GenericData, NodeDataType
 
 T = TypeVar("T")
 
@@ -79,31 +80,12 @@ class TypedPortItem(PortItem):
             "{}: {} ({})".format(self.name, self._data_type.name, conn_type)
         )
 
-    def paint(self, painter, option, widget):
-        """
-        Draws the circular port.
-
-        Args:
-            painter (QtGui.QPainter): painter used for drawing the item.
-            option (QtGui.QStyleOptionGraphicsItem):
-                used to describe the parameters needed to draw.
-            widget (QtWidgets.QWidget): not used.
-        """
+    def paint(self, painter: QPainter, option, widget):
         painter.save()
-
-        #  display falloff collision for debugging
-        # ----------------------------------------------------------------------
-        # pen = QtGui.QPen(QtGui.QColor(255, 255, 255, 80), 0.8)
-        # pen.setStyle(QtCore.Qt.DotLine)
-        # painter.setPen(pen)
-        # painter.drawRect(self.boundingRect())
-        # ----------------------------------------------------------------------
 
         rect_w = self._width / 1.8
         rect_h = self._height / 1.8
-        rect_x = self.boundingRect().center().x() - (rect_w / 2)
-        rect_y = self.boundingRect().center().y() - (rect_h / 2)
-        port_rect = QtCore.QRectF(rect_x, rect_y, rect_w, rect_h)
+        center = self.boundingRect().center()
 
         if self._hovered:
             color = QtGui.QColor(*PortEnum.HOVER_COLOR.value)
@@ -113,38 +95,54 @@ class TypedPortItem(PortItem):
             border_color = QtGui.QColor(74, 84, 85, 255)
         else:
             color = QtGui.QColor(125, 125, 125, 255)
-            border_color = QtGui.QColor(74, 84, 85, 255)
+            border_color = QtGui.QColor(*self.color)
 
         pen = QtGui.QPen(border_color, self._border_size)
         painter.setPen(pen)
         painter.setBrush(border_color)
-        painter.drawEllipse(port_rect)
 
-        if not self._hovered:
-            w = port_rect.width()
-            h = port_rect.height()
-            rect = QtCore.QRectF(
-                port_rect.center().x() - w / 2, port_rect.center().y() - h / 2, w, h
-            )
-            pen = QtGui.QPen(color, 1.4)
-            painter.setPen(pen)
-            painter.setBrush(color)
-            painter.drawEllipse(rect)
-        elif self._hovered:
-            if self.multi_connection:
-                pen = QtGui.QPen(border_color, 1.4)
-                painter.setPen(pen)
+        # === EXEC PIN (triangle) =====================================
+        if self._data_type is ExecData:
+            w = rect_w
+            h = rect_h
+
+            points = [
+                QtCore.QPointF(center.x() - w / 2, center.y() - h / 2),
+                QtCore.QPointF(center.x() - w / 2, center.y() + h / 2),
+                QtCore.QPointF(center.x() + w / 2, center.y()),
+            ]
+            border_poly = QtGui.QPolygonF(points)
+            painter.drawPolygon(border_poly)
+
+            if not self._hovered:
+                painter.setPen(QtGui.QPen(color, 1.4))
                 painter.setBrush(color)
-                w = port_rect.width() / 1.8
-                h = port_rect.height() / 1.8
-            else:
-                painter.setBrush(border_color)
-                w = port_rect.width() / 3.5
-                h = port_rect.height() / 3.5
-            rect = QtCore.QRectF(
-                port_rect.center().x() - w / 2, port_rect.center().y() - h / 2, w, h
+                inset = self._border_size * 0.2
+                inner = [
+                    QtCore.QPointF(
+                        p.x() + inset if i < 2 else p.x() - inset,
+                        p.y() + inset if i == 0 else p.y() - inset if i == 1 else p.y(),
+                    )
+                    for i, p in enumerate(points)
+                ]
+                painter.drawPolygon(QtGui.QPolygonF(inner))
+
+        # === DATA PIN (circle) ======================================
+        else:
+            port_rect = QtCore.QRectF(
+                center.x() - rect_w / 2,
+                center.y() - rect_h / 2,
+                rect_w,
+                rect_h,
             )
-            painter.drawEllipse(rect)
+
+            painter.drawEllipse(port_rect)
+
+            if not self._hovered:
+                painter.setPen(QtGui.QPen(color, 1.4))
+                painter.setBrush(color)
+                painter.drawEllipse(port_rect)
+
         painter.restore()
 
 
