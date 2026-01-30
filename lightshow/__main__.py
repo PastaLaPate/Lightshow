@@ -8,13 +8,31 @@ import sys
 from time import time_ns
 from typing import List
 
-from pyaudio import PyAudio
-from winrt.windows.media.control import (
-    GlobalSystemMediaTransportControlsSession,
-    GlobalSystemMediaTransportControlsSessionMediaProperties,
-    GlobalSystemMediaTransportControlsSessionPlaybackInfo,
-    GlobalSystemMediaTransportControlsSessionPlaybackStatus,
-)
+# PyAudio may not be available on all platforms; import safely
+try:
+    from pyaudio import PyAudio
+    PYAUDIO_AVAILABLE = True
+except Exception:
+    PYAUDIO_AVAILABLE = False
+    class PyAudio:  # lightweight placeholder
+        def __init__(self):
+            raise RuntimeError("PyAudio is not available on this system")
+from typing import Any
+# winrt is Windows-only; import it when available and fall back to safe defaults on other platforms
+try:
+    from winrt.windows.media.control import (
+        GlobalSystemMediaTransportControlsSession,
+        GlobalSystemMediaTransportControlsSessionMediaProperties,
+        GlobalSystemMediaTransportControlsSessionPlaybackInfo,
+        GlobalSystemMediaTransportControlsSessionPlaybackStatus,
+    )
+    WINRT_AVAILABLE = True
+except Exception:
+    WINRT_AVAILABLE = False
+    GlobalSystemMediaTransportControlsSession = Any
+    GlobalSystemMediaTransportControlsSessionMediaProperties = Any
+    GlobalSystemMediaTransportControlsSessionPlaybackInfo = Any
+    GlobalSystemMediaTransportControlsSessionPlaybackStatus = None
 
 import lightshow.audio.detectors as detectors
 import lightshow.utils.config as config
@@ -46,31 +64,50 @@ class MainAudioListener(AudioListener):
 
     def on_track_changed(
         self,
-        session: GlobalSystemMediaTransportControlsSession,
-        infos: GlobalSystemMediaTransportControlsSessionMediaProperties,
+        session: Any,
+        infos: Any,
     ):
-        self.logger.info(f"Now playing {infos.title} ! (By {infos.artist})")
-        self.send_packet_to_devices(PacketData(PacketType.NEW_MUSIC, PacketStatus.ON))
-        self.clear_state()
-        self.send_packet_to_devices(PacketData(PacketType.NEW_MUSIC, PacketStatus.OFF))
+        # If winrt is available, infos will typically have title/artist attributes.
+        title = getattr(infos, "title", None)
+        artist = getattr(infos, "artist", None)
+        if title:
+            self.logger.info(f"Now playing {title} ! (By {artist})")
+            self.send_packet_to_devices(PacketData(PacketType.NEW_MUSIC, PacketStatus.ON))
+            self.clear_state()
+            self.send_packet_to_devices(PacketData(PacketType.NEW_MUSIC, PacketStatus.OFF))
 
     def on_playback_status_changed(
         self,
-        session: GlobalSystemMediaTransportControlsSession,
-        status: GlobalSystemMediaTransportControlsSessionPlaybackInfo,
+        session: Any,
+        status: Any,
     ):
-        ps = status.playback_status
+        ps = getattr(status, "playback_status", None)
         self.logger.info(f"New playback status : {ps}")
-        if ps == GlobalSystemMediaTransportControlsSessionPlaybackStatus.PAUSED:
-            self.music_paused = True
-            self.paused_since = time_ns()
-            self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.ON))
-        elif ps == GlobalSystemMediaTransportControlsSessionPlaybackStatus.PLAYING:
-            self.music_paused = False
-            self.break_detector.clear_old_beats()
-            self.break_detector.clean_beats(time_ns() - self.paused_since)
-            self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.OFF))
-            self.paused_since = 0
+
+        # Handle WinRT enum values when available, else support simple string values
+        if WINRT_AVAILABLE and GlobalSystemMediaTransportControlsSessionPlaybackStatus is not None:
+            if ps == GlobalSystemMediaTransportControlsSessionPlaybackStatus.PAUSED:
+                self.music_paused = True
+                self.paused_since = time_ns()
+                self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.ON))
+            elif ps == GlobalSystemMediaTransportControlsSessionPlaybackStatus.PLAYING:
+                self.music_paused = False
+                self.break_detector.clear_old_beats()
+                self.break_detector.clean_beats(time_ns() - self.paused_since)
+                self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.OFF))
+                self.paused_since = 0
+        else:
+            # Some platforms may provide simple string statuses; be permissive.
+            if isinstance(ps, str) and ps.lower() == "paused":
+                self.music_paused = True
+                self.paused_since = time_ns()
+                self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.ON))
+            elif isinstance(ps, str) and ps.lower() in ("playing", "play"):
+                self.music_paused = False
+                self.break_detector.clear_old_beats()
+                self.break_detector.clean_beats(time_ns() - self.paused_since)
+                self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.OFF))
+                self.paused_since = 0
 
     def clear_state(self):
         """Resets all detectors and visualizers to their initial state."""
@@ -143,13 +180,20 @@ class MainAudioListener(AudioListener):
 
 def get_audio_devices() -> List[str]:
     """Returns a list of audio device names formatted for the combo box."""
-    pyaudio_instance = PyAudio()
-    devices = []
-    for i in range(pyaudio_instance.get_device_count()):
-        device_info = pyaudio_instance.get_device_info_by_index(i)
-        devices.append(f"{i}: {device_info['name']}")
-    pyaudio_instance.terminate()
-    return devices
+    if not PYAUDIO_AVAILABLE:
+        # PyAudio not installed; return an empty list and let UI handle it.
+        return []
+    try:
+        pyaudio_instance = PyAudio()
+        devices = []
+        for i in range(pyaudio_instance.get_device_count()):
+            device_info = pyaudio_instance.get_device_info_by_index(i)
+            devices.append(f"{i}: {device_info['name']}")
+        pyaudio_instance.terminate()
+        return devices
+    except Exception:
+        # If device enumeration fails, return empty list
+        return []
 
 
 def main():

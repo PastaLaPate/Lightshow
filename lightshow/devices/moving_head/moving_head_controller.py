@@ -28,6 +28,7 @@ from lightshow.devices.moving_head.moving_head_colors import (
     random_rainbow_color,
     startFlicker,
     toFadeBlack,
+    RedLowsModulator,
 )
 from lightshow.utils.config import global_config
 from lightshow.utils.logger import Logger
@@ -52,6 +53,9 @@ class MovingHeadController:
         self.device = device
         self.waiting_music = False
         self.logger = Logger(f"MovingHeadController{{{device.id}}}")
+        
+        # Initialize red lows modulator for audio-reactive effects
+        self.red_lows_modulator = RedLowsModulator()
 
         # =====================
         #      Cooldowns
@@ -98,14 +102,31 @@ class MovingHeadController:
             startFlicker,
         ]
 
-        self.color_mode_list = [RAINBOW_KICK_COLORS, random_rainbow_color]
+        self.color_mode_list = [RAINBOW_KICK_COLORS, random_rainbow_color, self.red_lows_modulator]
 
     def init_state(self):
         self.current_anim = random.choice(self.anim_list)
-        self.color_mode = random.choice(self.color_mode_list)
+        self.color_mode = self._select_color_mode_for_anim(self.current_anim)
         self.update_anim_color_mode()
         self.device.current_anim = self.current_anim.__class__.__name__
         self.device.showed_props_update()
+
+    def _is_circle_animation(self, anim):
+        """Check if animation is a circle-like animation."""
+        return isinstance(
+            anim,
+            (CircleAnimation, BernoulliLemniscateAnimation)
+        )
+    
+    def _select_color_mode_for_anim(self, anim):
+        """Select appropriate color mode for the given animation."""
+        if self._is_circle_animation(anim):
+            # For circle-like animations, include red lows modulator
+            return random.choice(self.color_mode_list)
+        else:
+            # For other animations, exclude the red lows modulator
+            non_lows_color_modes = [m for m in self.color_mode_list if m != self.red_lows_modulator]
+            return random.choice(non_lows_color_modes)
 
     def update_anim_color_mode(self):
         if isinstance(

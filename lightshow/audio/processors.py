@@ -1,6 +1,6 @@
 import librosa
 import numpy as np
-from .audio_types import AudioData, AudioListener, Processor
+from .audio_types import AudioData, Processor
 
 
 class SpectrumProcessor(Processor):
@@ -31,8 +31,23 @@ class SpectrumProcessor(Processor):
         )
 
     def process(self, data) -> AudioData:
-        fft_result = np.fft.rfft(data)
+        # Ensure array and convert to float32; normalize integers into [-1, 1]
+        arr = np.asarray(data)
+        if np.issubdtype(arr.dtype, np.integer):
+            maxv = np.iinfo(arr.dtype).max if arr.dtype != np.int64 else 2 ** 31 - 1
+            arr = arr.astype(np.float32) / float(maxv)
+        else:
+            arr = arr.astype(np.float32)
+            # If values look like integer range, rescale to protect against misinterpreted formats
+            max_abs = np.abs(arr).max() if arr.size else 0.0
+            if max_abs > 1.0:
+                arr = arr / max_abs
+
+        # Compute FFT and power spectrum
+        fft_result = np.fft.rfft(arr)
         power_spectrum = np.square(np.abs(fft_result))
+
+        # Apply Mel filterbank
         mel_energies = np.dot(self.mel_filters, power_spectrum)
 
         # Apply sensitivity

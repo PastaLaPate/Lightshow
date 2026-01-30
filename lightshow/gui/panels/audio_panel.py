@@ -11,11 +11,6 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from winrt.windows.media.control import (
-    GlobalSystemMediaTransportControlsSession,
-    GlobalSystemMediaTransportControlsSessionMediaProperties,
-)
-
 from lightshow.audio.audio_streams import AudioStreamHandler
 from lightshow.gui.components.logs import Logs
 from lightshow.utils.config import Config
@@ -141,8 +136,8 @@ class AudioPanel(BasePanel):
 
     def on_track_changed(
         self,
-        session: GlobalSystemMediaTransportControlsSession,
-        infos: GlobalSystemMediaTransportControlsSessionMediaProperties,
+        session,
+        infos,
     ):
         if self.playing_label:
             self.playing_label.setText(f"Playing: {infos.title} - {infos.artist}")

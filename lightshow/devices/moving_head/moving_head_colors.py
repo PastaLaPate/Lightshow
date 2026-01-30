@@ -27,6 +27,36 @@ def random_rainbow_color():
     )
 
 
+class RedLowsModulator:
+    """Color mode that returns red with brightness modulated by low-frequency energy."""
+    
+    def __init__(self):
+        self.last_audio_data = None
+        self.min_brightness = 50  # Minimum brightness for red (0-255)
+        self.max_brightness = 255  # Maximum brightness for red
+    
+    def set_audio_data(self, audio_data):
+        """Update audio data for modulation."""
+        self.last_audio_data = audio_data
+    
+    def __call__(self):
+        """Return red color with brightness modulated by lows energy."""
+        brightness = self.max_brightness  # Default to full brightness
+        
+        if self.last_audio_data is not None:
+            # Get low-frequency energy from first few FFT bins (typically 0-4 represent lows)
+            try:
+                lows_energy = self.last_audio_data.get_ps_mean([0, 4])
+                # Normalize energy to 0-1 range (assuming typical values are 0-1, adjust if needed)
+                normalized_energy = min(max(lows_energy, 0), 1)
+                # Map energy to brightness range
+                brightness = int(self.min_brightness + normalized_energy * (self.max_brightness - self.min_brightness))
+            except (AttributeError, IndexError, ValueError):
+                pass  # If audio data is invalid, use default brightness
+        
+        return RGB(brightness, 0, 0)
+
+
 COLOR_TRANSFORMER = Callable[[RGB], RGB | FadeCommand | FlickerCommand]
 
 

@@ -9,15 +9,15 @@ dependencies = [
     "PyQt6-Charts>=6.7.0",
     "librosa>=0.11.0",
     "numpy>=2.2.6",
-    "pyaudio>=0.2.11",
-    "pyaudiowpatch>=0.2.12.7",
+    "pyaudio>=0.2.14",
+    "pyaudiowpatch>=0.2.12.7 ; platform_system == \"Windows\"",
     "typing-extensions>=4.15.0",
     "websocket-client>=1.8.0",
-    "winrt-runtime>=3.2.1",
-    "winrt-windows-media>=3.2.1",
-    "winrt-windows-media-control>=3.2.1",
-    "winrt-windows-foundation>=3.2.1",
-    "winrt-windows-foundation-collections>=3.2.1",
+    "winrt-runtime>=3.2.1 ; platform_system == \"Windows\"",
+    "winrt-windows-media>=3.2.1 ; platform_system == \"Windows\"",
+    "winrt-windows-media-control>=3.2.1 ; platform_system == \"Windows\"",
+    "winrt-windows-foundation>=3.2.1 ; platform_system == \"Windows\"",
+    "winrt-windows-foundation-collections>=3.2.1 ; platform_system == \"Windows\"",
     "pyinstaller>=6.16.0",
     "matplotlib>=3.8.0",
     "pyqtgraph>=0.14.0",
@@ -35,6 +35,19 @@ py-modules = []
 # A bit slower, but it works for our use case
 link-mode = "copy"
 default-groups = []
+
+[tool.uv.workspace]
+members = [
+    ".",
+]
+
+[tool.uv.sources]
+lightshow = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "lightshow",
+]
 
 [project.scripts]
 lightshow = "lightshow.__main__:main"

@@ -495,18 +495,23 @@ dependencies = [
     { name = "matplotlib" },
     { name = "numpy" },
     { name = "pyaudio" },
-    { name = "pyaudiowpatch" },
+    { name = "pyaudiowpatch", marker = "sys_platform == 'win32'" },
     { name = "pyinstaller" },
     { name = "pyqt6" },
     { name = "pyqt6-charts" },
     { name = "pyqtgraph" },
     { name = "typing-extensions" },
     { name = "websocket-client" },
-    { name = "winrt-runtime" },
-    { name = "winrt-windows-foundation" },
-    { name = "winrt-windows-foundation-collections" },
-    { name = "winrt-windows-media" },
-    { name = "winrt-windows-media-control" },
+    { name = "winrt-runtime", marker = "sys_platform == 'win32'" },
+    { name = "winrt-windows-foundation", marker = "sys_platform == 'win32'" },
+    { name = "winrt-windows-foundation-collections", marker = "sys_platform == 'win32'" },
+    { name = "winrt-windows-media", marker = "sys_platform == 'win32'" },
+    { name = "winrt-windows-media-control", marker = "sys_platform == 'win32'" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "lightshow" },
 ]
 
 [package.metadata]
@@ -514,20 +519,23 @@ requires-dist = [
     { name = "librosa", specifier = ">=0.11.0" },
     { name = "matplotlib", specifier = ">=3.8.0" },
     { name = "numpy", specifier = ">=2.2.6" },
-    { name = "pyaudio", specifier = ">=0.2.11" },
-    { name = "pyaudiowpatch", specifier = ">=0.2.12.7" },
+    { name = "pyaudio", specifier = ">=0.2.14" },
+    { name = "pyaudiowpatch", marker = "sys_platform == 'win32'", specifier = ">=0.2.12.7" },
     { name = "pyinstaller", specifier = ">=6.16.0" },
     { name = "pyqt6", specifier = ">=6.7.0" },
     { name = "pyqt6-charts", specifier = ">=6.7.0" },
     { name = "pyqtgraph", specifier = ">=0.14.0" },
     { name = "typing-extensions", specifier = ">=4.15.0" },
     { name = "websocket-client", specifier = ">=1.8.0" },
-    { name = "winrt-runtime", specifier = ">=3.2.1" },
-    { name = "winrt-windows-foundation", specifier = ">=3.2.1" },
-    { name = "winrt-windows-foundation-collections", specifier = ">=3.2.1" },
-    { name = "winrt-windows-media", specifier = ">=3.2.1" },
-    { name = "winrt-windows-media-control", specifier = ">=3.2.1" },
+    { name = "winrt-runtime", marker = "sys_platform == 'win32'", specifier = ">=3.2.1" },
+    { name = "winrt-windows-foundation", marker = "sys_platform == 'win32'", specifier = ">=3.2.1" },
+    { name = "winrt-windows-foundation-collections", marker = "sys_platform == 'win32'", specifier = ">=3.2.1" },
+    { name = "winrt-windows-media", marker = "sys_platform == 'win32'", specifier = ">=3.2.1" },
+    { name = "winrt-windows-media-control", marker = "sys_platform == 'win32'", specifier = ">=3.2.1" },
 ]
+
+[package.metadata.requires-dev]
+dev = [{ name = "lightshow", editable = "." }]
 
 [[package]]
 name = "llvmlite"

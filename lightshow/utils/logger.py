@@ -36,15 +36,26 @@ class LoggerCore:
 
     def _init_logger(self):
         timestamp = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-        self.filename = (
-            Path(os.getenv("LOCALAPPDATA") or ".\\")
-            / ".LightShow"
-            / f"{timestamp}-logs.log"
-        )
+
+        if os.name == "nt":  # Windows
+            base_dir = Path(os.getenv("LOCALAPPDATA"))
+        else:  # Linux / macOS
+            base_dir = Path(
+                os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")
+            )
+
+        base_dir = base_dir.expanduser().resolve()
+
+        log_dir = base_dir / ".LightShow"
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        self.filename = log_dir / f"{timestamp}-logs.log"
         self.file = open(self.filename, "a", encoding="utf-8")
+
         self.qt_widget = None
         self.log_queue = Queue()
-        self.last_fps_html = None  # Track last FPS message for replacement
+        self.last_fps_html = None
+
 
     def attach_widget(self, widget: QTextEdit):
         self.qt_widget = widget

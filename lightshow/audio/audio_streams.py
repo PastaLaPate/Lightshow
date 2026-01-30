@@ -3,7 +3,14 @@ import traceback
 from typing import List, Type, Callable, Optional
 
 import numpy as np
-import pyaudiowpatch as pyaudio
+# Prefer PyAudioWPatch on Windows where loopback APIs are available, otherwise fall back to standard PyAudio
+try:
+    import pyaudiowpatch as pyaudio
+except Exception:
+    try:
+        import pyaudio
+    except Exception:
+        pyaudio = None
 
 from lightshow.audio.audio_types import (
     AAudioCapture,
@@ -40,22 +47,97 @@ class AudioCapture(AAudioCapture):
         self.listeners: List[AudioListenerType] = []
 
     def callback(self, in_data, frame_count, time_info, status):
-        # Convert incoming bytes into a NumPy array of int16.
-        data = np.frombuffer(in_data, dtype=np.int16)
-        # If multiple channels are present, reshape and take the first channel.
-        if self.channels > 1:
+        """Convert incoming bytes into a numeric array, handling both int16 and float32
+        frames. Normalize to float32 in range [-1.0, 1.0] so processors and detectors
+        behave consistently across platforms (WASAPI, PulseAudio, PipeWire, etc.)."""
+        # Try to infer true channels from the raw buffer length and frame_count.
+        # This avoids relying exclusively on device metadata (which may report e.g. 64 channels).
+        samples = None
+        derived_channels = None
+
+        try:
+            raw_i16 = np.frombuffer(in_data, dtype=np.int16)
+        except Exception:
+            raw_i16 = None
+        try:
+            raw_f32 = np.frombuffer(in_data, dtype=np.float32)
+        except Exception:
+            raw_f32 = None
+
+        def channels_from_candidate(arr):
+            if arr is None or frame_count == 0:
+                return None
+            if arr.size % frame_count != 0:
+                return None
+            return arr.size // frame_count
+
+        ch_i16 = channels_from_candidate(raw_i16)
+        ch_f32 = channels_from_candidate(raw_f32)
+
+        # Prefer int16 candidate if it's reasonable (<= 8 channels)
+        for cand_arr, cand_ch, dtype in ((raw_i16, ch_i16, "i16"), (raw_f32, ch_f32, "f32")):
+            if cand_arr is None or cand_ch is None:
+                continue
+            if 1 <= cand_ch <= 8:
+                derived_channels = cand_ch
+                if dtype == "i16":
+                    samples = cand_arr.astype(np.float32) / np.iinfo(np.int16).max
+                else:
+                    samples = cand_arr.astype(np.float32)
+                break
+
+        # Fallback: use available raw arrays and clamp device-reported channels
+        if samples is None:
+            if raw_i16 is not None:
+                samples = raw_i16.astype(np.float32) / np.iinfo(np.int16).max
+            elif raw_f32 is not None:
+                samples = raw_f32.astype(np.float32)
+            else:
+                samples = np.zeros(self.chunk_size, dtype=np.float32)
+
             try:
-                data = data.reshape(-1, self.channels)[:, 0]
-            except ValueError:
-                data = data[: self.chunk_size]
+                cand = int(self.channels)
+            except Exception:
+                cand = 1
+            if cand < 1 or cand > 8:
+                derived_channels = 1
+                print(
+                    f"Warning: Invalid channel count {self.channels} from device; defaulting to mono."
+                )
+            else:
+                derived_channels = cand
+
+        # If multi-channel, take first channel per frame; otherwise treat as mono and truncate
+        if derived_channels and derived_channels > 1:
+            try:
+                samples = samples.reshape(-1, derived_channels)[:, 0]
+            except Exception:
+                samples = samples[: self.chunk_size]
         else:
-            data = data[: self.chunk_size]
-        treatedData = self.processor.process(data)
-        for listener in self.listeners:
-            if not listener(treatedData):
-                self.listeners.remove(listener)
-        self.audio_buffer.append(data)
-        return (in_data, pyaudio.paContinue)
+            samples = samples[: self.chunk_size]
+
+        # Ensure correct buffer length: pad with zeros if too short
+        if samples.size < self.chunk_size:
+            samples = np.pad(samples, (0, max(0, self.chunk_size - samples.size)), "constant")
+
+        treatedData = self.processor.process(samples)
+
+        # Iterate over a copy of listeners to avoid modification during iteration
+        for listener in list(self.listeners):
+            try:
+                if not listener(treatedData):
+                    self.listeners.remove(listener)
+            except Exception:
+                # If a listener raises, remove it to avoid repeated failures
+                try:
+                    self.listeners.remove(listener)
+                except Exception:
+                    pass
+
+        self.audio_buffer.append(samples)
+        # Use a safe lookup for paContinue in case pyaudio is a fallback placeholder
+        paContinue = getattr(pyaudio, "paContinue", 0)
+        return (in_data, paContinue)
 
     def add_listener(self, listener: AudioListenerType) -> Optional[AudioListener]:
         """
@@ -93,7 +175,12 @@ class AudioStreamHandler(AAudioStreamHandler):
     def __init__(self, processor: Type[Processor], config: Config):
         self.logger = Logger("AudioStreamHandler")
         self.chunk_size = config.chunk_size or 1024
-        self.pyaudio_instance = pyaudio.PyAudio()
+        # Create PyAudio instance if available
+        if pyaudio is None:
+            self.logger.error("PyAudio is not available. Audio capture will be disabled on this system.")
+            self.pyaudio_instance = None
+        else:
+            self.pyaudio_instance = pyaudio.PyAudio()
         self.processor_class = processor
         self.device_change_listeners: List[Callable[[AudioCapture], None]] = []
         self.pending_listeners = []
@@ -142,44 +229,62 @@ class AudioStreamHandler(AAudioStreamHandler):
 
     def setup_device(self):
         if not self.pyaudio_instance:
-            return
-        try:
-            wasapi_info = self.pyaudio_instance.get_host_api_info_by_type(
-                pyaudio.paWASAPI
-            )
-        except OSError:
-            raise Exception("WASAPI is not available on the system. Exiting...")
+            raise Exception("PyAudio instance not available.")
 
-        if self.config.device_index == -1:
-            default_device = self.pyaudio_instance.get_device_info_by_index(
-                wasapi_info["defaultOutputDevice"]
-            )
-            if not default_device["isLoopbackDevice"]:
-                for (
-                    loopback
-                ) in self.pyaudio_instance.get_loopback_device_info_generator():
-                    if default_device["name"] in loopback["name"]:
-                        default_device = loopback
-                        break
+        # Try WASAPI loopback first (Windows). If not available, fallback to a normal
+        # input device (typical on Linux/macOS).
+        try:
+            wasapi_attr = getattr(pyaudio, "paWASAPI", None)
+            if wasapi_attr is not None:
+                wasapi_info = self.pyaudio_instance.get_host_api_info_by_type(wasapi_attr)
+            else:
+                # No WASAPI support in this build
+                raise AttributeError("WASAPI not supported")
+        except Exception:
+            # Fallback path: prefer explicit device_index from config, else use default input
+            try:
+                if getattr(self.config, "device_index", -1) != -1:
+                    default_device = self.pyaudio_instance.get_device_info_by_index(
+                        self.config.device_index
+                    )
                 else:
+                    # Typical on Linux: use the default input device
+                    default_device = self.pyaudio_instance.get_default_input_device_info()
+            except Exception:
+                # As a last resort, use device 0
+                default_device = self.pyaudio_instance.get_device_info_by_index(0)
+        else:
+            # WASAPI path (Windows)
+            if self.config.device_index == -1:
+                default_device = self.pyaudio_instance.get_device_info_by_index(
+                    wasapi_info["defaultOutputDevice"]
+                )
+                if not default_device.get("isLoopbackDevice", False):
+                    for loopback in self.pyaudio_instance.get_loopback_device_info_generator():
+                        if default_device["name"] in loopback["name"]:
+                            default_device = loopback
+                            break
+                    else:
+                        raise Exception(
+                            "Default loopback output device not found.\n\n"
+                            "Run `python -m pyaudiowpatch` to check available devices.\nExiting..."
+                        )
+            else:
+                default_device = self.pyaudio_instance.get_device_info_by_index(
+                    self.config.device_index
+                )
+                if not default_device.get("isLoopbackDevice", False):
                     raise Exception(
-                        "Default loopback output device not found.\n\n"
+                        f"Device {self.config.device_index} is not a loopback device.\n"
                         "Run `python -m pyaudiowpatch` to check available devices.\nExiting..."
                     )
-        else:
-            default_device = self.pyaudio_instance.get_device_info_by_index(
-                self.config.device_index
-            )
-            if not default_device["isLoopbackDevice"]:
-                raise Exception(
-                    f"Device {self.config.device_index} is not a loopback device.\n"
-                    "Run `python -m pyaudiowpatch` to check available devices.\nExiting..."
-                )
-        self.device_index = default_device["index"]
-        self.sample_rate = int(default_device["defaultSampleRate"])
-        self.channels = default_device["maxInputChannels"]
+
+        # Populate attributes safely, using sensible defaults if keys are missing
+        self.device_index = int(default_device.get("index", 0))
+        self.sample_rate = int(default_device.get("defaultSampleRate", getattr(self, "sample_rate", 44100)))
+        self.channels = int(default_device.get("maxInputChannels", getattr(self, "channels", 1)))
         self.logger.debug(
-            f"Using device: {default_device['name']} (index: {self.device_index}) Sample Rate: {self.sample_rate} Hz Channels: {self.channels} Chunk size: {self.chunk_size}"
+            f"Using device: {default_device.get('name', '<unknown>')} (index: {self.device_index}) Sample Rate: {self.sample_rate} Hz Channels: {self.channels} Chunk size: {self.chunk_size}"
         )
 
     def add_listener_on_init(
