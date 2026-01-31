@@ -101,9 +101,9 @@ class AudioCapture(AAudioCapture):
                 cand = 1
             if cand < 1 or cand > 8:
                 derived_channels = 1
-                print(
-                    f"Warning: Invalid channel count {self.channels} from device; defaulting to mono."
-                )
+                #print(
+                #    f"Warning: Invalid channel count {self.channels} from device; defaulting to mono."
+                #)
             else:
                 derived_channels = cand
 
@@ -118,8 +118,16 @@ class AudioCapture(AAudioCapture):
 
         # Ensure correct buffer length: pad with zeros if too short
         if samples.size < self.chunk_size:
-            samples = np.pad(samples, (0, max(0, self.chunk_size - samples.size)), "constant")
-
+            samples = np.pad(samples, (0, max(0, self.chunk_size - samples.size)), "constant")        
+        # Normalize float32 samples: if mostly in [0, 1] range or very small, amplify signal
+        # This handles quiet input from default Linux input devices
+        max_abs = np.abs(samples).max()
+        if 0.001 < max_abs < 0.1:
+            # Signal is very quiet, apply moderate amplification
+            samples = samples * 5.0
+        elif max_abs > 1.0:
+            # Clamp to [-1, 1]
+            samples = np.clip(samples, -1.0, 1.0)
         treatedData = self.processor.process(samples)
 
         # Iterate over a copy of listeners to avoid modification during iteration

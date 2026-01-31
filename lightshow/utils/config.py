@@ -63,6 +63,7 @@ class Config:
         self.chunk_size = self.get("chunk_size", 1024)
         self.device_index = self.get("device_index", -2)  # Auto-detect if -1
         self.max_fps = self.get("max_fps", 30)
+        self.audio_sensitivity = self.get("audio_sensitivity", 2.0)  # Linux default is higher
         self.devices: Dict[str, DeviceConfigType] = self.get("devices", {})
 
     def get(self, key, default: T = None) -> T:

@@ -10,7 +10,7 @@ class SpectrumProcessor(Processor):
     """
 
     def __init__(
-        self, chunk_size, sample_rate, n_mels=40, attack=0.9, decay=0.5, sensitivity=1.0
+        self, chunk_size, sample_rate, n_mels=40, attack=0.9, decay=0.5, sensitivity=2.0
     ):
         super().__init__(chunk_size, sample_rate)
         self.n_mels = n_mels
@@ -38,10 +38,12 @@ class SpectrumProcessor(Processor):
             arr = arr.astype(np.float32) / float(maxv)
         else:
             arr = arr.astype(np.float32)
-            # If values look like integer range, rescale to protect against misinterpreted formats
+            # Robust normalization for float audio: ensure it's in reasonable range
             max_abs = np.abs(arr).max() if arr.size else 0.0
-            if max_abs > 1.0:
-                arr = arr / max_abs
+            # Only normalize if values are actually outside expected range
+            if max_abs > 1.01 or (max_abs > 0 and max_abs < 0.001):
+                if max_abs > 0:
+                    arr = arr / max_abs
 
         # Compute FFT and power spectrum
         fft_result = np.fft.rfft(arr)

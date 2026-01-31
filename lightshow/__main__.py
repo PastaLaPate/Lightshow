@@ -135,7 +135,7 @@ class MainAudioListener(AudioListener):
                 device.on(packet)
 
     def __call__(self, data):
-        self.send_packet_to_devices(PacketData(PacketType.TICK, PacketStatus.ON))
+        self.send_packet_to_devices(PacketData(PacketType.TICK, PacketStatus.ON, audio_data=data))
         if self.music_paused:
             return True
 
@@ -152,24 +152,24 @@ class MainAudioListener(AudioListener):
                     time_ns() - self.break_detector.beats[-1]
                 )
                 self.send_packet_to_devices(
-                    PacketData(PacketType.BREAK, PacketStatus.OFF)
+                    PacketData(PacketType.BREAK, PacketStatus.OFF, audio_data=data)
                 )
             self.break_detector.on_beat()
             self.drop_detector.on_beat()
-            self.send_packet_to_devices(PacketData(PacketType.BEAT, PacketStatus.ON))
+            self.send_packet_to_devices(PacketData(PacketType.BEAT, PacketStatus.ON, audio_data=data))
 
         mbreak, drop = False, False
         if not self.break_detected and self.break_detector.detect(data):
             self.break_detected = True
-            self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.ON))
+            self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.ON, audio_data=data))
             mbreak = True
         if not self.drop_detected and self.drop_detector.detect(data):
             self.drop_detected = True
-            self.send_packet_to_devices(PacketData(PacketType.DROP, PacketStatus.ON))
+            self.send_packet_to_devices(PacketData(PacketType.DROP, PacketStatus.ON, audio_data=data))
             drop = True
         if self.drop_detected and not self.drop_detector.detect(data):
             self.drop_detected = False
-            self.send_packet_to_devices(PacketData(PacketType.DROP, PacketStatus.OFF))
+            self.send_packet_to_devices(PacketData(PacketType.DROP, PacketStatus.OFF, audio_data=data))
 
         # Update visualizer data
         self.kick_visualizer(

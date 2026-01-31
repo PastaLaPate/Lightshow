@@ -152,9 +152,15 @@ class MovingHeadController:
         self.current_anim = random.choice(
             [x for x in self.anim_list if x != self.current_anim] or self.anim_list
         )
-        self.color_mode = random.choice(
-            [x for x in self.color_mode_list if x != self.color_mode]
-        )
+        # Select a different color mode appropriate for the new animation
+        available_modes = [
+            m for m in (
+                self.color_mode_list if self._is_circle_animation(self.current_anim) 
+                else [m for m in self.color_mode_list if m != self.red_lows_modulator]
+            )
+            if m != self.color_mode
+        ]
+        self.color_mode = available_modes[0] if available_modes else self._select_color_mode_for_anim(self.current_anim)
         self.beats_since_anim_change = 0
         self.update_anim_color_mode()
         self.device.current_anim = self.current_anim.__class__.__name__
@@ -164,6 +170,10 @@ class MovingHeadController:
         self.updateFromFrame(frm)
 
     def handlePacket(self, packet: PacketData):
+        # Update audio data if available
+        if packet.audio_data is not None:
+            self.red_lows_modulator.set_audio_data(packet.audio_data)
+        
         if self.beats_since_anim_change > 20:
             self.randomAnimation()
         match packet.packet_type:

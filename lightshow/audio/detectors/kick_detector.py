@@ -8,7 +8,7 @@ class KickDetector(SpikeDetector):
             AudioHandler,
             1.75,
             20,
-            [0, 2],
+            [0, 1],
             DetectionType.UPPER,
             1 / 10000,
             250 / 1000,
