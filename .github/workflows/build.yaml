@@ -9,9 +9,44 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    runs-on: windows-latest
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      should_release: ${{ steps.check_tag.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - name: Fetch tags
+        run: git fetch --tags
+
+      - name: Get version from pyproject.toml
+        id: get_version
+        run: |
+          VERSION=$(grep -m1 '^version' pyproject.toml | sed 's/version = "\(.*\)"/\1/')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          if git tag | grep -q "^v${{ steps.get_version.outputs.version }}$"; then
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "Tag v${{ steps.get_version.outputs.version }} already exists, skipping release."
+          else
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
+  lint:
+    needs: check-version
+    if: needs.check-version.outputs.should_release == 'true'
+    uses: ./.github/workflows/ci.yml
+
+  build:
+    needs: [check-version, lint]
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,37 +87,31 @@ jobs:
 
       - name: Create installer
         run: |
-          cd installer && makensis /DPRODUCT_VERSION=${{ github.run_number }} lightshow.nsi
+          cd installer && makensis /DPRODUCT_VERSION=${{ needs.check-version.outputs.version }} lightshow.nsi
 
       - name: Get previous release tag
         id: prev_release
         shell: pwsh
         run: |
           $tag = gh api repos/${{ github.repository }}/releases --jq ".[0].tag_name" 2>$null
-          if (-not $tag) {
-            $tag = ""
-          }
+          if (-not $tag) { $tag = "" }
           echo "tag=$tag" >> $env:GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate changelog
-        id: changelog
         shell: pwsh
         run: |
           $format = "- %s (%h) by %an"
-
           if ("${{ steps.prev_release.outputs.tag }}" -eq "") {
-            Write-Host "No previous release. Using all commits."
             git log --pretty=format:"$format" | Out-File CHANGELOG.md -Encoding utf8
           } else {
-            Write-Host "Previous release: ${{ steps.prev_release.outputs.tag }}"
             git log ${{ steps.prev_release.outputs.tag }}..HEAD --pretty=format:"$format" | Out-File CHANGELOG.md -Encoding utf8
           }
 
       - name: Create Release
         uses: softprops/action-gh-release@v2.4.2
         with:
-          tag_name: v${{ github.run_number }}
-          files: installer/lightshow-setup-win-${{ github.run_number }}.exe
+          tag_name: v${{ needs.check-version.outputs.version }}
+          files: installer/lightshow-setup-win-${{ needs.check-version.outputs.version }}.exe
           body_path: CHANGELOG.md
