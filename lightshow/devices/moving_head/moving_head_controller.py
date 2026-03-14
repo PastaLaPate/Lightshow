@@ -53,7 +53,7 @@ class MovingHeadController:
         self.device = device
         self.waiting_music = False
         self.logger = Logger(f"MovingHeadController{{{device.id}}}")
-        
+
         # Initialize red lows modulator for audio-reactive effects
         self.red_lows_modulator = RedLowsModulator()
 
@@ -102,7 +102,11 @@ class MovingHeadController:
             startFlicker,
         ]
 
-        self.color_mode_list = [RAINBOW_KICK_COLORS, random_rainbow_color, self.red_lows_modulator]
+        self.color_mode_list = [
+            RAINBOW_KICK_COLORS,
+            random_rainbow_color,
+            self.red_lows_modulator,
+        ]
 
     def init_state(self):
         self.current_anim = random.choice(self.anim_list)
@@ -113,11 +117,8 @@ class MovingHeadController:
 
     def _is_circle_animation(self, anim):
         """Check if animation is a circle-like animation."""
-        return isinstance(
-            anim,
-            (CircleAnimation, BernoulliLemniscateAnimation)
-        )
-    
+        return isinstance(anim, (CircleAnimation, BernoulliLemniscateAnimation))
+
     def _select_color_mode_for_anim(self, anim):
         """Select appropriate color mode for the given animation."""
         if self._is_circle_animation(anim):
@@ -125,7 +126,9 @@ class MovingHeadController:
             return random.choice(self.color_mode_list)
         else:
             # For other animations, exclude the red lows modulator
-            non_lows_color_modes = [m for m in self.color_mode_list if m != self.red_lows_modulator]
+            non_lows_color_modes = [
+                m for m in self.color_mode_list if m != self.red_lows_modulator
+            ]
             return random.choice(non_lows_color_modes)
 
     def update_anim_color_mode(self):
@@ -154,13 +157,19 @@ class MovingHeadController:
         )
         # Select a different color mode appropriate for the new animation
         available_modes = [
-            m for m in (
-                self.color_mode_list if self._is_circle_animation(self.current_anim) 
+            m
+            for m in (
+                self.color_mode_list
+                if self._is_circle_animation(self.current_anim)
                 else [m for m in self.color_mode_list if m != self.red_lows_modulator]
             )
             if m != self.color_mode
         ]
-        self.color_mode = available_modes[0] if available_modes else self._select_color_mode_for_anim(self.current_anim)
+        self.color_mode = (
+            available_modes[0]
+            if available_modes
+            else self._select_color_mode_for_anim(self.current_anim)
+        )
         self.beats_since_anim_change = 0
         self.update_anim_color_mode()
         self.device.current_anim = self.current_anim.__class__.__name__
@@ -173,7 +182,7 @@ class MovingHeadController:
         # Update audio data if available
         if packet.audio_data is not None:
             self.red_lows_modulator.set_audio_data(packet.audio_data)
-        
+
         if self.beats_since_anim_change > 20:
             self.randomAnimation()
         match packet.packet_type:

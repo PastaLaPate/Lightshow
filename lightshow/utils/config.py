@@ -1,8 +1,8 @@
 import json
 import os
 import sys
-from typing import Any, Dict, Type, TypeVar, TypedDict
 from pathlib import Path
+from typing import Any, Dict, Type, TypedDict, TypeVar
 
 from lightshow.devices import DEVICES_STR_TYPES
 from lightshow.devices.device import Device
@@ -63,10 +63,12 @@ class Config:
         self.chunk_size = self.get("chunk_size", 1024)
         self.device_index = self.get("device_index", -2)  # Auto-detect if -1
         self.max_fps = self.get("max_fps", 30)
-        self.audio_sensitivity = self.get("audio_sensitivity", 2.0)  # Linux default is higher
+        self.audio_sensitivity = self.get(
+            "audio_sensitivity", 2.0
+        )  # Linux default is higher
         self.devices: Dict[str, DeviceConfigType] = self.get("devices", {})
 
-    def get(self, key, default: T = None) -> T:
+    def get(self, key, default: T) -> T:
         return self.settings.get(key, default)
 
     def save(self):

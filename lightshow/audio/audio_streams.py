@@ -1,15 +1,16 @@
-import sounddevice as sd
-import numpy as np
 from collections import deque
-from typing import List, Type, Callable, Optional
 from queue import Queue
+from typing import Callable, List, Optional, Type
+
+import numpy as np
+import sounddevice as sd
 
 from lightshow.audio.audio_types import (
     AAudioCapture,
     AAudioStreamHandler,
     AudioListener,
-    Processor,
     AudioListenerType,
+    Processor,
 )
 from lightshow.gui.utils.message_box import post_ui_message
 from lightshow.utils.config import Config
@@ -31,6 +32,7 @@ class AudioCapture(AAudioCapture):
         channels=1,
         sample_rate=44100,
     ):
+        self.logger = Logger("AudioCapture")
         self.stream_handler = stream_handler
         self.sample_rate = sample_rate
         self.chunk_size = chunk_size
@@ -42,20 +44,22 @@ class AudioCapture(AAudioCapture):
         # Smaller queue prevents 2+ second backlog. Excess audio dropped.
         self.sample_queue = Queue(maxsize=5)
 
-    def callback(self, indata, frames, time_info, status):
+    def callback(self, in_data, frames, time_info, status):
         """Minimal callback - just extract and queue audio, don't process."""
         try:
             if status:
-                print(f"Audio callback status: {status}")
+                self.logger.debug(f"Audio callback status: {status}")
 
-            # indata is array with shape (frames, channels), always extract first channel
-            samples = indata[:, 0].copy()
-            
+            # in_data is array with shape (frames, channels), always extract first channel
+            samples = in_data[:, 0].copy()
+
             # Ensure correct buffer length
             if samples.size < self.chunk_size:
-                samples = np.pad(samples, (0, max(0, self.chunk_size - samples.size)), "constant")
+                samples = np.pad(
+                    samples, (0, max(0, self.chunk_size - samples.size)), "constant"
+                )
             else:
-                samples = samples[:self.chunk_size].copy()
+                samples = samples[: self.chunk_size].copy()
 
             # Normalize if needed
             max_abs = np.abs(samples).max()
@@ -67,16 +71,18 @@ class AudioCapture(AAudioCapture):
                 samples = np.clip(samples, -1.0, 1.0)
 
             self.audio_buffer.append(samples)
-            
+
             # Queue samples for processing on main thread (don't block)
             try:
                 self.sample_queue.put_nowait(samples)
-            except:
+            except Exception:
+                self.logger.info("Audio sample queue full...")
                 # Queue full, drop sample
                 pass
-                
+
         except Exception as e:
             import traceback
+
             print(f"Critical error in audio callback: {e}")
             traceback.print_exc()
 
@@ -93,13 +99,14 @@ class AudioCapture(AAudioCapture):
                 samples = self.sample_queue.get_nowait()
                 # Process samples
                 treatedData = self.processor.process(samples)
-                
+
                 # Call listeners
                 for listener in list(self.listeners):
                     try:
                         listener(treatedData)
                     except Exception as e:
                         import traceback
+
                         print(f"Error in listener: {e}")
                         traceback.print_exc()
                 processed_count += 1
@@ -163,25 +170,29 @@ class AudioStreamHandler(AAudioStreamHandler):
             self.stream = None
             self.setup_device()
             self.start_stream()
-            
+            if not self.audio_capture:
+                raise Exception("Failed to retrieve audio capture.")
+
             # Add any pending listeners
             for listener in self.pending_listeners:
                 self.audio_capture.add_listener(listener)
             self.pending_listeners = []
-            
+
         except Exception as e:
             self.logger.error(f"Error initializing stream: {e}")
-            post_ui_message("error", "Audio Error", f"Failed to initialize audio stream: {e}")
+            post_ui_message(
+                "error", "Audio Error", f"Failed to initialize audio stream: {e}"
+            )
 
     def setup_device(self):
         """Setup audio device using sounddevice."""
         try:
             # Get default input device
-            device_info = sd.query_devices(kind='input')
+            device_info = sd.query_devices(kind="input")
             self.device_index = sd.default.device[0]
-            self.sample_rate = int(device_info['default_samplerate'])
-            self.channels = min(device_info['max_input_channels'], 1)  # Use mono
-            
+            self.sample_rate = int(device_info["default_samplerate"])
+            self.channels = min(device_info["max_input_channels"], 1)  # Use mono
+
             self.logger.debug(
                 f"Using device: {device_info['name']} (index: {self.device_index}) "
                 f"Sample Rate: {self.sample_rate} Hz Channels: {self.channels} "
@@ -193,7 +204,9 @@ class AudioStreamHandler(AAudioStreamHandler):
             self.sample_rate = 44100
             self.channels = 1
 
-    def add_listener_on_init(self, listener: AudioListenerType) -> Optional[AudioListener]:
+    def add_listener_on_init(
+        self, listener: AudioListenerType
+    ) -> Optional[AudioListener]:
         self.pending_listeners.append(listener)
         return None
 
@@ -203,7 +216,7 @@ class AudioStreamHandler(AAudioStreamHandler):
             self.logger.debug("Creating processor...")
             # Create processor instance
             processor = self.processor_class(self.chunk_size, self.sample_rate)
-            
+
             self.logger.debug("Creating audio capture...")
             # Create audio capture
             self.audio_capture = AudioCapture(
@@ -213,12 +226,12 @@ class AudioStreamHandler(AAudioStreamHandler):
                 channels=self.channels,
                 sample_rate=self.sample_rate,
             )
-            
+
             self.logger.debug("Notifying device change listeners...")
             # Notify device change listeners
             for listener in self.device_change_listeners:
                 listener(self.audio_capture)
-            
+
             self.logger.debug("Creating sounddevice InputStream...")
             # Create and start sounddevice stream
             self.stream = sd.InputStream(
@@ -227,17 +240,20 @@ class AudioStreamHandler(AAudioStreamHandler):
                 channels=self.channels,
                 blocksize=self.chunk_size,
                 callback=self.audio_capture.callback,
-                dtype='float32',
+                dtype="float32",
             )
             self.logger.debug("Starting audio stream...")
             self.stream.start()
             self.logger.info("Audio stream started")
-            
+
         except Exception as e:
             self.logger.error(f"Error starting stream: {e}")
             import traceback
+
             traceback.print_exc()
-            post_ui_message("error", "Audio Error", f"Failed to start audio stream: {e}")
+            post_ui_message(
+                "error", "Audio Error", f"Failed to start audio stream: {e}"
+            )
 
     def stop_stream(self):
         """Stop the audio stream."""

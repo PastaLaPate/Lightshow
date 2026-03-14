@@ -1,18 +1,32 @@
-from collections import deque
+import importlib
+import importlib.util
 import traceback
-from queue import Queue, Empty  # Import Empty for cleaner queue handling
+from collections import deque
+from dataclasses import dataclass
+from queue import Empty, Queue
+from typing import Dict, List, Literal  # Import Empty for cleaner queue handling
 
 import pyqtgraph as pg
-from PyQt6.QtWidgets import QVBoxLayout, QWidget
 from PyQt6.QtCore import QTimer
+from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
-try:
-    import OpenGL.GL  # not just `import OpenGL`
+if importlib.util.find_spec("OpenGL", "GL"):
     OPENGL_AVAILABLE = True
     print("OpenGL available")
-except ImportError:
+else:
     OPENGL_AVAILABLE = False
     print("OpenGL NOT available")
+
+
+@dataclass
+class Markers:
+    x: List[int]
+    y: List[int]
+    dirty: bool
+
+
+MarkerTypes = Literal["beat"] | Literal["break"] | Literal["drop"]
+
 
 class SpikeDetectorVisualizer(QWidget):
     """Real-time spike visualizer using pyqtgraph for efficient plotting."""
@@ -36,30 +50,30 @@ class SpikeDetectorVisualizer(QWidget):
         self.limit_history = deque(maxlen=visualization_len)
         self.global_index = 0
 
-        self.marker_data = {
-            "beat": {"x": [], "y": [], "dirty": False},
-            "break": {"x": [], "y": [], "dirty": False},
-            "drop": {"x": [], "y": [], "dirty": False},
+        self.marker_data: Dict[MarkerTypes, Markers] = {
+            "beat": Markers(x=[], y=[], dirty=False),
+            "break": Markers(x=[], y=[], dirty=False),
+            "drop": Markers(x=[], y=[], dirty=False),
         }
 
         self.update_queue = Queue(maxsize=5)
 
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self._process_queued_updates)
-        self.update_timer.start(int(1000/30))  # ~30 FPS
+        self.update_timer.start(int(1000 / 30))  # ~30 FPS
 
         # --- OPTIMIZATION 2: Enable OpenGL ---
-        # useOpenGL=True offloads rendering to GPU. 
+        # useOpenGL=True offloads rendering to GPU.
         # Requires: pip install PyOpenGL
         self.plot = pg.PlotWidget(title="Spike Detector", useOpenGL=OPENGL_AVAILABLE)
-        
+
         self.plot.setBackground("#1e1e1e")
         # Ensure antialiasing is off on the plot item specifically
-        self.plot.setAntialiasing(False) 
+        self.plot.setAntialiasing(False)
         plot_item = self.plot.getPlotItem()
         if plot_item:
             plot_item.setClipToView(True)
-            plot_item.setDownsampling(mode='peak')
+            plot_item.setDownsampling(mode="peak")
 
         self.plot.showGrid(x=False, y=False)
         self.plot.addLegend(offset=(10, 10))
@@ -74,7 +88,7 @@ class SpikeDetectorVisualizer(QWidget):
         self.energy_curve = self.plot.plot([], [], pen=pen_energy, name="Energy")
         self.diff_curve = self.plot.plot([], [], pen=pen_diff, name="Diff")
         self.limit_curve = self.plot.plot([], [], pen=pen_limit, name="Limit")
-        
+
         # Optimization: Skip recording data for drawing if not needed
         self.energy_curve.setSkipFiniteCheck(True)
         self.diff_curve.setSkipFiniteCheck(True)
@@ -83,7 +97,7 @@ class SpikeDetectorVisualizer(QWidget):
         self.diff_curve.setZValue(20)
         self.limit_curve.setZValue(10)
 
-        self.marker_items = {
+        self.marker_items: Dict[MarkerTypes, pg.ScatterPlotItem] = {
             "beat": pg.ScatterPlotItem(
                 [], [], pen=pg.mkPen(None), brush=pg.mkBrush(0, 255, 0), size=6
             ),
@@ -96,9 +110,9 @@ class SpikeDetectorVisualizer(QWidget):
         }
         for name, item in self.marker_items.items():
             item.setZValue(40)
-            # Optimization: Scatter plots are heavy. 
+            # Optimization: Scatter plots are heavy.
             # pxMode=True means size is in pixels, not data coordinates (faster)
-            item.setPxMode(True) 
+            item.setPxMode(True)
             self.plot.addItem(item)
 
         layout = QVBoxLayout()
@@ -110,7 +124,9 @@ class SpikeDetectorVisualizer(QWidget):
         self, data, beat_detected=False, break_detected=False, drop_detected=False
     ):
         try:
-            self.update_queue.put_nowait((data, beat_detected, break_detected, drop_detected))
+            self.update_queue.put_nowait(
+                (data, beat_detected, break_detected, drop_detected)
+            )
         except Exception:
             pass
 
@@ -171,25 +187,28 @@ class SpikeDetectorVisualizer(QWidget):
             self.global_index += 1
         except Exception:
             traceback.print_exc()
-        
 
     def _add_marker(self, marker_type, detected, current_energy):
         if detected:
-            self.marker_data[marker_type]["x"].append(self.global_index)
-            self.marker_data[marker_type]["y"].append(current_energy)
+            self.marker_data[marker_type].x.append(self.global_index)
+            self.marker_data[marker_type].y.append(current_energy)
             # cap marker history
             maxlen = 200
-            if len(self.marker_data[marker_type]["x"]) > maxlen:
-                self.marker_data[marker_type]["x"] = self.marker_data[marker_type]["x"][-maxlen:]
-                self.marker_data[marker_type]["y"] = self.marker_data[marker_type]["y"][-maxlen:]
-                self.marker_data[marker_type]["dirty"] = True
+            if len(self.marker_data[marker_type].x) > maxlen:
+                self.marker_data[marker_type].x = self.marker_data[marker_type].x[
+                    -maxlen:
+                ]
+                self.marker_data[marker_type].y = self.marker_data[marker_type].x[
+                    -maxlen:
+                ]
+                self.marker_data[marker_type].dirty = True
 
     def qt_update(self):
         """Update plot items with buffered data."""
         if not self.x_history:
             return
 
-        # Optimization: Converting deque to list is okay, 
+        # Optimization: Converting deque to list is okay,
         # but if this gets slow, consider pre-allocated numpy arrays.
         xs = list(self.x_history)
         energies = list(self.energy_history)
@@ -198,7 +217,7 @@ class SpikeDetectorVisualizer(QWidget):
 
         self.energy_curve.setData(xs, energies)
         self.diff_curve.setData(xs, diffs)
-        
+
         if len(limits) > 0:
             lx = xs[-len(limits) :]
             self.limit_curve.setData(lx, list(limits))
@@ -206,15 +225,17 @@ class SpikeDetectorVisualizer(QWidget):
             self.limit_curve.setData([], [])
 
         for mtype, item in self.marker_items.items():
-                
-            if self.marker_data[mtype].get("dirty"):
-                mx = self.marker_data[mtype]["x"]
-                my = self.marker_data[mtype]["y"]
+            if self.marker_data[mtype].dirty:
+                mx = self.marker_data[mtype].x
+                my = self.marker_data[mtype].y
                 item.setData(mx, my)
 
         max_x = self.global_index
         min_x = max(0, max_x - self.visualization_len)
-        self.plot.setXRange(min_x, max_x, padding=0)
+        # Fixes pylance problems
+        plot_item = self.plot.getPlotItem()
+        if isinstance(plot_item, pg.PlotItem) and isinstance(plot_item.vb, pg.ViewBox):
+            plot_item.vb.setXRange(min_x, max_x, padding=0)
 
     # (Clear method remains the same)
     def clear(self):
@@ -224,16 +245,13 @@ class SpikeDetectorVisualizer(QWidget):
         self.diff_history.clear()
         self.limit_history.clear()
         for marker_type in self.marker_data:
-            self.marker_data[marker_type]["x"].clear()
-            self.marker_data[marker_type]["y"].clear()
+            self.marker_data[marker_type].x.clear()
+            self.marker_data[marker_type].y.clear()
         self.energy_curve.setData([], [])
         self.diff_curve.setData([], [])
         self.limit_curve.setData([], [])
         for item in self.marker_items.values():
             item.setData([], [])
         while not self.update_queue.empty():
-            try:
-                self.update_queue.get_nowait()
-            except:
-                pass
+            self.update_queue.get_nowait()
         self.update_timer.start()

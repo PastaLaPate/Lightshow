@@ -2,21 +2,53 @@ import asyncio
 import logging
 import os
 import threading
-from typing import Callable
+from typing import Any, Callable
 
 # winrt is Windows-only. Try to import; if not available, provide safe fallbacks
 if os.name == "nt":
     from winrt.windows.media.control import (
-        GlobalSystemMediaTransportControlsSessionManager,
         GlobalSystemMediaTransportControlsSession,
+        GlobalSystemMediaTransportControlsSessionManager,
     )
-    
+
 if os.name == "posix":
+    from typing import Protocol, cast, runtime_checkable
+
     from dbus_next.aio.message_bus import MessageBus
     from dbus_next.constants import BusType
-        
     from dbus_next.signature import Variant
-    
+
+    # --------------- dbus interface Protocol stubs --------------- #
+
+    @runtime_checkable
+    class DBusInterface(Protocol):
+        """Stub for org.freedesktop.DBus proxy interface."""
+
+        def on_name_owner_changed(
+            self,
+            callback: Callable[[str, str, str], None],
+        ) -> None: ...
+
+        async def call_list_names(self) -> list[str]: ...
+
+    @runtime_checkable
+    class PropertiesInterface(Protocol):
+        """Stub for org.freedesktop.DBus.Properties proxy interface."""
+
+        def on_properties_changed(
+            self,
+            callback: Callable[[str, dict[str, Any], list[str]], None],
+        ) -> None: ...
+
+    @runtime_checkable
+    class PlayerInterface(Protocol):
+        """Stub for org.mpris.MediaPlayer2.Player proxy interface."""
+
+        async def get_playback_status(self) -> str: ...
+
+        async def get_metadata(self) -> dict[str, Any]: ...
+
+
 MPRIS_PREFIX = "org.mpris.MediaPlayer2."
 PLAYER_PRIORITY = [
     "org.mpris.MediaPlayer2.deezer",
@@ -31,28 +63,34 @@ PLAYER_PRIORITY = [
 # Common API classes that work across platforms
 class TrackInfo:
     """Platform-agnostic track information."""
+
     def __init__(self, title: str = "", artist: str = ""):
         self.title = title
         self.artist = artist
 
+
 class PlaybackInfo:
     """Platform-agnostic playback status."""
+
     def __init__(self, playback_status: str = "stopped"):
         self.playback_status = playback_status
+
 
 # Session object for common API (represents a media player session)
 class MediaSession:
     """Platform-agnostic media session object."""
+
     def __init__(self, name: str = ""):
         self.name = name
 
+
 TrackChangedListener = Callable[
-    [MediaSession, TrackInfo],
+    [str, TrackInfo],
     None,
 ]
 
 PlaybackStatusChangedListener = Callable[
-    [MediaSession, PlaybackInfo],
+    [str, PlaybackInfo],
     None,
 ]
 
@@ -62,8 +100,8 @@ threading.Thread(target=loop.run_forever, daemon=True).start()
 
 
 if os.name == "nt":
-    class TracksInfoTracker:
 
+    class TracksInfoTracker:
         def __init__(self):
             self.track_changed_listeners = []
             self.playback_status_changed_listeners = []
@@ -122,16 +160,18 @@ elif os.name == "posix":
 
         def __init__(self):
             self.loop = loop
-            self.bus = None
+            self.bus: MessageBus | None = None
 
-            self.players = {}          # name -> player iface
-            self.props = {}            # name -> props iface
-            self.status = {}           # name -> PlaybackStatus
+            self.players: dict[str, PlayerInterface] = {}
+            self.props: dict[str, PropertiesInterface] = {}
+            self.status: dict[str, str] = {}
 
-            self.active_player = None
+            self.active_player: str | None = None
 
-            self.track_changed_listeners = []
-            self.playback_status_changed_listeners = []
+            self.track_changed_listeners: list[TrackChangedListener] = []
+            self.playback_status_changed_listeners: list[
+                PlaybackStatusChangedListener
+            ] = []
 
             asyncio.run_coroutine_threadsafe(self._init(), loop)
 
@@ -147,19 +187,21 @@ elif os.name == "posix":
             obj = self.bus.get_proxy_object(
                 "org.freedesktop.DBus", "/org/freedesktop/DBus", intro
             )
-            dbus_iface = obj.get_interface("org.freedesktop.DBus")
+            dbus_iface = cast(DBusInterface, obj.get_interface("org.freedesktop.DBus"))
             dbus_iface.on_name_owner_changed(self._on_name_owner_changed)
 
             await self._scan_existing_players()
 
         async def _scan_existing_players(self):
+            if not self.bus:
+                return
             intro = await self.bus.introspect(
                 "org.freedesktop.DBus", "/org/freedesktop/DBus"
             )
             obj = self.bus.get_proxy_object(
                 "org.freedesktop.DBus", "/org/freedesktop/DBus", intro
             )
-            iface = obj.get_interface("org.freedesktop.DBus")
+            iface = cast(DBusInterface, obj.get_interface("org.freedesktop.DBus"))
             names = await iface.call_list_names()
 
             for name in names:
@@ -169,15 +211,21 @@ elif os.name == "posix":
         # ---------------- PLAYER MGMT ---------------- #
 
         async def _attach_player(self, name: str):
-            if name in self.players:
+            if name in self.players or not self.bus:
                 return
 
             try:
                 intro = await self.bus.introspect(name, "/org/mpris/MediaPlayer2")
                 obj = self.bus.get_proxy_object(name, "/org/mpris/MediaPlayer2", intro)
 
-                player = obj.get_interface("org.mpris.MediaPlayer2.Player")
-                props = obj.get_interface("org.freedesktop.DBus.Properties")
+                player = cast(
+                    PlayerInterface,
+                    obj.get_interface("org.mpris.MediaPlayer2.Player"),
+                )
+                props = cast(
+                    PropertiesInterface,
+                    obj.get_interface("org.freedesktop.DBus.Properties"),
+                )
 
                 props.on_properties_changed(
                     lambda iface, changed, invalid: self._on_properties_changed(
@@ -194,8 +242,8 @@ elif os.name == "posix":
 
             except Exception:
                 pass
-            
-        async def _emit_track_info_force(self, name):
+
+        async def _emit_track_info_force(self, name: str):
             if name not in self.players:
                 return
 
@@ -210,9 +258,8 @@ elif os.name == "posix":
 
             info = TrackInfo(title=title, artist=artist)
 
-            for l in self.track_changed_listeners:
-                l(name, info)
-
+            for listener in self.track_changed_listeners:
+                listener(name, info)
 
         def _detach_player(self, name: str):
             self.players.pop(name, None)
@@ -239,7 +286,7 @@ elif os.name == "posix":
                     self._emit_full_state(selected), self.loop
                 )
 
-        def _pick_by_priority(self, names):
+        def _pick_by_priority(self, names: list[str]) -> str:
             for p in PLAYER_PRIORITY:
                 if p in names:
                     return p
@@ -247,75 +294,69 @@ elif os.name == "posix":
 
         # ---------------- SIGNAL HANDLERS ---------------- #
 
-        def _on_name_owner_changed(self, name, old, new):
+        def _on_name_owner_changed(self, name: str, old: str, new: str):
             if not name.startswith(MPRIS_PREFIX):
                 return
 
             if new:
-                asyncio.run_coroutine_threadsafe(
-                    self._attach_player(name), self.loop
-                )
+                asyncio.run_coroutine_threadsafe(self._attach_player(name), self.loop)
             else:
                 self._detach_player(name)
 
-        def _on_properties_changed(self, name, iface, changed):
-                if iface != "org.mpris.MediaPlayer2.Player":
-                    return
+        def _on_properties_changed(
+            self, name: str, iface: str, changed: dict[str, Any]
+        ):
+            if iface != "org.mpris.MediaPlayer2.Player":
+                return
 
-                # 1. Handle Status Changes
-                if "PlaybackStatus" in changed:
-                    self.status[name] = changed["PlaybackStatus"].value
-                    self._reevaluate_active_player()
+            # 1. Handle Status Changes
+            if "PlaybackStatus" in changed:
+                self.status[name] = changed["PlaybackStatus"].value
+                self._reevaluate_active_player()
 
-                    if name == self.active_player:
-                        self._emit_playback_status(name)
+                if name == self.active_player:
+                    self._emit_playback_status(name)
 
-                # 2. Handle Metadata Changes
-                # Fix: Check if Metadata is in 'changed' directly. 
-                # We pass the 'changed' dict to _emit_track_info so we don't have to fetch it again.
-                if "Metadata" in changed and name == self.active_player:
-                    self._emit_track_info(name, metadata=changed["Metadata"])
+            # 2. Handle Metadata Changes
+            if "Metadata" in changed and name == self.active_player:
+                self._emit_track_info(name, metadata=changed["Metadata"])
 
         # ---------------- EMIT ---------------- #
-        async def _emit_full_state(self, name):
-            # When emitting full state, we don't have cached metadata from a signal,
-            # so we pass None to force a fetch.
+
+        async def _emit_full_state(self, name: str):
             self._emit_track_info(name, metadata=None)
             self._emit_playback_status(name)
 
-        def _emit_track_info(self, name, metadata=None):
+        def _emit_track_info(self, name: str, metadata: "Variant | None" = None):
             """
-            Emits track info. 
+            Emits track info.
             If 'metadata' is provided (from a signal), uses it.
             Otherwise, fetches it from the player.
             """
+
             async def run():
                 try:
                     # Use provided metadata or fetch it if missing
-                    if metadata:
-                        meta = metadata.value if isinstance(metadata, Variant) else metadata
+                    if metadata is not None:
+                        meta: dict[str, Any] = (
+                            metadata.value
+                            if isinstance(metadata, Variant)
+                            else metadata
+                        )
                     else:
                         if name not in self.players:
                             return
-                        player = self.players[name]
-                        # SAFETY: await the get_metadata call
-                        meta = await player.get_metadata()
+                        meta = await self.players[name].get_metadata()
 
-                    # SAFETY: Handle cases where meta is None or keys are missing
                     if not meta:
                         return
 
-                    # Extract Title
-                    # dbus-next variants need careful handling. 
-                    # meta is usually a dict of {str: Variant}
                     title_var = meta.get("xesam:title")
-                    title = title_var.value if title_var else "Unknown Title"
+                    title: str = title_var.value if title_var else "Unknown Title"
 
-                    # Extract Artist
                     artist = "Unknown Artist"
                     artist_var = meta.get("xesam:artist")
                     if artist_var:
-                        # xesam:artist is usually a list of strings
                         artists = artist_var.value
                         if artists and isinstance(artists, list):
                             artist = artists[0]
@@ -324,19 +365,17 @@ elif os.name == "posix":
 
                     info = TrackInfo(title=title, artist=artist)
 
-                    for l in self.track_changed_listeners:
-                        l(name, info)
+                    for listener in self.track_changed_listeners:
+                        listener(name, info)
 
                 except Exception as e:
-                    # IMPORTANT: Catch errors in async tasks to see why it fails!
                     logging.getLogger("TracksInfoTracker").error(
                         f"Error emitting track info for {name}: {e}", exc_info=True
                     )
 
             asyncio.run_coroutine_threadsafe(run(), self.loop)
 
-
-        def _emit_playback_status(self, name):
+        def _emit_playback_status(self, name: str):
             raw = self.status.get(name)
 
             if raw == "Playing":
@@ -346,26 +385,27 @@ elif os.name == "posix":
             else:
                 status = PlaybackInfo("stopped")
 
-            for l in self.playback_status_changed_listeners:
-                l(name, status)
-
-
+            for listener in self.playback_status_changed_listeners:
+                listener(name, status)
 
         # ---------------- API ---------------- #
 
-        def add_track_changed_listener(self, listener):
+        def add_track_changed_listener(self, listener: TrackChangedListener):
             self.track_changed_listeners.append(listener)
 
-        def add_playback_status_changed_listener(self, listener):
+        def add_playback_status_changed_listener(
+            self, listener: PlaybackStatusChangedListener
+        ):
             self.playback_status_changed_listeners.append(listener)
 
 else:
     # No platform support available - provide a lightweight no-op tracker
     class TracksInfoTracker:
-
         def __init__(self):
-            self.track_changed_listeners = []
-            self.playback_status_changed_listeners = []
+            self.track_changed_listeners: list[TrackChangedListener] = []
+            self.playback_status_changed_listeners: list[
+                PlaybackStatusChangedListener
+            ] = []
 
         def add_track_changed_listener(self, listener: TrackChangedListener):
             self.track_changed_listeners.append(listener)

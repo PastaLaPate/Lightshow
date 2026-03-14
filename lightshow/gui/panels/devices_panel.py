@@ -1,17 +1,20 @@
 from typing import List, Type
 
 from PyQt6.QtWidgets import (
-    QVBoxLayout,
+    QComboBox,
     QHBoxLayout,
     QLabel,
     QListWidget,
-    QComboBox,
     QPushButton,
+    QVBoxLayout,
 )
 
-from .base_panel import BasePanel
-from lightshow.utils import Config
+from lightshow.devices import is_device_type
 from lightshow.devices.device import Device
+from lightshow.utils import Config
+from lightshow.utils.config import DeviceConfigType
+
+from .base_panel import BasePanel
 
 
 class DevicesPanel(BasePanel):
@@ -84,16 +87,20 @@ class DevicesPanel(BasePanel):
             # Create a default device config
             device_count = len(self.config.devices)
             device_id = f"{device_type_name}_{device_count}"
-            self.config.devices[device_id] = {
-                "type": device_type_name,
-                "props": getattr(device_type, "DEFAULT_CONFIG", {}).copy(),
-            }
+            if is_device_type(device_type_name):
+                self.config.devices[device_id] = DeviceConfigType(
+                    {
+                        "type": device_type_name,
+                        "props": getattr(device_type, "DEFAULT_CONFIG", {}).copy(),
+                    }
+                )
             self.refresh_list()
             # Select the newly added device in the list so details show up
             if self.device_listbox:
                 items = [
-                    self.device_listbox.item(i).text()
+                    item.text()
                     for i in range(self.device_listbox.count())
+                    if (item := self.device_listbox.item(i)) is not None
                 ]
                 try:
                     idx = items.index(device_id)

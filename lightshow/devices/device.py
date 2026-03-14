@@ -20,12 +20,18 @@ class PacketStatus(Enum):
 
 class PacketData:
     def __init__(
-        self, packet_type: PacketType, packet_status: PacketStatus, power: int = 1, audio_data=None
+        self,
+        packet_type: PacketType,
+        packet_status: PacketStatus,
+        power: int = 1,
+        audio_data=None,
     ):
         self.packet_type = packet_type
         self.packet_status = packet_status
         self.power = power  # Used to determine the brightness of the LED
-        self.audio_data = audio_data  # Optional AudioData object for audio-reactive effects
+        self.audio_data = (
+            audio_data  # Optional AudioData object for audio-reactive effects
+        )
 
 
 class Device(ABC):

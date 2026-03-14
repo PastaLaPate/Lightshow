@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from typing import Literal, TypedDict, Union
 
 from lightshow.devices.animations.AAnimation import (
@@ -9,7 +10,10 @@ from lightshow.devices.animations.AAnimation import (
 )
 from lightshow.devices.moving_head.moving_head_colors import COLOR_TRANSFORMER
 
-QUART_OUT = lambda t: 1 - (1 - t) ** 4
+
+def QUART_OUT(t):
+    return 1 - (1 - t) ** 4
+
 
 ServoType = Literal["base", "top"]
 
@@ -35,7 +39,7 @@ class BaseServoCommand(ServoCommand):
 
 
 class TopServoCommand(ServoCommand):
-    def __init__(self, angle):
+    def __init__(self, angle: int):
         super().__init__("top", angle)
 
 
@@ -47,6 +51,7 @@ class MHAnimationFrame(TypedDict):
 
 
 class AMHAnimation(AAnimation):
+    @abstractmethod
     def next(self, isTick=False, dt=0) -> MHAnimationFrame:
         pass
 

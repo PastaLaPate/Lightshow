@@ -1,5 +1,9 @@
 import time
+
 import numpy as np
+
+from lightshow.audio.audio_types import AudioData
+
 from .spike_detector import SpikeDetector
 
 
@@ -8,7 +12,7 @@ class BreakDetector(SpikeDetector):
         self.beats = []
         self.window_size = window_size
 
-    def detect(self, data):
+    def detect(self, data: AudioData, appendCurrentEnergy=True):
         if len(self.beats) < self.window_size - 5:
             return False
         time_since_last_beat = time.time_ns() - self.beats[-1]

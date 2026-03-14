@@ -21,5 +21,6 @@ def hsv_to_rgb(h: float, s: float, v: float, a: float) -> tuple:
             return (t, w, v, a)
         if i == 5:
             return (v, w, q, a)
+        return (v, v, v, a)
     else:
         return (v, v, v, a)

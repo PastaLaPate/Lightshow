@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QTextEdit, QFrame, QVBoxLayout, QPushButton
+from PyQt6.QtWidgets import QFrame, QPushButton, QTextEdit, QVBoxLayout
 
 from lightshow.gui.panels.base_panel import BasePanel
 from lightshow.utils.logger import LoggerCore
@@ -36,7 +36,9 @@ class Logs(BasePanel):
         frameLayout.addWidget(self.textBox)
 
         self.clearButton = QPushButton("Clear")
-        self.clearButton.clicked.connect(lambda: self.textBox.clear())
+        self.clearButton.clicked.connect(
+            lambda: self.textBox.clear() if self.textBox else None
+        )
 
         layout.addWidget(self.frame)
         layout.addWidget(self.clearButton)

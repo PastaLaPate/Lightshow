@@ -7,7 +7,6 @@ from .base_panel import BasePanel
 
 
 class Button(QPushButton):
-
     def __init__(self, label: str):
         super().__init__(label)
         self.setSizePolicy(

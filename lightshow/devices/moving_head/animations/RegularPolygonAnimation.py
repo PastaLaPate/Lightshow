@@ -1,6 +1,7 @@
-from itertools import cycle
 import math
 import random
+from itertools import cycle
+from typing import List
 
 from lightshow.devices.moving_head.moving_head_animations import (
     AMHAnimation,
@@ -57,18 +58,22 @@ class RegularPolygonAnimation(AMHAnimation):
     def calculateServoPoses(self, angle_offset=0):
         angle_step = 360 / self.points_num
         angle_step = math.radians(angle_step)
-        self.topServoPositions = [
-            self.topRange[0]
-            + (math.cos(angle_step * i + angle_offset) + 1)
-            / 2
-            * (self.topRange[1] - self.topRange[0])
+        self.topServoPositions: List[int] = [
+            int(
+                self.topRange[0]
+                + (math.cos(angle_step * i + angle_offset) + 1)
+                / 2
+                * (self.topRange[1] - self.topRange[0])
+            )
             for i in range(self.points_num)
         ]
-        self.baseServoPositions = [
-            self.baseRange[0]
-            + (math.sin(angle_step * i + angle_offset) + 1)
-            / 2
-            * (self.baseRange[1] - self.baseRange[0])
+        self.baseServoPositions: List[int] = [
+            int(
+                self.baseRange[0]
+                + (math.sin(angle_step * i + angle_offset) + 1)
+                / 2
+                * (self.baseRange[1] - self.baseRange[0])
+            )
             for i in range(self.points_num)
         ]
 

@@ -282,7 +282,11 @@ class UIManager(QMainWindow):
         LoggerCore().process_log_queue()
 
         # Process queued audio samples (from audio callback thread)
-        if self.audio_panel.is_streaming and hasattr(self.audio_handler, 'audio_capture') and self.audio_handler.audio_capture:
+        if (
+            self.audio_panel.is_streaming
+            and hasattr(self.audio_handler, "audio_capture")
+            and self.audio_handler.audio_capture
+        ):
             try:
                 self.audio_handler.audio_capture.process_queued_samples()
             except Exception as e:

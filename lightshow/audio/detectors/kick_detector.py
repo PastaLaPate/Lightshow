@@ -24,7 +24,7 @@ class KickDetector(SpikeDetector):
         # Use frequency data from FFT for bass detection
         # data.get_ps_mean([0, 40]) accesses the low frequency range
         current_energy = data.get_ps_mean([0, 40])
-        
+
         if appendCurrentEnergy:
             self.energy_history.append(current_energy)
 

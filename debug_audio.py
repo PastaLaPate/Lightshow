@@ -1,25 +1,29 @@
 #!/usr/bin/env python3
+import importlib.util
+
 """
 Debug script to analyze audio capture on Linux
 """
-try:
-    import pyaudiowpatch as pyaudio
-except Exception:
-    try:
-        import pyaudio
-    except Exception:
-        pyaudio = None
 
 from lightshow.audio.audio_streams import AudioStreamHandler
 from lightshow.audio.processors import SpectrumProcessor
 from lightshow.utils.config import Config
+
+if importlib.util.resolve_name("pyaudiowpatch", ""):
+    import pyaudiowpatch as pyaudio  # type: ignore
+else:
+    try:
+        import pyaudio
+    except Exception:
+        raise Exception("Install pyaudio!")
+
 
 def debug_audio_devices():
     """List all available audio devices and their properties."""
     if pyaudio is None:
         print("PyAudio not available")
         return
-    
+
     pa = pyaudio.PyAudio()
     print("\n=== Audio Devices ===")
     for i in range(pa.get_device_count()):
@@ -29,33 +33,36 @@ def debug_audio_devices():
         print(f"  Output Channels: {info['maxOutputChannels']}")
         print(f"  Sample Rate: {info['defaultSampleRate']}")
         print(f"  Default Input: {pa.get_default_input_device_info()['index'] == i}")
-    
+
     pa.terminate()
+
 
 def debug_audio_capture():
     """Capture and analyze raw audio data."""
     if pyaudio is None:
         print("PyAudio not available")
         return
-    
+
     config = Config()
     audio_handler = AudioStreamHandler(SpectrumProcessor, config)
-    
+
     print("\n=== Selected Audio Configuration ===")
     print(f"Device Index: {audio_handler.device_index}")
     print(f"Sample Rate: {audio_handler.sample_rate}")
     print(f"Channels: {audio_handler.channels}")
     print(f"Chunk Size: {audio_handler.chunk_size}")
-    
+
     # Capture 10 chunks of audio
     print("\n=== Capturing Audio Samples ===")
     audio_handler.start_stream()
-    
+
     samples_to_capture = 10
     chunk_count = 0
-    
+
     while chunk_count < samples_to_capture:
         try:
+            if not audio_handler.audio_capture:
+                continue
             latest = audio_handler.audio_capture.get_latest_data()
             if latest is not None:
                 print(f"\nChunk {chunk_count + 1}:")
@@ -67,12 +74,14 @@ def debug_audio_capture():
                 chunk_count += 1
         except Exception as e:
             print(f"Error: {e}")
-        
+
         import time
+
         time.sleep(0.1)
-    
+
     audio_handler.stop_stream()
     audio_handler.close()
+
 
 if __name__ == "__main__":
     debug_audio_devices()

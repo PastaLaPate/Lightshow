@@ -6,7 +6,6 @@ from .spike_detector import SpikeDetector
 # Similar to BreakDetector but instead of detecting if not enough beats are detected it detects if too many beats are detected in a short time span, indicating a drop in the music.
 # It does that by comparing the average time between the last window_size beats and all of the previous beats.
 class DropDetector(SpikeDetector):
-
     def __init__(self, window_size=25, comparing_window_size=10):
         self.beats = []
         self.window_size = window_size

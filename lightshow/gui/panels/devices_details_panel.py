@@ -1,18 +1,19 @@
 from typing import List, Type
 
 from PyQt6.QtWidgets import (
-    QVBoxLayout,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
-    QPushButton,
-    QFrame,
     QProgressBar,
+    QPushButton,
+    QVBoxLayout,
 )
 
-from .base_panel import BasePanel
-from lightshow.utils import Config, live_devices
 from lightshow.devices.device import Device
+from lightshow.utils import Config, live_devices
+
+from .base_panel import BasePanel
 
 
 class DeviceDetailsPanel(BasePanel):
@@ -236,6 +237,8 @@ class DeviceDetailsPanel(BasePanel):
                     initial = ""
                 value_label.setText(str(initial))
                 row.addWidget(value_label)
+                if not self.showed_props_layout:
+                    continue
                 self.showed_props_layout.addLayout(row)
                 self.showed_prop_labels[pname] = value_label
 

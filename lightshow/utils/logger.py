@@ -1,8 +1,9 @@
 import datetime
 import os
-from pathlib import Path
 import threading
+from pathlib import Path
 from queue import Queue
+
 from PyQt6.QtWidgets import QTextEdit
 
 
@@ -56,7 +57,6 @@ class LoggerCore:
         self.log_queue = Queue()
         self.last_fps_html = None
 
-
     def attach_widget(self, widget: QTextEdit):
         self.qt_widget = widget
 
@@ -87,26 +87,22 @@ class LoggerCore:
 
         # Process all queued messages
         while not self.log_queue.empty():
-            try:
-                item = self.log_queue.get_nowait()
-                html, is_fps = item if isinstance(item, tuple) else (item, False)
+            item = self.log_queue.get_nowait()
+            html, is_fps = item if isinstance(item, tuple) else (item, False)
 
-                if is_fps and self.last_fps_html:
-                    # Replace the last FPS line instead of adding a new one
-                    doc = self.qt_widget.document()
-                    cursor = self.qt_widget.textCursor()
-                    # Move to end and select the last line
-                    cursor.movePosition(cursor.MoveOperation.End)
-                    cursor.select(cursor.SelectionType.LineUnderCursor)
-                    cursor.insertHtml(html)
-                else:
-                    self.qt_widget.append(html)
+            if is_fps and self.last_fps_html:
+                # Replace the last FPS line instead of adding a new one
+                cursor = self.qt_widget.textCursor()
+                # Move to end and select the last line
+                cursor.movePosition(cursor.MoveOperation.End)
+                cursor.select(cursor.SelectionType.LineUnderCursor)
+                cursor.insertHtml(html)
+            else:
+                self.qt_widget.append(html)
 
-                if is_fps:
-                    self.last_fps_html = html
-                self.qt_widget.ensureCursorVisible()
-            except:
-                break
+            if is_fps:
+                self.last_fps_html = html
+            self.qt_widget.ensureCursorVisible()
 
 
 class Logger:
