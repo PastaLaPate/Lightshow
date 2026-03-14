@@ -87,14 +87,14 @@ class RegularPolygonAnimation(AMHAnimation):
     def reverse(self):
         super().reverse()
         self.topServo = cycle(
-            reversed(self.topServoPositions)
+            [ServoCommand("top", angle=x) for x in reversed(self.topServoPositions)]
             if not self.reversed
-            else self.topServoPositions
+            else [ServoCommand("top", angle=x) for x in self.topServoPositions]
         )
         self.baseServo = cycle(
-            reversed(self.baseServoPositions)
+            [ServoCommand("base", angle=x) for x in reversed(self.baseServoPositions)]
             if not self.reversed
-            else self.baseServoPositions
+            else [ServoCommand("base", angle=x) for x in self.baseServoPositions]
         )
 
         next(self.topServo)
