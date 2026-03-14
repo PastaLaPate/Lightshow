@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 import importlib.util
 
-"""
-Debug script to analyze audio capture on Linux
-"""
-
 from lightshow.audio.audio_streams import AudioStreamHandler
 from lightshow.audio.processors import SpectrumProcessor
 from lightshow.utils.config import Config
