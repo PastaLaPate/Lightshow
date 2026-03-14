@@ -74,6 +74,7 @@ class Config:
             self.settings["chunk_size"] = self.chunk_size
             self.settings["device_index"] = self.device_index
             self.settings["max_fps"] = self.max_fps
+            self.settings["audio_sensitivity"] = self.audio_sensitivity
             self.settings["devices"] = self.devices
             json.dump(self.settings, f, indent=4)
         self.logger.info(f"Configuration saved to {self.config_file}")

@@ -2,7 +2,6 @@
 """
 Debug script to analyze audio capture on Linux
 """
-import numpy as np
 try:
     import pyaudiowpatch as pyaudio
 except Exception:

@@ -1,39 +1,33 @@
-"""
-Real-time audio spectrum visualization with kick detection.
-"""
-
 import os
 import signal
 import sys
 from time import time_ns
-from typing import List
+from typing import List, Any
+import pyqtgraph as pg
+pg.setConfigOptions(useOpenGL=True, enableExperimental=True)
+import sounddevice as sd
 
-# PyAudio may not be available on all platforms; import safely
-try:
-    from pyaudio import PyAudio
-    PYAUDIO_AVAILABLE = True
-except Exception:
-    PYAUDIO_AVAILABLE = False
-    class PyAudio:  # lightweight placeholder
-        def __init__(self):
-            raise RuntimeError("PyAudio is not available on this system")
-from typing import Any
-# winrt is Windows-only; import it when available and fall back to safe defaults on other platforms
-try:
-    from winrt.windows.media.control import (
-        GlobalSystemMediaTransportControlsSession,
-        GlobalSystemMediaTransportControlsSessionMediaProperties,
-        GlobalSystemMediaTransportControlsSessionPlaybackInfo,
-        GlobalSystemMediaTransportControlsSessionPlaybackStatus,
-    )
-    WINRT_AVAILABLE = True
-except Exception:
+if os.name == "nt":
+    try:
+        from winrt.windows.media.control import (
+            GlobalSystemMediaTransportControlsSession,
+            GlobalSystemMediaTransportControlsSessionMediaProperties,
+            GlobalSystemMediaTransportControlsSessionPlaybackInfo,
+            GlobalSystemMediaTransportControlsSessionPlaybackStatus,
+        )
+        WINRT_AVAILABLE = True
+    except Exception:
+        WINRT_AVAILABLE = False
+        GlobalSystemMediaTransportControlsSession = Any
+        GlobalSystemMediaTransportControlsSessionMediaProperties = Any
+        GlobalSystemMediaTransportControlsSessionPlaybackInfo = Any
+        GlobalSystemMediaTransportControlsSessionPlaybackStatus = None
+else:
     WINRT_AVAILABLE = False
     GlobalSystemMediaTransportControlsSession = Any
     GlobalSystemMediaTransportControlsSessionMediaProperties = Any
     GlobalSystemMediaTransportControlsSessionPlaybackInfo = Any
     GlobalSystemMediaTransportControlsSessionPlaybackStatus = None
-
 import lightshow.audio.detectors as detectors
 import lightshow.utils.config as config
 from lightshow.audio.audio_streams import AudioListener, AudioStreamHandler
@@ -43,7 +37,10 @@ from lightshow.gui.main_window import UIManager
 from lightshow.utils import Logger, TracksInfoTracker
 from lightshow.utils.config import resource_path
 from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
+from PyQt6.QtCore import QObject, pyqtSignal
 
+class GuiBridge(QObject):
+    clear_visualizer_signal = pyqtSignal()
 
 class MainAudioListener(AudioListener):
     def __init__(self, AudioHandler: AudioStreamHandler):
@@ -54,6 +51,7 @@ class MainAudioListener(AudioListener):
         self.break_detector = detectors.BreakDetector(30)
         self.drop_detector = detectors.DropDetector(30, 5)
         self.kick_visualizer = None
+        self.gui_bridge = GuiBridge()
         self.track_tracker = TracksInfoTracker()
         self.logger.info("Adding track infos tracker")
         self.track_tracker.add_track_changed_listener(self.on_track_changed)
@@ -61,6 +59,10 @@ class MainAudioListener(AudioListener):
             self.on_playback_status_changed
         )
         self.clear_state()
+    
+    def changed_visualizer_settings(self):
+        if hasattr(self, "kick_visualizer") and self.kick_visualizer:
+            self.gui_bridge.clear_visualizer_signal.connect(self.kick_visualizer.clear)
 
     def on_track_changed(
         self,
@@ -124,7 +126,7 @@ class MainAudioListener(AudioListener):
             self.drop_detector.clear()
         # Only clear visualizer if it has been created (after QApplication exists)
         if hasattr(self, "kick_visualizer") and self.kick_visualizer:
-            self.kick_visualizer.clear()
+            self.gui_bridge.clear_visualizer_signal.emit()
 
     def send_packet_to_devices(self, packet: PacketData):
         devices = (
@@ -170,26 +172,27 @@ class MainAudioListener(AudioListener):
         if self.drop_detected and not self.drop_detector.detect(data):
             self.drop_detected = False
             self.send_packet_to_devices(PacketData(PacketType.DROP, PacketStatus.OFF, audio_data=data))
-
         # Update visualizer data
-        self.kick_visualizer(
-            data, beat_detected=beat, break_detected=mbreak, drop_detected=drop
-        )
+        if self.kick_visualizer:
+            self.kick_visualizer(
+                data, beat_detected=beat, break_detected=mbreak, drop_detected=drop
+            )
         return True
 
 
 def get_audio_devices() -> List[str]:
     """Returns a list of audio device names formatted for the combo box."""
-    if not PYAUDIO_AVAILABLE:
-        # PyAudio not installed; return an empty list and let UI handle it.
-        return []
     try:
-        pyaudio_instance = PyAudio()
         devices = []
-        for i in range(pyaudio_instance.get_device_count()):
-            device_info = pyaudio_instance.get_device_info_by_index(i)
-            devices.append(f"{i}: {device_info['name']}")
-        pyaudio_instance.terminate()
+        device_count = sd.query_devices(kind='input')
+        if isinstance(device_count, dict):
+            # Single device case
+            devices.append(f"{0}: {device_count['name']}")
+        else:
+            # Multiple devices
+            for i, device in enumerate(device_count):
+                if device['max_input_channels'] > 0:
+                    devices.append(f"{i}: {device['name']}")
         return devices
     except Exception:
         # If device enumeration fails, return empty list
@@ -229,6 +232,7 @@ def main():
     # Now that a QApplication exists, create the visualizer QWidget
     # and attach it to the listener. The visualizer depends on Qt widgets.
     listener.kick_visualizer = SpikeDetectorVisualizer(listener.kick_detector)
+    listener.changed_visualizer_settings()
 
     # Create and show the GUI, passing all necessary components
     ui_manager = UIManager(listener, audio_handler, config.global_config, audio_devices)

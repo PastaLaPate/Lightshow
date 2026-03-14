@@ -1,71 +1,64 @@
-import librosa
 import numpy as np
 from .audio_types import AudioData, Processor
+
+# Initialize numpy to use single thread for callbacks
+np.seterr(all='ignore')
 
 
 class SpectrumProcessor(Processor):
     """
-    Computes the FFT power spectrum and applies a Mel filter bank,
-    with support for attack, decay, and sensitivity smoothing.
+    Computes the FFT power spectrum with 20000 frequency elements.
+    No mel filterbank applied - pure FFT analysis.
     """
 
     def __init__(
-        self, chunk_size, sample_rate, n_mels=40, attack=0.9, decay=0.5, sensitivity=2.0
+        self, chunk_size, sample_rate, sensitivity=2.0
     ):
         super().__init__(chunk_size, sample_rate)
-        self.n_mels = n_mels
-        self.attack = attack
-        self.decay = decay
         self.sensitivity = sensitivity
-        self.mel_filters = librosa.filters.mel(
-            sr=sample_rate, n_fft=chunk_size, n_mels=n_mels
-        )
-        self.raw_freqs = np.fft.rfftfreq(chunk_size, d=1.0 / sample_rate)
-        self.prev_mel_energies = np.zeros(n_mels)  # for smoothing
-
-    def set_mels(self, n_mels):
-        self.n_mels = n_mels
-        self.prev_mel_energies = np.zeros(n_mels)
-        self.mel_filters = librosa.filters.mel(
-            sr=self.sample_rate, n_fft=self.chunk_size, n_mels=n_mels
-        )
 
     def process(self, data) -> AudioData:
-        # Ensure array and convert to float32; normalize integers into [-1, 1]
-        arr = np.asarray(data)
-        if np.issubdtype(arr.dtype, np.integer):
-            maxv = np.iinfo(arr.dtype).max if arr.dtype != np.int64 else 2 ** 31 - 1
-            arr = arr.astype(np.float32) / float(maxv)
-        else:
-            arr = arr.astype(np.float32)
-            # Robust normalization for float audio: ensure it's in reasonable range
-            max_abs = np.abs(arr).max() if arr.size else 0.0
-            # Only normalize if values are actually outside expected range
-            if max_abs > 1.01 or (max_abs > 0 and max_abs < 0.001):
-                if max_abs > 0:
-                    arr = arr / max_abs
+        """
+        Process audio data and return FFT power spectrum.
+        
+        :param data: Audio samples as array
+        :return: AudioData with 20000 frequency magnitude elements
+        """
+        try:
+            # Ensure array and convert to float32; normalize integers into [-1, 1]
+            arr = np.asarray(data, dtype=np.float32)
+            
+            # Ensure we have valid data
+            if arr.size == 0:
+                return AudioData(np.zeros(20000, dtype=np.float32))
+            
+            # Robust normalization for float audio
+            max_abs = float(np.abs(arr).max())
+            if max_abs > 1.01:
+                arr = np.clip(arr, -1.0, 1.0)
+            elif max_abs > 0 and max_abs < 0.001:
+                arr = arr / max_abs
 
-        # Compute FFT and power spectrum
-        fft_result = np.fft.rfft(arr)
-        power_spectrum = np.square(np.abs(fft_result))
+            # Compute FFT and power spectrum using numpy (single thread)
+            with np.errstate(all='ignore'):
+                fft_result = np.fft.rfft(arr)
+                power_spectrum = np.square(np.abs(fft_result))
 
-        # Apply Mel filterbank
-        mel_energies = np.dot(self.mel_filters, power_spectrum)
+            # Apply sensitivity scaling
+            power_spectrum = power_spectrum * self.sensitivity
 
-        # Apply sensitivity
-        mel_energies *= self.sensitivity
+            # Pad or trim to exactly 20000 elements
+            if len(power_spectrum) < 20000:
+                power_spectrum = np.pad(
+                    power_spectrum, (0, 20000 - len(power_spectrum)), mode='constant'
+                )
+            else:
+                power_spectrum = power_spectrum[:20000]
 
-        # Apply attack/decay smoothing
-        rising = mel_energies > self.prev_mel_energies
-        self.prev_mel_energies[rising] = (
-            self.attack * self.prev_mel_energies[rising]
-            + (1 - self.attack) * mel_energies[rising]
-        )
-        self.prev_mel_energies[~rising] = (
-            self.decay * self.prev_mel_energies[~rising]
-            + (1 - self.decay) * mel_energies[~rising]
-        )
-
-        smoothed_mel = self.prev_mel_energies.copy()
-
-        return AudioData(power_spectrum, smoothed_mel)
+            return AudioData(power_spectrum)
+        except Exception as e:
+            import traceback
+            print(f"Error in processor: {e}")
+            traceback.print_exc()
+            # Return empty data to prevent crash
+            return AudioData(np.zeros(20000, dtype=np.float32))

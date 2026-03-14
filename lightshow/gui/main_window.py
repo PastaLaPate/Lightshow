@@ -254,10 +254,7 @@ class UIManager(QMainWindow):
         try:
             self.audio_handler.reinit_stream(self.config)
             self.listener.clear_state()
-            self.audio_panel.audio_thread = threading.Thread(
-                target=self.audio_handler.start_stream, daemon=True
-            )
-            self.audio_panel.audio_thread.start()
+            # Note: reinit_stream() already starts the stream, no need to start again
             self.audio_panel.set_streaming(True)
         except Exception:
             self.ui_signals.show_error.emit(
@@ -283,6 +280,13 @@ class UIManager(QMainWindow):
         from lightshow.utils.logger import LoggerCore
 
         LoggerCore().process_log_queue()
+
+        # Process queued audio samples (from audio callback thread)
+        if self.audio_panel.is_streaming and hasattr(self.audio_handler, 'audio_capture') and self.audio_handler.audio_capture:
+            try:
+                self.audio_handler.audio_capture.process_queued_samples()
+            except Exception as e:
+                self.logger.error(f"Error processing queued audio: {e}")
 
         if self.audio_panel.is_streaming and self.audio_panel.visualizer:
             try:

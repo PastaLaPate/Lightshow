@@ -8,7 +8,7 @@ class KickDetector(SpikeDetector):
             AudioHandler,
             1.75,
             20,
-            [0, 1],
+            [40, 100],  # First 4 mel bins = ~20-100Hz (bass range)
             DetectionType.UPPER,
             1 / 10000,
             250 / 1000,
@@ -21,8 +21,10 @@ class KickDetector(SpikeDetector):
         self.cooldown_counter = 0
 
     def detect(self, data, appendCurrentEnergy=True):
-        current_energy = data.get_ps_mean(self.freq_range)
-
+        # Use frequency data from FFT for bass detection
+        # data.get_ps_mean([0, 40]) accesses the low frequency range
+        current_energy = data.get_ps_mean([0, 40])
+        
         if appendCurrentEnergy:
             self.energy_history.append(current_energy)
 
