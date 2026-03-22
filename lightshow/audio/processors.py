@@ -1,4 +1,5 @@
 import numpy as np
+
 from .audio_types import AudioData, Processor
 
 # Initialize numpy to use single thread for callbacks
@@ -36,6 +37,8 @@ class SpectrumProcessor(Processor):
                 arr = np.clip(arr, -1.0, 1.0)
             elif max_abs > 0 and max_abs < 0.001:
                 arr = arr / max_abs
+            window = np.hanning(len(arr))
+            arr = arr * window
 
             # Compute FFT and power spectrum using numpy (single thread)
             with np.errstate(all="ignore"):
@@ -43,6 +46,8 @@ class SpectrumProcessor(Processor):
                 power_spectrum = np.square(np.abs(fft_result))
 
             # Apply sensitivity scaling
+            p95 = np.percentile(power_spectrum, 95)
+            power_spectrum = np.clip(power_spectrum, 0, p95 * 2)
             power_spectrum = power_spectrum * self.sensitivity
 
             # Pad or trim to exactly 20000 elements

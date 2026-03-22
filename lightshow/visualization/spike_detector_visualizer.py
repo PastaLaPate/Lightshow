@@ -10,12 +10,16 @@ import pyqtgraph as pg
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
+from lightshow.utils.logger import Logger
+
+_logger = Logger.for_class("Audio Visualization")
+
 if importlib.util.find_spec("OpenGL", "GL"):
     OPENGL_AVAILABLE = True
-    print("OpenGL available")
+    _logger.debug("Using OpenGL")
 else:
     OPENGL_AVAILABLE = False
-    print("OpenGL NOT available")
+    _logger.warn("Unable to use OpenGL. Expect poor performance")
 
 
 @dataclass
@@ -136,22 +140,18 @@ class SpikeDetectorVisualizer(QWidget):
         max_per_frame = 10
         has_new_data = False
 
-        try:
-            while not self.update_queue.empty() and updates_processed < max_per_frame:
-                try:
-                    data_tuple = self.update_queue.get_nowait()
-                    self._on_update_data(*data_tuple)
-                    updates_processed += 1
-                    has_new_data = True
-                except Empty:
-                    break
-                except Exception:
-                    traceback.print_exc()
-            if has_new_data:
-                self.qt_update()
-
-        except Exception:
-            traceback.print_exc()
+        while not self.update_queue.empty() and updates_processed < max_per_frame:
+            try:
+                data_tuple = self.update_queue.get_nowait()
+                self._on_update_data(*data_tuple)
+                updates_processed += 1
+                has_new_data = True
+            except Empty:
+                break
+            except Exception:
+                traceback.print_exc()
+        if has_new_data:
+            self.qt_update()
 
     def _on_update_data(self, data, beat_detected, break_detected, drop_detected):
         try:
@@ -236,6 +236,7 @@ class SpikeDetectorVisualizer(QWidget):
 
     # (Clear method remains the same)
     def clear(self):
+        self.global_index = 0
         self.update_timer.stop()
         self.x_history.clear()
         self.energy_history.clear()
