@@ -107,6 +107,9 @@ if os.name == "nt":
             self.playback_status_changed_listeners = []
             self.manager = None
             # schedule initialization safely
+            # asyncio.run_coroutine_threadsafe(self.async_init(), loop)
+
+        def start(self):
             asyncio.run_coroutine_threadsafe(self.async_init(), loop)
 
         async def async_init(self):
@@ -173,6 +176,9 @@ elif os.name == "posix":
                 PlaybackStatusChangedListener
             ] = []
 
+            # asyncio.run_coroutine_threadsafe(self._init(), loop)
+
+        def start(self):
             asyncio.run_coroutine_threadsafe(self._init(), loop)
 
         # ---------------- INIT ---------------- #
@@ -406,6 +412,9 @@ else:
             self.playback_status_changed_listeners: list[
                 PlaybackStatusChangedListener
             ] = []
+
+        def start(self):
+            pass
 
         def add_track_changed_listener(self, listener: TrackChangedListener):
             self.track_changed_listeners.append(listener)

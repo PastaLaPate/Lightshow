@@ -149,6 +149,13 @@ class MainAudioListener(AudioListener):
         # Only clear visualizer if it has been created (after QApplication exists)
         if hasattr(self, "kick_visualizer") and self.kick_visualizer:
             self.gui_bridge.clear_visualizer_signal.emit()
+        if isinstance(self.stream_handler, AudioStreamHandler):
+            try:
+                if self.stream_handler.audio_capture:
+                    self.stream_handler.audio_capture.audio_buffer.clear()
+                    self.stream_handler.audio_capture.sample_queue.queue.clear()
+            except Exception:
+                pass
 
     def send_packet_to_devices(self, packet: PacketData):
         devices = (
@@ -247,6 +254,7 @@ def main():
 
     # Create Qt application
     app = QApplication(sys.argv)
+    app.setApplicationName("lightshow")
 
     if os.name == "nt":
         # Workaround to set app user model id on Windows for proper taskbar icon display
@@ -256,21 +264,21 @@ def main():
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
     ICON_PATH = resource_path("lightshow/gui/assets/lightshow_icon.png")
-    app.setWindowIcon(QIcon(ICON_PATH))
+    icon = QIcon(ICON_PATH)
+    app.setWindowIcon(icon)
     timer = QTimer()
     timer.start(500)
     timer.timeout.connect(lambda: None)
 
-    # Now that a QApplication exists, create the visualizer QWidget
-    # and attach it to the listener. The visualizer depends on Qt widgets.
     listener.kick_visualizer = SpikeDetectorVisualizer(listener.kick_detector)
     listener.changed_visualizer_settings()
 
-    # Create and show the GUI, passing all necessary components
     ui_manager = UIManager(listener, audio_handler, config.global_config, audio_devices)
-    ui_manager.setWindowIcon(QIcon(ICON_PATH))
+    ui_manager.setProperty("_NET_WM_NAME", "Lightshow")
     ui_manager.resize(800, 600)
+    listener.track_tracker.start()
     ui_manager.show()
+    ui_manager.setWindowIcon(QIcon(ICON_PATH))
 
     # Run the application
     sys.exit(app.exec())
