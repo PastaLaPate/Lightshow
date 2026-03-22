@@ -72,13 +72,12 @@ class LoggerCore:
         self.file.flush()
 
         # GUI - queue message instead of blocking
-        if self.qt_widget:
-            gui_color = self.COLORS[level]
-            html = f'<span style="color:{gui_color}">{base}</span>'
+        gui_color = self.COLORS[level]
+        html = f'<span style="color:{gui_color}">{base}</span>'
 
-            # If this is an FPS message, mark it for replacement
-            is_fps = "Average fps" in message
-            self.log_queue.put((html, is_fps))
+        # If this is an FPS message, mark it for replacement
+        is_fps = "Average fps" in message
+        self.log_queue.put((html, is_fps))
 
     def process_log_queue(self):
         """Call this from the GUI thread to process queued log messages."""
