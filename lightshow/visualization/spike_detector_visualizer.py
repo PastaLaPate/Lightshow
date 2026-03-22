@@ -179,7 +179,6 @@ class SpikeDetectorVisualizer(QWidget):
             )
             limit = self.spike_detector.sensitivity * avg_energy
             self.limit_history.append(limit)
-
             self._add_marker("beat", beat_detected, current_energy)
             self._add_marker("break", break_detected, current_energy)
             self._add_marker("drop", drop_detected, current_energy)
@@ -201,15 +200,13 @@ class SpikeDetectorVisualizer(QWidget):
                 self.marker_data[marker_type].y = self.marker_data[marker_type].x[
                     -maxlen:
                 ]
-                self.marker_data[marker_type].dirty = True
+            self.marker_data[marker_type].dirty = True
 
     def qt_update(self):
         """Update plot items with buffered data."""
         if not self.x_history:
             return
 
-        # Optimization: Converting deque to list is okay,
-        # but if this gets slow, consider pre-allocated numpy arrays.
         xs = list(self.x_history)
         energies = list(self.energy_history)
         diffs = list(self.diff_history)
