@@ -42,3 +42,7 @@ class MakeArrayNode(GenericNode):
             items = [items]
 
         return {"array": items}
+
+    def apply_resolved_type(self, data_type):
+        pass
+        # return super().apply_resolved_type(data_type)

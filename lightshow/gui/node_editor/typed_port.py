@@ -176,14 +176,18 @@ class TypedPort(Port):
 
         # reject Generic ↔ Generic
         if self.data_type is GenericData and port.data_type is GenericData:
+            print("rejected1")
             return
 
         # allow Generic ↔ anything
         if self.data_type is GenericData or port.data_type is GenericData:
             return super().connect_to(port, push_undo, emit_signal)
 
+        if self.data_type is port.data_type:
+            return super().connect_to(port, push_undo, emit_signal)
+
         # handle ArrayData[T]
         if _array_types_compatible(self.data_type, port.data_type):
             return super().connect_to(port, push_undo, emit_signal)
-
+        print("rejected2")
         return

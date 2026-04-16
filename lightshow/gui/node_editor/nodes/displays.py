@@ -1,14 +1,8 @@
-from typing import Any
 from NodeGraphQt import NodeGraph
 
-from lightshow.gui.node_editor.custom_node import DisplayNode
+from lightshow.gui.node_editor.display_node import DisplayNode
 from lightshow.gui.node_editor.datas import (
-    ArrayData,
-    BooleanData,
     ColorData,
-    DecimalData,
-    IntegerData,
-    StringData,
 )
 from lightshow.gui.node_editor.nodes.colors import DisplayColorNodeWidget
 
@@ -16,34 +10,10 @@ from lightshow.gui.node_editor.nodes.colors import DisplayColorNodeWidget
 def register_displays(graph: NodeGraph):
     graph.register_nodes(
         [
-            BooleanDisplay,
-            IntegerDisplay,
-            FloatDisplay,
-            StringDisplay,
+            DisplayNode,
             ColorDisplay,
-            ArrayDisplay,
         ]
     )
-
-
-class BooleanDisplay(DisplayNode):
-    NODE_NAME = "Boolean Display"
-    DATA_TYPE = BooleanData
-
-
-class IntegerDisplay(DisplayNode):
-    NODE_NAME = "Integer Display"
-    DATA_TYPE = IntegerData
-
-
-class FloatDisplay(DisplayNode):
-    NODE_NAME = "Float Display"
-    DATA_TYPE = DecimalData
-
-
-class StringDisplay(DisplayNode):
-    NODE_NAME = "String Display"
-    DATA_TYPE = StringData
 
 
 class ColorDisplay(DisplayNode):
@@ -62,8 +32,3 @@ class ColorDisplay(DisplayNode):
         value = inputs.get(key, None)
         self._wcolor.set_value(value)
         return super().compute(inputs)
-
-
-class ArrayDisplay(DisplayNode):
-    NODE_NAME = "Array Display"
-    DATA_TYPE = ArrayData[Any]
