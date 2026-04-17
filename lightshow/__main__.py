@@ -142,6 +142,9 @@ class MainAudioListener(AudioListener):
         self.new_music = False
         self.music_paused = False
         self.paused_since = 0
+        self.current_power = 0
+        self.power_since = 0
+        self.power_decay_time = 0.5  # Decay power over 0.5 seconds (in seconds)
         if hasattr(self, "kick_detector"):
             self.kick_detector.clear()
             self.break_detector.clear()
@@ -158,9 +161,39 @@ class MainAudioListener(AudioListener):
             if device.ready:
                 device.on(packet)
 
+    def set_beat_power(self, beat_intensity: float):
+        """
+        Set power based on beat intensity.
+        beat_intensity: should be between 0 and 1 (normalized)
+        """
+        self.current_power = int(beat_intensity * 100)  # Scale to 0-100
+        self.power_since = time_ns()
+
+    def get_current_power(self) -> int:
+        """
+        Calculate power with exponential decay over time.
+        Returns power value between 0 and 100.
+        """
+        if self.current_power <= 0:
+            return 0
+
+        time_elapsed = (time_ns() - self.power_since) / 1e9  # Convert ns to seconds
+
+        # Exponential decay: power = max_power * e^(-time/decay_time)
+        decay_factor = 2.71828 ** (-time_elapsed / self.power_decay_time)
+        power = int(self.current_power * decay_factor)
+
+        if power < 1:
+            self.current_power = 0
+            return 0
+        return power
+
     def __call__(self, data):
+        current_power = self.get_current_power()
         self.send_packet_to_devices(
-            PacketData(PacketType.TICK, PacketStatus.ON, audio_data=data)
+            PacketData(
+                PacketType.TICK, PacketStatus.ON, audio_data=data, power=current_power
+            )
         )
         if self.music_paused:
             return True
@@ -170,6 +203,17 @@ class MainAudioListener(AudioListener):
         )
 
         if beat:
+            # Calculate beat intensity from frequency data (0-100 scale)
+            # Using bass frequencies (0-40) which are analyzed by kick detector
+            try:
+                bass_energy = data.get_freq_mean([0, 40])
+                # Normalize to 0-1 range (adjust max based on your typical max energy)
+                beat_intensity = min(bass_energy / 1e13, 1.0)
+            except Exception:
+                beat_intensity = 1.0
+
+            self.set_beat_power(beat_intensity)
+
             if self.break_detected:
                 self.break_detected = False
                 self.kick_detector.reset_state()
@@ -183,7 +227,12 @@ class MainAudioListener(AudioListener):
             self.break_detector.on_beat()
             self.drop_detector.on_beat()
             self.send_packet_to_devices(
-                PacketData(PacketType.BEAT, PacketStatus.ON, audio_data=data)
+                PacketData(
+                    PacketType.BEAT,
+                    PacketStatus.ON,
+                    audio_data=data,
+                    power=self.current_power,
+                )
             )
 
         mbreak, drop = False, False
