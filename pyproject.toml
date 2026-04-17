@@ -9,8 +9,6 @@ dependencies = [
     "PyQt6-Charts>=6.7.0",
     "librosa>=0.11.0",
     "numpy>=2.2.6",
-    "pyaudio>=0.2.14",
-    "pyaudiowpatch>=0.2.12.7 ; platform_system == \"Windows\"",
     "typing-extensions>=4.15.0",
     "websocket-client>=1.8.0",
     "winrt-runtime>=3.2.1 ; platform_system == \"Windows\"",
@@ -21,10 +19,10 @@ dependencies = [
     "pyinstaller>=6.16.0",
     "matplotlib>=3.8.0",
     "pyqtgraph>=0.14.0",
-    "sounddevice>=0.5.5",
     "dbus-next>=0.2.3",
     "pyopengl>=3.1.10",
     "pyopengl-accelerate>=3.1.10",
+    "soundcard>=0.4.6",
 ]
 
 [build-system]
