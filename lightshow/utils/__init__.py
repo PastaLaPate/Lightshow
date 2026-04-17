@@ -1,7 +1,11 @@
-from .config import Config, global_config, resource_path, live_devices
 from .colors import hsv_to_rgb
+from .config import Config, global_config, live_devices, resource_path
 from .logger import Logger
-from .tracks_infos import TracksInfoTracker
+from .tracks_infos import (
+    PlaybackInfo,
+    TrackInfo,
+    TracksInfoTracker,
+)
 
 __all__ = [
     "Config",
@@ -11,4 +15,7 @@ __all__ = [
     "Logger",
     "TracksInfoTracker",
     "live_devices",
+    "PlaybackInfo",
+    "TrackInfo",
+    "PlaybackStatusChangedListener",
 ]

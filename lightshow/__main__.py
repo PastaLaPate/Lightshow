@@ -2,7 +2,7 @@ import os
 import signal
 import sys
 from time import time_ns
-from typing import Any, List
+from typing import List
 
 import pyqtgraph as pg
 import sounddevice as sd
@@ -16,34 +16,13 @@ from lightshow.devices.device import PacketData, PacketStatus, PacketType
 from lightshow.gui.main_window import UIManager
 from lightshow.utils import Logger, TracksInfoTracker
 from lightshow.utils.config import resource_path
+from lightshow.utils.tracks_infos import PlaybackInfo, TrackInfo
 from lightshow.visualization.frequencies_visualizer import FrequenciesVisualizer
 from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
 
-if os.name == "nt":
-    try:
-        from winrt.windows.media.control import (
-            GlobalSystemMediaTransportControlsSession,
-            GlobalSystemMediaTransportControlsSessionMediaProperties,
-            GlobalSystemMediaTransportControlsSessionPlaybackInfo,
-            GlobalSystemMediaTransportControlsSessionPlaybackStatus,
-        )
-
-        WINRT_AVAILABLE = True
-    except Exception:
-        WINRT_AVAILABLE = False
-        GlobalSystemMediaTransportControlsSession = Any
-        GlobalSystemMediaTransportControlsSessionMediaProperties = Any
-        GlobalSystemMediaTransportControlsSessionPlaybackInfo = Any
-        GlobalSystemMediaTransportControlsSessionPlaybackStatus = None
-else:
-    WINRT_AVAILABLE = False
-    GlobalSystemMediaTransportControlsSession = Any
-    GlobalSystemMediaTransportControlsSessionMediaProperties = Any
-    GlobalSystemMediaTransportControlsSessionPlaybackInfo = Any
-    GlobalSystemMediaTransportControlsSessionPlaybackStatus = None
 pg.setConfigOptions(useOpenGL=True, enableExperimental=True)
 
-ui_manager = None
+ui_manager: "UIManager | None" = None
 
 
 class GuiBridge(QObject):
@@ -69,20 +48,13 @@ class MainAudioListener(AudioListener):
         )
         self.clear_state()
 
-    def changed_visualizer_settings(self):
+    def changed_visualizer_settings(self) -> None:
         if hasattr(self, "kick_visualizer") and self.kick_visualizer:
             self.gui_bridge.clear_visualizer_signal.connect(self.kick_visualizer.clear)
 
-    def on_track_changed(
-        self,
-        session: Any,
-        infos: Any,
-    ):
-        # If winrt is available, infos will typically have title/artist attributes.
-        title = getattr(infos, "title", None)
-        artist = getattr(infos, "artist", None)
-        if title:
-            self.logger.info(f"Now playing {title} ! (By {artist})")
+    def on_track_changed(self, player_name: str, infos: TrackInfo) -> None:
+        if infos.title:
+            self.logger.info(f"Now playing {infos.title} ! (By {infos.artist})")
             self.send_packet_to_devices(
                 PacketData(PacketType.NEW_MUSIC, PacketStatus.ON)
             )
@@ -92,50 +64,25 @@ class MainAudioListener(AudioListener):
             )
 
     def on_playback_status_changed(
-        self,
-        session: Any,
-        status: Any,
-    ):
-        ps = getattr(status, "playback_status", None)
-        self.logger.info(f"New playback status : {ps}")
+        self, player_name: str, status: PlaybackInfo
+    ) -> None:
+        self.logger.info(f"New playback status: {status.playback_status}")
 
-        # Handle WinRT enum values when available, else support simple string values
-        if (
-            WINRT_AVAILABLE
-            and GlobalSystemMediaTransportControlsSessionPlaybackStatus is not None
-        ):
-            if ps == GlobalSystemMediaTransportControlsSessionPlaybackStatus.PAUSED:
-                self.music_paused = True
-                self.paused_since = time_ns()
-                self.send_packet_to_devices(
-                    PacketData(PacketType.BREAK, PacketStatus.ON)
-                )
-            elif ps == GlobalSystemMediaTransportControlsSessionPlaybackStatus.PLAYING:
-                self.music_paused = False
-                self.break_detector.clear_old_beats()
-                self.break_detector.clean_beats(time_ns() - self.paused_since)
-                self.send_packet_to_devices(
-                    PacketData(PacketType.BREAK, PacketStatus.OFF)
-                )
-                self.paused_since = 0
-        else:
-            # Some platforms may provide simple string statuses; be permissive.
-            if isinstance(ps, str) and ps.lower() == "paused":
-                self.music_paused = True
-                self.paused_since = time_ns()
-                self.send_packet_to_devices(
-                    PacketData(PacketType.BREAK, PacketStatus.ON)
-                )
-            elif isinstance(ps, str) and ps.lower() in ("playing", "play"):
-                self.music_paused = False
-                self.break_detector.clear_old_beats()
-                self.break_detector.clean_beats(time_ns() - self.paused_since)
-                self.send_packet_to_devices(
-                    PacketData(PacketType.BREAK, PacketStatus.OFF)
-                )
-                self.paused_since = 0
+        if status.playback_status == "paused":
+            self.music_paused = True
+            self.paused_since = time_ns()
+            self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.ON))
 
-    def clear_state(self):
+        elif status.playback_status == "playing":
+            self.music_paused = False
+            self.break_detector.clear_old_beats()
+            self.break_detector.clean_beats(time_ns() - self.paused_since)
+            self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.OFF))
+            self.paused_since = 0
+
+        # "stopped" requires no action beyond the log above
+
+    def clear_state(self) -> None:
         """Resets all detectors and visualizers to their initial state."""
         self.break_detected = False
         self.drop_detected = False
@@ -146,12 +93,11 @@ class MainAudioListener(AudioListener):
         self.paused_since = 0
         self.current_power = 0
         self.power_since = 0
-        self.power_decay_time = 0.5  # Decay power over 0.5 seconds (in seconds)
+        self.power_decay_time = 0.5  # Decay power over 0.5 seconds
         if hasattr(self, "kick_detector"):
             self.kick_detector.clear()
             self.break_detector.clear()
             self.drop_detector.clear()
-        # Only clear visualizer if it has been created (after QApplication exists)
         if hasattr(self, "kick_visualizer") and self.kick_visualizer:
             self.gui_bridge.clear_visualizer_signal.emit()
         if isinstance(self.stream_handler, AudioStreamHandler):
@@ -162,20 +108,18 @@ class MainAudioListener(AudioListener):
             except Exception:
                 pass
 
-    def send_packet_to_devices(self, packet: PacketData):
-        devices = (
-            config.live_devices.copy()
-        )  # Create copy to avoid exception during change
+    def send_packet_to_devices(self, packet: PacketData) -> None:
+        devices = config.live_devices.copy()
         for device in devices.values():
             if device.ready:
                 device.on(packet)
 
-    def set_beat_power(self, beat_intensity: float):
+    def set_beat_power(self, beat_intensity: float) -> None:
         """
         Set power based on beat intensity.
-        beat_intensity: should be between 0 and 1 (normalized)
+        beat_intensity: should be between 0 and 1 (normalized).
         """
-        self.current_power = int(beat_intensity * 100)  # Scale to 0-100
+        self.current_power = int(beat_intensity * 100)
         self.power_since = time_ns()
 
     def get_current_power(self) -> int:
@@ -186,9 +130,7 @@ class MainAudioListener(AudioListener):
         if self.current_power <= 0:
             return 0
 
-        time_elapsed = (time_ns() - self.power_since) / 1e9  # Convert ns to seconds
-
-        # Exponential decay: power = max_power * e^(-time/decay_time)
+        time_elapsed = (time_ns() - self.power_since) / 1e9
         decay_factor = 2.71828 ** (-time_elapsed / self.power_decay_time)
         power = int(self.current_power * decay_factor)
 
@@ -197,7 +139,7 @@ class MainAudioListener(AudioListener):
             return 0
         return power
 
-    def __call__(self, data):
+    def __call__(self, data) -> bool:
         current_power = self.get_current_power()
         self.send_packet_to_devices(
             PacketData(
@@ -214,11 +156,8 @@ class MainAudioListener(AudioListener):
         )
 
         if beat:
-            # Calculate beat intensity from frequency data (0-100 scale)
-            # Using bass frequencies (0-40) which are analyzed by kick detector
             try:
                 bass_energy = data.get_freq_mean([0, 40])
-                # Normalize to 0-1 range (adjust max based on your typical max energy)
                 beat_intensity = min(bass_energy / 1e13, 1.0)
             except Exception:
                 beat_intensity = 1.0
@@ -264,7 +203,6 @@ class MainAudioListener(AudioListener):
             self.send_packet_to_devices(
                 PacketData(PacketType.DROP, PacketStatus.OFF, audio_data=data)
             )
-        # Update visualizer data
         if self.kick_visualizer:
             self.kick_visualizer(
                 data, beat_detected=beat, break_detected=mbreak, drop_detected=drop
@@ -275,23 +213,20 @@ class MainAudioListener(AudioListener):
 def get_audio_devices() -> List[str]:
     """Returns a list of audio device names formatted for the combo box."""
     try:
-        devices = []
-        device_count = sd.query_devices(kind="input")
-        if isinstance(device_count, dict):
-            # Single device case
-            devices.append(f"{0}: {device_count['name']}")
+        devices: List[str] = []
+        device_info = sd.query_devices()
+        if isinstance(device_info, dict):
+            devices.append(f"0: {device_info['name']}")
         else:
-            # Multiple devices
-            for i, device in enumerate(device_count):
+            for i, device in enumerate(device_info):
                 if device["max_input_channels"] > 0:
                     devices.append(f"{i}: {device['name']}")
         return devices
     except Exception:
-        # If device enumeration fails, return empty list
         return []
 
 
-def main():
+def main() -> None:
     global ui_manager
     from PyQt6.QtCore import QTimer
     from PyQt6.QtGui import QIcon
@@ -299,26 +234,24 @@ def main():
 
     audio_devices = get_audio_devices()
 
-    # The AudioStreamHandler is now initialized but not started.
-    # The UIManager will control when the stream starts and stops.
     audio_handler = AudioStreamHandler(SpectrumProcessor, config.global_config)
     listener = MainAudioListener(audio_handler)
     audio_handler.add_listener_on_init(listener)
 
-    # Create Qt application
     app = QApplication(sys.argv)
     app.setApplicationName("lightshow")
 
     if os.name == "nt":
-        # Workaround to set app user model id on Windows for proper taskbar icon display
         import ctypes
 
-        myappid = "pastalapate.lightshow"
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+            "pastalapate.lightshow"
+        )
 
     ICON_PATH = resource_path("lightshow/gui/assets/lightshow_icon.png")
     icon = QIcon(ICON_PATH)
     app.setWindowIcon(icon)
+
     timer = QTimer()
     timer.start(500)
     timer.timeout.connect(lambda: None)
@@ -334,11 +267,10 @@ def main():
     ui_manager.show()
     ui_manager.setWindowIcon(QIcon(ICON_PATH))
 
-    # Run the application
     sys.exit(app.exec())
 
 
-def terminate(sig, frame):
+def terminate(sig: int, frame: object) -> None:
     print("Interrupt signal caught! Stopping gracefully...")
     try:
         if ui_manager:

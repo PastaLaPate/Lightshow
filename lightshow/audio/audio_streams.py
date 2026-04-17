@@ -188,10 +188,10 @@ class AudioStreamHandler(AAudioStreamHandler):
         """Setup audio device using sounddevice."""
         try:
             # Get default input device
-            device_info = sd.query_devices(kind="input")
-            self.device_index = sd.default.device[0]
+            device_info = sd.query_devices(device=sd.default.device[1])
+            self.device_index = sd.default.device[1]
             self.sample_rate = int(device_info["default_samplerate"])
-            self.channels = min(device_info["max_input_channels"], 1)  # Use mono
+            self.channels = min(device_info["max_output_channels"], 1)  # Use mono
 
             self.logger.debug(
                 f"Using device: {device_info['name']} (index: {self.device_index}) "
@@ -200,9 +200,14 @@ class AudioStreamHandler(AAudioStreamHandler):
             )
         except Exception as e:
             self.logger.error(f"Error setting up device: {e}")
-            self.device_index = sd.default.device[0]
+            self.device_index = sd.default.device[1]
             self.sample_rate = 44100
             self.channels = 1
+            self.logger.debug(
+                f"Using device: {device_info['name']} (index: {self.device_index}) "
+                f"Sample Rate: {self.sample_rate} Hz Channels: {self.channels} "
+                f"Chunk size: {self.chunk_size}"
+            )
 
     def add_listener_on_init(
         self, listener: AudioListenerType
@@ -234,6 +239,7 @@ class AudioStreamHandler(AAudioStreamHandler):
 
             self.logger.debug("Creating sounddevice InputStream...")
             # Create and start sounddevice stream
+            print(self.channels)
             self.stream = sd.InputStream(
                 device=self.device_index,
                 samplerate=self.sample_rate,
