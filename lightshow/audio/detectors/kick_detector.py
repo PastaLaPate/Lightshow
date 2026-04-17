@@ -1,5 +1,6 @@
 from lightshow.audio.audio_streams import AudioStreamHandler
-from .spike_detector import SpikeDetector, DetectionType
+
+from .spike_detector import DetectionType, SpikeDetector
 
 
 class KickDetector(SpikeDetector):
@@ -8,7 +9,7 @@ class KickDetector(SpikeDetector):
             AudioHandler,
             1.75,
             20,
-            [40, 100],  # First 4 mel bins = ~20-100Hz (bass range)
+            [40, 100],
             DetectionType.UPPER,
             1 / 10000,
             250 / 1000,
