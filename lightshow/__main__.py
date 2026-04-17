@@ -16,6 +16,7 @@ from lightshow.devices.device import PacketData, PacketStatus, PacketType
 from lightshow.gui.main_window import UIManager
 from lightshow.utils import Logger, TracksInfoTracker
 from lightshow.utils.config import resource_path
+from lightshow.visualization.frequencies_visualizer import FrequenciesVisualizer
 from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
 
 if os.name == "nt":
@@ -58,6 +59,7 @@ class MainAudioListener(AudioListener):
         self.break_detector = detectors.BreakDetector(30)
         self.drop_detector = detectors.DropDetector(30, 5)
         self.kick_visualizer: SpikeDetectorVisualizer | None = None
+        self.freq_visualizer: FrequenciesVisualizer | None = None
         self.gui_bridge = GuiBridge()
         self.track_tracker = TracksInfoTracker()
         self.logger.info("Adding track infos tracker")
@@ -169,6 +171,8 @@ class MainAudioListener(AudioListener):
         self.send_packet_to_devices(
             PacketData(PacketType.TICK, PacketStatus.ON, audio_data=data)
         )
+        if self.freq_visualizer:
+            self.freq_visualizer(data)
         if self.music_paused:
             return True
 
@@ -271,6 +275,7 @@ def main():
     timer.timeout.connect(lambda: None)
 
     listener.kick_visualizer = SpikeDetectorVisualizer(listener.kick_detector)
+    listener.freq_visualizer = FrequenciesVisualizer()
     listener.changed_visualizer_settings()
 
     ui_manager = UIManager(listener, audio_handler, config.global_config, audio_devices)

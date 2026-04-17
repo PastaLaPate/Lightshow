@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
 from lightshow.audio.audio_streams import AudioStreamHandler
 from lightshow.gui.components.logs import Logs
 from lightshow.utils.config import Config
@@ -42,7 +43,7 @@ class AudioPanel(BasePanel):
         self.stream_button = None
         self.device_combo = None
         self.playing_label = None
-        self.visualizer = None
+        self.kick_visualizer = None
         self.logs = Logs()
 
     def create_qt_ui(self, layout: QVBoxLayout):
@@ -87,8 +88,11 @@ class AudioPanel(BasePanel):
 
         # Add spike detector visualizer from listener
         if self.listener and hasattr(self.listener, "kick_visualizer"):
-            self.visualizer = self.listener.kick_visualizer
-            topLayout.addWidget(self.visualizer, 1)
+            self.kick_visualizer = self.listener.kick_visualizer
+            topLayout.addWidget(self.kick_visualizer, 1)
+        if self.listener and hasattr(self.listener, "freq_visualizer"):
+            self.freq_visualizer = self.listener.freq_visualizer
+            topLayout.addWidget(self.freq_visualizer, 1)
 
         logsWidget = QWidget()
         logs_layout = QVBoxLayout(logsWidget)

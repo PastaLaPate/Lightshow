@@ -292,10 +292,10 @@ class UIManager(QMainWindow):
             except Exception as e:
                 self.logger.error(f"Error processing queued audio: {e}")
 
-        if self.audio_panel.is_streaming and self.audio_panel.visualizer:
+        if self.audio_panel.is_streaming and self.audio_panel.kick_visualizer:
             try:
                 # Update spike detector visualizer
-                self.audio_panel.visualizer.qt_update()
+                self.audio_panel.kick_visualizer.qt_update()
             except Exception as e:
                 self.logger.error(f"Visualization update error: {e}")
 

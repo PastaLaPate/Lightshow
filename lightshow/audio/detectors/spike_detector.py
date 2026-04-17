@@ -3,6 +3,7 @@ from enum import Enum
 
 from lightshow.audio.audio_streams import AudioCapture, AudioStreamHandler
 from lightshow.audio.audio_types import AudioData
+from lightshow.audio.processors import SpectrumProcessor
 
 
 class DetectionType(Enum):
@@ -31,9 +32,7 @@ class SpikeDetector:
         :param window_size: Number of recent frames over which to average energy in seconds.
         """
         AudioHandler.add_device_change_listener(self.on_device_change)
-        chunks_per_second = int(
-            44100 / 1024
-        )  # Default value, will be updated on device change
+        chunks_per_second = int(44100 / 1024)
         if not chunks_per_second or chunks_per_second <= 0:
             raise ValueError("Chunks per second must be a positive non-nul int.")
         self.chunks_per_second = chunks_per_second
@@ -42,6 +41,10 @@ class SpikeDetector:
         self.window_size = int(window_size * chunks_per_second)
         self.energy_history = deque(maxlen=self.window_size)
         self.freq_range = freq_range
+        self.bin_range = (
+            SpectrumProcessor.hz_to_bin(self.freq_range[0], 44100, 1024),
+            SpectrumProcessor.hz_to_bin(self.freq_range[1], 44100, 1024),
+        )
         self.detection_type = detection_type
         self.detecting = False
         self.p_min_frame_duration = min_duration
@@ -62,12 +65,20 @@ class SpikeDetector:
             1, int(self.p_cooldown * self.chunks_per_second)
         )
         self.cooldown_counter = 0
+        self.bin_range = (
+            SpectrumProcessor.hz_to_bin(
+                self.freq_range[0], device.sample_rate, device.chunk_size
+            ),
+            SpectrumProcessor.hz_to_bin(
+                self.freq_range[1], device.sample_rate, device.chunk_size
+            ),
+        )
 
     def clear(self):
         self.energy_history.clear()
 
     def detect(self, data: AudioData, appendCurrentEnergy=True):
-        current_energy = data.get_ps_mean(self.freq_range)
+        current_energy = data.get_ps_mean(self.bin_range)
         if appendCurrentEnergy:
             self.energy_history.append(current_energy)
         if len(self.energy_history) < 1:
