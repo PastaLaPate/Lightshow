@@ -2,15 +2,17 @@ import os
 import signal
 import sys
 from time import time_ns
-from typing import List
 
 import pyqtgraph as pg
-import sounddevice as sd
 from PyQt6.QtCore import QObject, pyqtSignal
 
 import lightshow.audio.detectors as detectors
 import lightshow.utils.config as config
-from lightshow.audio.audio_streams import AudioListener, AudioStreamHandler
+from lightshow.audio.audio_streams import (
+    AAudioStreamHandler,
+    AudioListener,
+    LoopbackAudioStreamHandler,
+)
 from lightshow.audio.processors import SpectrumProcessor
 from lightshow.devices.device import PacketData, PacketStatus, PacketType
 from lightshow.gui.main_window import UIManager
@@ -30,7 +32,7 @@ class GuiBridge(QObject):
 
 
 class MainAudioListener(AudioListener):
-    def __init__(self, AudioHandler: AudioStreamHandler):
+    def __init__(self, AudioHandler: AAudioStreamHandler):
         super().__init__(AudioHandler)
         self.logger = Logger("AudioListener")
         self.kick_detector = detectors.KickDetector(AudioHandler)
@@ -100,7 +102,7 @@ class MainAudioListener(AudioListener):
             self.drop_detector.clear()
         if hasattr(self, "kick_visualizer") and self.kick_visualizer:
             self.gui_bridge.clear_visualizer_signal.emit()
-        if isinstance(self.stream_handler, AudioStreamHandler):
+        if isinstance(self.stream_handler, LoopbackAudioStreamHandler):
             try:
                 if self.stream_handler.audio_capture:
                     self.stream_handler.audio_capture.audio_buffer.clear()
@@ -157,7 +159,7 @@ class MainAudioListener(AudioListener):
 
         if beat:
             try:
-                bass_energy = data.get_freq_mean([0, 40])
+                bass_energy = data.frequencies[0]
                 beat_intensity = min(bass_energy / 1e13, 1.0)
             except Exception:
                 beat_intensity = 1.0
@@ -210,31 +212,13 @@ class MainAudioListener(AudioListener):
         return True
 
 
-def get_audio_devices() -> List[str]:
-    """Returns a list of audio device names formatted for the combo box."""
-    try:
-        devices: List[str] = []
-        device_info = sd.query_devices()
-        if isinstance(device_info, dict):
-            devices.append(f"0: {device_info['name']}")
-        else:
-            for i, device in enumerate(device_info):
-                if device["max_input_channels"] > 0:
-                    devices.append(f"{i}: {device['name']}")
-        return devices
-    except Exception:
-        return []
-
-
 def main() -> None:
     global ui_manager
     from PyQt6.QtCore import QTimer
     from PyQt6.QtGui import QIcon
     from PyQt6.QtWidgets import QApplication
 
-    audio_devices = get_audio_devices()
-
-    audio_handler = AudioStreamHandler(SpectrumProcessor, config.global_config)
+    audio_handler = LoopbackAudioStreamHandler(SpectrumProcessor, config.global_config)
     listener = MainAudioListener(audio_handler)
     audio_handler.add_listener_on_init(listener)
 
@@ -260,7 +244,7 @@ def main() -> None:
     listener.freq_visualizer = FrequenciesVisualizer()
     listener.changed_visualizer_settings()
 
-    ui_manager = UIManager(listener, audio_handler, config.global_config, audio_devices)
+    ui_manager = UIManager(listener, audio_handler, config.global_config)
     ui_manager.setProperty("_NET_WM_NAME", "Lightshow")
     ui_manager.resize(800, 600)
     listener.track_tracker.start()

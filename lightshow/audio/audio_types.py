@@ -3,46 +3,23 @@ from collections import deque
 from typing import Any, Callable, Type, Union
 
 import numpy as np
-from sounddevice import CallbackFlags
 
+from lightshow.audio.data import AudioData
 from lightshow.utils.config import Config
 
-
-class AudioData:
-    """
-    Audio data containing frequency spectrum (FFT) with 20000 frequency elements.
-    """
-
-    def __init__(self, frequencies):
-        """
-        :param frequencies: Array of 20000 frequency magnitude values from FFT
-        """
-        self.frequencies = frequencies
-
-    def get_freq_mean(self, range):
-        """Get mean frequency magnitude over a range of indices."""
-        if len(range) > 2:
-            raise ValueError("Range must be a list of two elements.")
-        return np.mean(self.frequencies[range[0] : range[1]])
-
-    # Aliases for backwards compatibility with existing detectors
-    def get_ps_mean(self, range):
-        """Alias for get_freq_mean (power spectrum mean)."""
-        return self.get_freq_mean(range)
-
-    def get_mel_mean(self, range):
-        """Alias for get_freq_mean (mel energies are now represented by frequencies)."""
-        return self.get_freq_mean(range)
+# sounddevice exposes this type but it's just an int-like object;
+# using Any keeps the ABC free of a hard sounddevice dependency.
+CallbackFlags = Any
 
 
 class Processor(ABC):
-    def __init__(self, chunk_size, sample_rate):
+    def __init__(self, chunk_size: int, sample_rate: int):
         self.chunk_size = chunk_size
         self.sample_rate = sample_rate
         super().__init__()
 
     @abstractmethod
-    def process(self, data) -> AudioData:
+    def process(self, data: np.ndarray) -> AudioData:
         pass
 
 
@@ -50,14 +27,14 @@ class AAudioCapture(ABC):
     def __init__(
         self,
         processor: Processor,
-        chunk_size=512,
-        max_buffer=10,
-        channels=1,
-        sample_rate=44100,
+        chunk_size: int = 512,
+        max_buffer: int = 10,
+        channels: int = 1,
+        sample_rate: int = 44100,
     ):
         self.sample_rate = sample_rate
         self.chunk_size = chunk_size
-        self.audio_buffer = deque(maxlen=max_buffer)
+        self.audio_buffer: deque = deque(maxlen=max_buffer)
         self.channels = channels
 
     @abstractmethod
@@ -67,7 +44,7 @@ class AAudioCapture(ABC):
         frames: int,
         time_info: Any,
         status: CallbackFlags,
-    ):
+    ) -> None:
         pass
 
 
@@ -76,48 +53,49 @@ class AAudioStreamHandler(ABC):
         pass
 
     @abstractmethod
-    def reinit_stream(self, config: Config):
+    def reinit_stream(self, config: Config) -> None:
         pass
 
     @abstractmethod
-    def add_device_change_listener(self, listener: Callable[[AAudioCapture], None]):
+    def add_device_change_listener(
+        self, listener: Callable[["AAudioCapture"], None]
+    ) -> None:
         pass
 
     @abstractmethod
-    def setup_device(self):
+    def setup_device(self) -> None:
         pass
 
     @abstractmethod
-    def start_stream(self):
+    def start_stream(self) -> None:
         pass
 
     @abstractmethod
-    def stop_stream(self):
+    def stop_stream(self) -> None:
         pass
 
     @abstractmethod
-    def close(self):
+    def close(self) -> None:
         pass
 
 
 class AudioListener(ABC):
-    def __init__(self, AudioStreamHandler: AAudioStreamHandler):
-        self.stream_handler = AudioStreamHandler
+    def __init__(self, stream_handler: AAudioStreamHandler):
+        self.stream_handler = stream_handler
         self.stream_handler.add_device_change_listener(self.on_device_change)
-        self.channels = 1
-        self.chunk_size = 1024
-        self.sample_rate = 44100
+        self.channels: int = 1
+        self.chunk_size: int = 1024
+        self.sample_rate: int = 44100
         super().__init__()
 
-    def on_device_change(self, capture: AAudioCapture):
+    def on_device_change(self, capture: AAudioCapture) -> None:
         self.channels = capture.channels
         self.chunk_size = capture.chunk_size
         self.sample_rate = capture.sample_rate
 
     @abstractmethod
-    def __call__(
-        self, data: AudioData
-    ) -> bool:  # Return False if the listener wants to stop listening
+    def __call__(self, data: AudioData) -> bool:
+        """Return False to unsubscribe this listener."""
         pass
 
 

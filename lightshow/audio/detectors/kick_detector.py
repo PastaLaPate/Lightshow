@@ -1,10 +1,11 @@
-from lightshow.audio.audio_streams import AudioStreamHandler
+from lightshow.audio.audio_streams import AAudioStreamHandler
+from lightshow.audio.data import AudioData
 
 from .spike_detector import DetectionType, SpikeDetector
 
 
 class KickDetector(SpikeDetector):
-    def __init__(self, AudioHandler: AudioStreamHandler):
+    def __init__(self, AudioHandler: AAudioStreamHandler):
         super().__init__(
             AudioHandler,
             1.75,
@@ -21,10 +22,8 @@ class KickDetector(SpikeDetector):
         self.was_above = False
         self.cooldown_counter = 0
 
-    def detect(self, data, appendCurrentEnergy=True):
-        # Use frequency data from FFT for bass detection
-        # data.get_ps_mean([0, 40]) accesses the low frequency range
-        current_energy = data.get_ps_mean([0, 40])
+    def detect(self, data: AudioData, appendCurrentEnergy=True):
+        current_energy = data.get_ps_mean([0, 2])
 
         if appendCurrentEnergy:
             self.energy_history.append(current_energy)

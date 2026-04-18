@@ -1,9 +1,9 @@
-from collections import deque
+import threading
 from queue import Queue
 from typing import Callable, List, Optional, Type
 
 import numpy as np
-import sounddevice as sd
+import soundcard as sc
 
 from lightshow.audio.audio_types import (
     AAudioCapture,
@@ -16,262 +16,316 @@ from lightshow.gui.utils.message_box import post_ui_message
 from lightshow.utils.config import Config
 from lightshow.utils.logger import Logger
 
+# ---------------------------------------------------------------------------
+# LoopbackAudioCapture
+# ---------------------------------------------------------------------------
 
-class AudioCapture(AAudioCapture):
+
+class LoopbackAudioCapture(AAudioCapture):
     """
-    Collects audio data via a sounddevice stream callback.
-    Uses a queue to pass raw samples to be processed on the main thread.
+    Wraps a soundcard loopback microphone and exposes the same interface
+    as AudioCapture (queue + listeners).
+
+    soundcard's record() is a blocking call, so capture runs in its own
+    thread and pushes chunks into a bounded queue — identical pattern to
+    the sounddevice-based AudioCapture.
     """
 
     def __init__(
         self,
         processor: Processor,
         stream_handler: AAudioStreamHandler,
-        chunk_size=512,
-        max_buffer=10,
-        channels=1,
-        sample_rate=44100,
+        loopback_mic,  # soundcard microphone object (loopback=True)
+        chunk_size: int = 1024,
+        max_buffer: int = 256,
+        channels: int = 1,
+        sample_rate: int = 44100,
     ):
-        self.logger = Logger("AudioCapture")
+        # AAudioCapture sets: sample_rate, chunk_size, audio_buffer, channels
+        super().__init__(
+            processor=processor,
+            chunk_size=chunk_size,
+            max_buffer=max_buffer,
+            channels=channels,
+            sample_rate=sample_rate,
+        )
+        self.logger = Logger("LoopbackAudioCapture")
         self.stream_handler = stream_handler
-        self.sample_rate = sample_rate
-        self.chunk_size = chunk_size
-        self.audio_buffer = deque(maxlen=max_buffer)
-        self.channels = channels
         self.processor = processor
+        self.loopback_mic = loopback_mic
         self.listeners: List[AudioListenerType] = []
-        # Queue for passing raw samples from audio callback to main thread
-        # Smaller queue prevents 2+ second backlog. Excess audio dropped.
-        self.sample_queue = Queue(maxsize=5)
+
+        # Bounded queue: excess chunks are dropped to avoid growing backlog
+        self.sample_queue: Queue = Queue(maxsize=5)
+
+        self._stop_event = threading.Event()
+        self._capture_thread: Optional[threading.Thread] = None
+
+    # ------------------------------------------------------------------
+    # AAudioCapture interface
+    # ------------------------------------------------------------------
 
     def callback(self, in_data, frames, time_info, status):
-        """Minimal callback - just extract and queue audio, don't process."""
+        """
+        Not used directly for soundcard (blocking API), but satisfies the
+        abstract interface. Internally we call _enqueue() from the thread.
+        """
+        self._enqueue(in_data)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _enqueue(self, raw: np.ndarray) -> None:
+        """Normalise a raw frame array and push it onto the queue."""
+        # raw shape: (frames, channels) — mix down to mono
+        if raw.ndim == 2:
+            samples = raw[:, 0].copy()
+        else:
+            samples = raw.copy()
+
+        # Ensure correct chunk length
+        if samples.size < self.chunk_size:
+            samples = np.pad(samples, (0, self.chunk_size - samples.size), "constant")
+        else:
+            samples = samples[: self.chunk_size]
+
+        # Normalise / clamp
+        max_abs = float(np.abs(samples).max())
+        if 0.001 < max_abs < 0.1:
+            samples = samples * 5.0
+        elif max_abs > 1.0:
+            samples = np.clip(samples, -1.0, 1.0)
+
+        self.audio_buffer.append(samples)
+
         try:
-            if status:
-                self.logger.debug(f"Audio callback status: {status}")
+            self.sample_queue.put_nowait(samples)
+        except Exception:
+            self.logger.debug("Loopback queue full – dropping chunk")
 
-            # in_data is array with shape (frames, channels), always extract first channel
-            samples = in_data[:, 0].copy()
-
-            # Ensure correct buffer length
-            if samples.size < self.chunk_size:
-                samples = np.pad(
-                    samples, (0, max(0, self.chunk_size - samples.size)), "constant"
-                )
-            else:
-                samples = samples[: self.chunk_size].copy()
-
-            # Normalize if needed
-            max_abs = np.abs(samples).max()
-            if 0.001 < max_abs < 0.1:
-                # Signal is very quiet, apply moderate amplification
-                samples = samples * 5.0
-            elif max_abs > 1.0:
-                # Clamp to [-1, 1]
-                samples = np.clip(samples, -1.0, 1.0)
-
-            self.audio_buffer.append(samples)
-
-            # Queue samples for processing on main thread (don't block)
-            try:
-                self.sample_queue.put_nowait(samples)
-            except Exception:
-                self.logger.info("Audio sample queue full...")
-                # Queue full, drop sample
-                pass
-
+    def _capture_loop(self) -> None:
+        """Blocking capture loop – runs in a dedicated thread."""
+        self.logger.info("Loopback capture thread started")
+        try:
+            with self.loopback_mic.recorder(
+                samplerate=self.sample_rate,
+                channels=self.channels,
+                blocksize=self.chunk_size,
+            ) as recorder:
+                while not self._stop_event.is_set():
+                    # record() blocks until chunk_size frames are available
+                    data = recorder.record(numframes=self.chunk_size)
+                    self._enqueue(data)
         except Exception as e:
+            self.logger.error(f"Loopback capture error: {e}")
             import traceback
 
-            print(f"Critical error in audio callback: {e}")
             traceback.print_exc()
+        self.logger.info("Loopback capture thread stopped")
 
-    def process_queued_samples(self, max_per_frame=15):
+    # ------------------------------------------------------------------
+    # Thread control
+    # ------------------------------------------------------------------
+
+    def start(self) -> None:
+        self._stop_event.clear()
+        self._capture_thread = threading.Thread(
+            target=self._capture_loop, daemon=True, name="LoopbackCapture"
+        )
+        self._capture_thread.start()
+
+    def stop(self) -> None:
+        self._stop_event.set()
+        if self._capture_thread:
+            self._capture_thread.join(timeout=2.0)
+            self._capture_thread = None
+
+    # ------------------------------------------------------------------
+    # Queue processing (call from main / GUI thread, same as AudioCapture)
+    # ------------------------------------------------------------------
+
+    def process_queued_samples(self, max_per_frame: int = 15) -> None:
         """
-        Process queued audio samples - call this from main thread.
-        Limits processing to max_per_frame FFTs to keep up with audio rate.
-        At 44.1kHz with 1024-sample chunks, audio arrives ~43 times/sec.
-        With GUI at 30fps, need ~1.4 per frame minimum. 15 keeps us ahead.
+        Drain the queue and call listeners.  Identical contract to the
+        sounddevice-based AudioCapture.process_queued_samples().
         """
-        processed_count = 0
-        while not self.sample_queue.empty() and processed_count < max_per_frame:
+        processed = 0
+        while not self.sample_queue.empty() and processed < max_per_frame:
             try:
                 samples = self.sample_queue.get_nowait()
-                # Process samples
-                treatedData = self.processor.process(samples)
+                treated = self.processor.process(samples)
 
-                # Call listeners
+                dead: List[AudioListenerType] = []
                 for listener in list(self.listeners):
                     try:
-                        listener(treatedData)
+                        keep = listener(treated)
+                        if keep is False:
+                            dead.append(listener)
                     except Exception as e:
-                        import traceback
+                        self.logger.error(f"Listener error: {e}")
+                for d in dead:
+                    self.listeners.remove(d)
 
-                        print(f"Error in listener: {e}")
-                        traceback.print_exc()
-                processed_count += 1
+                processed += 1
             except Exception as e:
-                print(f"Error processing queued sample: {e}")
+                self.logger.error(f"Queue drain error: {e}")
                 break
 
+    # ------------------------------------------------------------------
+    # Listener management (mirrors AudioCapture)
+    # ------------------------------------------------------------------
+
     def add_listener(self, listener: AudioListenerType) -> Optional[AudioListener]:
-        """
-        Returns the listener instanced if it was initially a class.
-        """
         if isinstance(listener, type) and issubclass(listener, AudioListener):
             listener = listener(self.stream_handler)
             self.listeners.append(listener)
             return listener
-        elif isinstance(listener, AudioListener):
-            self.listeners.append(listener)
-        elif isinstance(listener, Callable):  # Lambda function
+        elif isinstance(listener, (AudioListener, object)) and callable(listener):
             self.listeners.append(listener)
         else:
             raise ValueError(
-                "Listener must be an AudioListener instance, class or a lambda function"
+                "Listener must be an AudioListener subclass, instance, or callable"
             )
         return None
 
-    def remove_listener(self, listener: Type[AudioListener]):
-        if not issubclass(listener, AudioListener):
-            raise ValueError("Listener must be an instance of AudioListener")
-        self.listeners.remove(listener(self.stream_handler))
+    def remove_listener(self, listener: AudioListenerType) -> None:
+        if listener in self.listeners:
+            self.listeners.remove(listener)
 
-    def get_latest_data(self):
+    def get_latest_data(self) -> Optional[np.ndarray]:
         return self.audio_buffer[-1] if self.audio_buffer else None
 
 
-class AudioStreamHandler(AAudioStreamHandler):
+# ---------------------------------------------------------------------------
+# LoopbackAudioStreamHandler
+# ---------------------------------------------------------------------------
+
+
+class LoopbackAudioStreamHandler(AAudioStreamHandler):
     """
-    Sets up the audio device using sounddevice and manages the stream.
+    Drop-in replacement for AudioStreamHandler that captures speaker
+    loopback instead of microphone input.
+
+    Usage
+    -----
+    handler = LoopbackAudioStreamHandler(MyProcessor, config)
+    handler.reinit_stream(config)
+
+    # Optionally pick a specific speaker (defaults to system default):
+    handler = LoopbackAudioStreamHandler(MyProcessor, config, speaker_id="Realtek")
     """
 
-    def __init__(self, processor: Type[Processor], config: Config):
-        self.logger = Logger("AudioStreamHandler")
-        self.chunk_size = config.chunk_size or 1024
+    def __init__(
+        self,
+        processor: Type[Processor],
+        config: Config,
+        speaker_id: Optional[str] = None,  # None → system default speaker
+    ):
+        self.logger = Logger("LoopbackAudioStreamHandler")
+        self.chunk_size: int = getattr(config, "chunk_size", 1024) or 1024
         self.processor_class = processor
-        self.device_change_listeners: List[Callable[[AudioCapture], None]] = []
-        self.pending_listeners = []
-        self.stream = None
-        self.audio_capture = None
+        self.speaker_id = speaker_id
 
-    def add_device_change_listener(self, listener: Callable[[AudioCapture], None]):
+        self.device_change_listeners: List[Callable[[LoopbackAudioCapture], None]] = []
+        self.pending_listeners: List[AudioListenerType] = []
+
+        self.audio_capture: Optional[LoopbackAudioCapture] = None
+        self._loopback_mic = None  # soundcard mic object
+
+    # ------------------------------------------------------------------
+    # AAudioStreamHandler interface
+    # ------------------------------------------------------------------
+
+    def add_device_change_listener(
+        self, listener: Callable[[LoopbackAudioCapture], None]
+    ) -> None:
         self.device_change_listeners.append(listener)
 
-    def reinit_stream(self, config: Config):
-        """Initializes or re-initializes the stream with a new configuration."""
-        self.logger.info("Initializing the stream")
+    def reinit_stream(self, config: Config) -> None:
+        self.logger.info("(Re)initialising loopback stream")
         try:
-            if self.stream and self.stream.active:
-                self.stream.stop()
-                self.stream.close()
-
+            self.stop_stream()
             self.config = config
-            self.stream = None
+            self.chunk_size = getattr(config, "chunk_size", 1024) or 1024
             self.setup_device()
             self.start_stream()
-            if not self.audio_capture:
-                raise Exception("Failed to retrieve audio capture.")
 
-            # Add any pending listeners
+            if not self.audio_capture:
+                raise RuntimeError("audio_capture was not created")
+
             for listener in self.pending_listeners:
                 self.audio_capture.add_listener(listener)
-            self.pending_listeners = []
+            self.pending_listeners.clear()
 
         except Exception as e:
-            self.logger.error(f"Error initializing stream: {e}")
-            post_ui_message(
-                "error", "Audio Error", f"Failed to initialize audio stream: {e}"
-            )
+            self.logger.error(f"reinit_stream failed: {e}")
+            post_ui_message("error", "Audio Error", f"Loopback stream init failed: {e}")
 
-    def setup_device(self):
-        """Setup audio device using sounddevice."""
+    def setup_device(self) -> None:
+        """Resolve the soundcard loopback microphone for the target speaker."""
         try:
-            # Get default input device
-            device_info = sd.query_devices(device=sd.default.device[1])
-            self.device_index = sd.default.device[1]
-            self.sample_rate = int(device_info["default_samplerate"])
-            self.channels = min(device_info["max_output_channels"], 1)  # Use mono
+            self._loopback_mic = sc.get_microphone(
+                id=str(self.speaker_id), include_loopback=True
+            )
+            self.sample_rate = 44100  # soundcard accepts any common rate
+            self.channels = 1  # always capture mono
 
             self.logger.debug(
-                f"Using device: {device_info['name']} (index: {self.device_index}) "
-                f"Sample Rate: {self.sample_rate} Hz Channels: {self.channels} "
-                f"Chunk size: {self.chunk_size}"
+                f"Loopback device: '{self.speaker_id}' | "
+                f"SR={self.sample_rate} | chunk={self.chunk_size}"
             )
+
         except Exception as e:
-            self.logger.error(f"Error setting up device: {e}")
-            self.device_index = sd.default.device[1]
-            self.sample_rate = 44100
-            self.channels = 1
-            self.logger.debug(
-                f"Using device: {device_info['name']} (index: {self.device_index}) "
-                f"Sample Rate: {self.sample_rate} Hz Channels: {self.channels} "
-                f"Chunk size: {self.chunk_size}"
-            )
+            self.logger.error(f"setup_device failed: {e}")
+            raise
 
-    def add_listener_on_init(
-        self, listener: AudioListenerType
-    ) -> Optional[AudioListener]:
-        self.pending_listeners.append(listener)
-        return None
-
-    def start_stream(self):
-        """Start the audio stream using sounddevice."""
+    def start_stream(self) -> None:
         try:
-            self.logger.debug("Creating processor...")
-            # Create processor instance
             processor = self.processor_class(self.chunk_size, self.sample_rate)
 
-            self.logger.debug("Creating audio capture...")
-            # Create audio capture
-            self.audio_capture = AudioCapture(
+            self.audio_capture = LoopbackAudioCapture(
                 processor=processor,
                 stream_handler=self,
+                loopback_mic=self._loopback_mic,
                 chunk_size=self.chunk_size,
                 channels=self.channels,
                 sample_rate=self.sample_rate,
             )
 
-            self.logger.debug("Notifying device change listeners...")
-            # Notify device change listeners
             for listener in self.device_change_listeners:
                 listener(self.audio_capture)
 
-            self.logger.debug("Creating sounddevice InputStream...")
-            # Create and start sounddevice stream
-            print(self.channels)
-            self.stream = sd.InputStream(
-                device=self.device_index,
-                samplerate=self.sample_rate,
-                channels=self.channels,
-                blocksize=self.chunk_size,
-                callback=self.audio_capture.callback,
-                dtype="float32",
-            )
-            self.logger.debug("Starting audio stream...")
-            self.stream.start()
-            self.logger.info("Audio stream started")
+            self.audio_capture.start()
+            self.logger.info("Loopback stream started")
 
         except Exception as e:
-            self.logger.error(f"Error starting stream: {e}")
+            self.logger.error(f"start_stream failed: {e}")
             import traceback
 
             traceback.print_exc()
             post_ui_message(
-                "error", "Audio Error", f"Failed to start audio stream: {e}"
+                "error", "Audio Error", f"Loopback stream start failed: {e}"
             )
 
-    def stop_stream(self):
-        """Stop the audio stream."""
-        self.logger.info("Stopping stream")
-        if self.stream is not None:
-            try:
-                self.stream.stop()
-                self.stream.close()
-                self.stream = None
-            except Exception as e:
-                self.logger.error(f"Error stopping stream: {e}")
+    def stop_stream(self) -> None:
+        if self.audio_capture:
+            self.logger.info("Stopping loopback stream")
+            self.audio_capture.stop()
+            self.audio_capture = None
 
-    def close(self):
-        """Stops the stream and closes audio resources."""
+    def close(self) -> None:
         self.stop_stream()
+
+    # ------------------------------------------------------------------
+    # Convenience
+    # ------------------------------------------------------------------
+
+    def add_listener_on_init(self, listener: AudioListenerType) -> None:
+        """Register a listener before the stream is started."""
+        self.pending_listeners.append(listener)
+
+    @staticmethod
+    def list_speakers() -> List[str]:
+        """Helper to enumerate available speaker names for speaker_id."""
+        return [s.name for s in sc.all_speakers()]

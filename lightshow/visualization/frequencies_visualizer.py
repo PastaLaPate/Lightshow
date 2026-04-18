@@ -52,17 +52,12 @@ def _hermite_interpolate(values: np.ndarray, upsample: int = 8) -> np.ndarray:
 class FrequenciesVisualizer(QWidget):
     """Real-time frequencies visualizer using pyqtgraph and cubic Hermite splines."""
 
-    def __init__(
-        self,
-        freq_ranges=(20, 1000),
-        upsample: int = 8,
-    ):
+    def __init__(self, freq_ranges=(0, 2049)):
         super().__init__()
         self.freq_ranges = freq_ranges
-        self.upsample = upsample
 
         pg.setConfigOption("antialias", True)
-        self.plot = pg.PlotWidget(title="Spike Detector", useOpenGL=OPENGL_AVAILABLE)
+        self.plot = pg.PlotWidget(title="Spectrum", useOpenGL=OPENGL_AVAILABLE)
         self.plot.setBackground("#1e1e1e")
         self.plot.setAntialiasing(False)
 
@@ -87,9 +82,6 @@ class FrequenciesVisualizer(QWidget):
     def __call__(self, data: AudioData) -> None:
         try:
             bins = data.frequencies[self.freq_ranges[0] : self.freq_ranges[1]]
-            smooth = _hermite_interpolate(
-                np.asarray(bins, dtype=np.float32), self.upsample
-            )
-            self.energy_curve.setData(smooth)
+            self.energy_curve.setData(bins)
         except Exception:
             traceback.print_exc()

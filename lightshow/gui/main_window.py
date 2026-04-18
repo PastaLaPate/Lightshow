@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from lightshow.audio.audio_streams import AudioStreamHandler
+from lightshow.audio.audio_streams import LoopbackAudioStreamHandler
 from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
@@ -34,11 +34,7 @@ class UIManager(QMainWindow):
     """Main Qt-based GUI manager for Lightshow."""
 
     def __init__(
-        self,
-        audio_listener,
-        audio_handler: AudioStreamHandler,
-        config: Config,
-        audio_devices: List[str],
+        self, audio_listener, audio_handler: LoopbackAudioStreamHandler, config: Config
     ):
         super().__init__()
         self.logger = Logger("UIManager")
@@ -49,9 +45,7 @@ class UIManager(QMainWindow):
         self.ui_signals = UISignals()
 
         # Initialize panels
-        self.audio_panel = AudioPanel(
-            audio_listener, audio_handler, config, audio_devices
-        )
+        self.audio_panel = AudioPanel(audio_listener, audio_handler, config)
         self.devices_panel = DevicesPanel(config, self.device_types)
         self.device_details = DeviceDetailsPanel(config, self.device_types)
         self.manual_packets = ManualPacketsSenderPanel()
@@ -59,6 +53,7 @@ class UIManager(QMainWindow):
         # Register internal handlers
         self.audio_panel.register("start_stream", self._start_stream_callback)
         self.audio_panel.register("stop_stream", self._stop_stream_callback)
+        self.audio_panel.register("device_changed", self._audio_device_changed_callback)
 
         self.devices_panel.register("device_selected", self._on_device_select)
         self.devices_panel.register("device_added", lambda name: None)
@@ -83,7 +78,7 @@ class UIManager(QMainWindow):
         # Timer for updating visualizations
         self.update_timer = QTimer()
         self.update_timer.timeout.connect(self._update_visualizations)
-        self.update_timer.start(int(1000 / 30))  # Target X Fps
+        self.update_timer.start(int(1000 / 60))  # Target X Fps
 
     def register(self, panel: str, event: str, callback):
         """Public API to register custom callbacks on panels."""
@@ -248,6 +243,9 @@ class UIManager(QMainWindow):
         self.device_details.selected_device_id = None
         self.devices_panel.refresh_list()
         self.device_details.clear()
+
+    def _audio_device_changed_callback(self, new_id):
+        self.audio_handler.speaker_id = new_id
 
     def _start_stream_callback(self):
         """Start audio stream."""

@@ -1,7 +1,7 @@
 from collections import deque
 from enum import Enum
 
-from lightshow.audio.audio_streams import AudioCapture, AudioStreamHandler
+from lightshow.audio.audio_streams import AAudioCapture, AAudioStreamHandler
 from lightshow.audio.audio_types import AudioData
 from lightshow.audio.processors import SpectrumProcessor
 
@@ -19,7 +19,7 @@ class SpikeDetector:
 
     def __init__(
         self,
-        AudioHandler: AudioStreamHandler,
+        AudioHandler: AAudioStreamHandler,
         sensitivity=2.0,
         window_size=1,
         freq_range=[0, 3],
@@ -54,7 +54,7 @@ class SpikeDetector:
         self.cooldown_frame_duration = max(1, int(cooldown * chunks_per_second))
         self.cooldown_counter = 0
 
-    def on_device_change(self, device: AudioCapture):
+    def on_device_change(self, device: AAudioCapture):
         self.chunks_per_second = int(device.sample_rate / device.chunk_size)
         self.window_size = int(self.p_window_size * self.chunks_per_second)
         self.energy_history = deque(maxlen=self.window_size)

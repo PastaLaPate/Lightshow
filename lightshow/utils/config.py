@@ -32,7 +32,9 @@ def resource_path(relative_path):
 class Config:
     def __init__(self, config_file="config.json"):
         if os.name == "nt":  # Windows
-            base_dir = Path(os.getenv("LOCALAPPDATA"))
+            base_dir = Path(
+                os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local")
+            )
         else:  # Linux / macOS
             base_dir = Path(
                 os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")

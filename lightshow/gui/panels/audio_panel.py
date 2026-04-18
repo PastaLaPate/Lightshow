@@ -1,6 +1,6 @@
 import threading
-from typing import List
 
+import soundcard
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QComboBox,
@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from lightshow.audio.audio_streams import AudioStreamHandler
+from lightshow.audio.audio_streams import AAudioStreamHandler
 from lightshow.gui.components.logs import Logs
 from lightshow.utils.config import Config
 
@@ -25,17 +25,25 @@ class AudioPanel(BasePanel):
     def __init__(
         self,
         listener,
-        audio_handler: AudioStreamHandler,
+        audio_handler: AAudioStreamHandler,
         config: Config,
-        audio_devices: List[str],
     ):
         super().__init__()
         self.listener = listener
         listener.track_tracker.add_track_changed_listener(self.on_track_changed)
         self.audio_handler = audio_handler
         self.config = config
-        self.audio_devices = audio_devices.copy()
-        self.audio_devices.append("-1: Autodetect used device")
+        self.audio_devices = {}
+        self.audio_devices["Autodetect used speaker"] = soundcard.default_speaker().id
+        recordable_mics = soundcard.all_microphones(include_loopback=True)
+        recordable_speakers = [d for d in recordable_mics if d.isloopback]
+        for speaker in recordable_speakers:
+            self.audio_devices[speaker.name] = speaker.id
+        self.audio_devices["Autodetect default input (mic)"] = (
+            soundcard.default_microphone().id
+        )
+        for mic in soundcard.all_microphones(include_loopback=False):
+            self.audio_devices[mic.name] = mic.id
         self.is_streaming = False
         self.audio_thread: threading.Thread | None = None
 
@@ -66,7 +74,7 @@ class AudioPanel(BasePanel):
         controls_layout.addWidget(device_label)
 
         self.device_combo = QComboBox()
-        self.device_combo.addItems(self.audio_devices)
+        self.device_combo.addItems(self.audio_devices.keys())
         # Set default value
         default_device = next(
             (
@@ -133,8 +141,8 @@ class AudioPanel(BasePanel):
         try:
             if self.device_combo:
                 app_data = self.device_combo.currentText()
-                self.config.device_index = int(app_data.split(":")[0])
-                self.trigger("device_changed", app_data)
+                # self.config.device_index = self.audio_devices[app_data]
+                self.trigger("device_changed", self.audio_devices[app_data])
         except Exception:
             pass
 

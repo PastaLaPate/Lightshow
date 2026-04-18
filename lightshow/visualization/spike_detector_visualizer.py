@@ -155,7 +155,7 @@ class SpikeDetectorVisualizer(QWidget):
 
     def _on_update_data(self, data, beat_detected, break_detected, drop_detected):
         try:
-            current_energy = data.get_freq_mean([0, 40])
+            current_energy = data.frequencies[0]
 
             self.x_history.append(self.global_index)
             self.energy_history.append(current_energy)
