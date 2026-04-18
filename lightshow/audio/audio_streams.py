@@ -13,6 +13,7 @@ from lightshow.audio.audio_types import (
     Processor,
 )
 from lightshow.gui.utils.message_box import post_ui_message
+from lightshow.utils import global_config
 from lightshow.utils.config import Config
 from lightshow.utils.logger import Logger
 
@@ -56,7 +57,7 @@ class LoopbackAudioCapture(AAudioCapture):
         self.listeners: List[AudioListenerType] = []
 
         # Bounded queue: excess chunks are dropped to avoid growing backlog
-        self.sample_queue: Queue = Queue(maxsize=5)
+        self.sample_queue: Queue = Queue(maxsize=50)
 
         self._stop_event = threading.Event()
         self._capture_thread: Optional[threading.Thread] = None
@@ -100,7 +101,7 @@ class LoopbackAudioCapture(AAudioCapture):
         self.audio_buffer.append(samples)
 
         try:
-            self.sample_queue.put_nowait(samples)
+            self.sample_queue.put(samples, block=True, timeout=0.05)
         except Exception:
             self.logger.debug("Loopback queue full – dropping chunk")
 
@@ -145,7 +146,7 @@ class LoopbackAudioCapture(AAudioCapture):
     # Queue processing (call from main / GUI thread, same as AudioCapture)
     # ------------------------------------------------------------------
 
-    def process_queued_samples(self, max_per_frame: int = 15) -> None:
+    def process_queued_samples(self, max_per_frame: int = 25) -> None:
         """
         Drain the queue and call listeners.  Identical contract to the
         sounddevice-based AudioCapture.process_queued_samples().
@@ -216,16 +217,10 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
     handler = LoopbackAudioStreamHandler(MyProcessor, config, speaker_id="Realtek")
     """
 
-    def __init__(
-        self,
-        processor: Type[Processor],
-        config: Config,
-        speaker_id: Optional[str] = None,  # None → system default speaker
-    ):
+    def __init__(self, processor: Type[Processor], config: Config):
         self.logger = Logger("LoopbackAudioStreamHandler")
         self.chunk_size: int = getattr(config, "chunk_size", 1024) or 1024
         self.processor_class = processor
-        self.speaker_id = speaker_id
 
         self.device_change_listeners: List[Callable[[LoopbackAudioCapture], None]] = []
         self.pending_listeners: List[AudioListenerType] = []
@@ -242,12 +237,25 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
     ) -> None:
         self.device_change_listeners.append(listener)
 
-    def reinit_stream(self, config: Config) -> None:
+    def reinit_stream(self) -> None:
+        # Wait for any existing reinit to finish before starting another
+        if (
+            hasattr(self, "_reinit_thread")
+            and self._reinit_thread
+            and self._reinit_thread.is_alive()
+        ):
+            self.logger.warn("reinit already in progress, skipping")
+            return
+        self._reinit_thread = threading.Thread(
+            target=self._reinit_stream_worker, daemon=True
+        )
+        self._reinit_thread.start()
+
+    def _reinit_stream_worker(self) -> None:
         self.logger.info("(Re)initialising loopback stream")
         try:
             self.stop_stream()
-            self.config = config
-            self.chunk_size = getattr(config, "chunk_size", 1024) or 1024
+            self.chunk_size = getattr(global_config, "chunk_size", 1024) or 1024
             self.setup_device()
             self.start_stream()
 
@@ -265,14 +273,13 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
     def setup_device(self) -> None:
         """Resolve the soundcard loopback microphone for the target speaker."""
         try:
-            self._loopback_mic = sc.get_microphone(
-                id=str(self.speaker_id), include_loopback=True
-            )
+            global_config.audio_device.fetch_device()
+            self._loopback_mic = global_config.audio_device.device
             self.sample_rate = 44100  # soundcard accepts any common rate
             self.channels = 1  # always capture mono
 
             self.logger.debug(
-                f"Loopback device: '{self.speaker_id}' | "
+                f"Loopback device: '{self._loopback_mic.name}' ({self._loopback_mic.id}) | "
                 f"SR={self.sample_rate} | chunk={self.chunk_size}"
             )
 
@@ -310,9 +317,10 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
 
     def stop_stream(self) -> None:
         if self.audio_capture:
-            self.logger.info("Stopping loopback stream")
             self.audio_capture.stop()
+            self.pending_listeners = self.audio_capture.listeners.copy()
             self.audio_capture = None
+            self.logger.info("Stopping loopback stream")
 
     def close(self) -> None:
         self.stop_stream()

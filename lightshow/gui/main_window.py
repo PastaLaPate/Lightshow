@@ -13,11 +13,13 @@ from PyQt6.QtWidgets import (
 )
 
 from lightshow.audio.audio_streams import LoopbackAudioStreamHandler
+from lightshow.audio.audio_types import AudioDevice
 from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
-from lightshow.utils.config import Config, live_devices
+from lightshow.utils import global_config
+from lightshow.utils.config import live_devices
 from lightshow.utils.logger import Logger
 
 
@@ -33,21 +35,18 @@ class UISignals(QObject):
 class UIManager(QMainWindow):
     """Main Qt-based GUI manager for Lightshow."""
 
-    def __init__(
-        self, audio_listener, audio_handler: LoopbackAudioStreamHandler, config: Config
-    ):
+    def __init__(self, audio_listener, audio_handler: LoopbackAudioStreamHandler):
         super().__init__()
         self.logger = Logger("UIManager")
         self.listener = audio_listener
         self.audio_handler = audio_handler
-        self.config = config
         self.device_types: List[Type[Device]] = [MovingHead]
         self.ui_signals = UISignals()
 
         # Initialize panels
-        self.audio_panel = AudioPanel(audio_listener, audio_handler, config)
-        self.devices_panel = DevicesPanel(config, self.device_types)
-        self.device_details = DeviceDetailsPanel(config, self.device_types)
+        self.audio_panel = AudioPanel(audio_listener, audio_handler)
+        self.devices_panel = DevicesPanel(self.device_types)
+        self.device_details = DeviceDetailsPanel(self.device_types)
         self.manual_packets = ManualPacketsSenderPanel()
 
         # Register internal handlers
@@ -185,7 +184,7 @@ class UIManager(QMainWindow):
             return
 
         # Handle connect
-        device_type_name = self.config.devices[device_id]["type"]
+        device_type_name = global_config.devices[device_id]["type"]
         device_type = next(
             (t for t in self.device_types if t.DEVICE_TYPE_NAME == device_type_name),
             None,
@@ -194,7 +193,7 @@ class UIManager(QMainWindow):
             return
 
         live_devices[device_id] = device_type()
-        for k, v in self.config.devices[device_id]["props"].items():
+        for k, v in global_config.devices[device_id]["props"].items():
             setattr(live_devices[device_id], k, v)
 
         self.device_details.set_connecting(True)
@@ -238,19 +237,19 @@ class UIManager(QMainWindow):
         if device_id in live_devices:
             live_devices[device_id].disconnect()
             del live_devices[device_id]
-        if device_id in self.config.devices:
-            del self.config.devices[device_id]
+        if device_id in global_config.devices:
+            del global_config.devices[device_id]
         self.device_details.selected_device_id = None
         self.devices_panel.refresh_list()
         self.device_details.clear()
 
-    def _audio_device_changed_callback(self, new_id):
-        self.audio_handler.speaker_id = new_id
+    def _audio_device_changed_callback(self, new_device: AudioDevice):
+        global_config.audio_device = new_device
 
     def _start_stream_callback(self):
         """Start audio stream."""
         try:
-            self.audio_handler.reinit_stream(self.config)
+            self.audio_handler.reinit_stream()
             self.listener.clear_state()
             # Note: reinit_stream() already starts the stream, no need to start again
             self.audio_panel.set_streaming(True)
@@ -311,7 +310,7 @@ class UIManager(QMainWindow):
         if self.audio_panel.is_streaming:
             self._stop_stream_callback()
         self.audio_handler.close()
-        self.config.save()
+        global_config.save()
 
     def closeEvent(self, a0):
         """Handle window close event."""

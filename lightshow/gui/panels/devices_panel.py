@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
 
 from lightshow.devices import is_device_type
 from lightshow.devices.device import Device
-from lightshow.utils import Config
+from lightshow.utils import global_config
 from lightshow.utils.config import DeviceConfigType
 
 from .base_panel import BasePanel
@@ -20,9 +20,8 @@ from .base_panel import BasePanel
 class DevicesPanel(BasePanel):
     """Panel for managing device list and additions."""
 
-    def __init__(self, config: Config, device_types: List[Type[Device]]):
+    def __init__(self, device_types: List[Type[Device]]):
         super().__init__()
-        self.config = config
         self.device_types = device_types
         self.device_listbox = None
         self.device_type_combo = None
@@ -31,7 +30,7 @@ class DevicesPanel(BasePanel):
         """Refresh the device listbox with current devices."""
         if self.device_listbox:
             self.device_listbox.clear()
-            for device_name in self.config.devices.keys():
+            for device_name in global_config.devices.keys():
                 self.device_listbox.addItem(device_name)
 
     def create_qt_ui(self, layout: QVBoxLayout):
@@ -44,7 +43,7 @@ class DevicesPanel(BasePanel):
         # Device listbox
         self.device_listbox = QListWidget()
         self.device_listbox.setMaximumHeight(200)
-        for device_name in self.config.devices.keys():
+        for device_name in global_config.devices.keys():
             self.device_listbox.addItem(device_name)
         self.device_listbox.itemSelectionChanged.connect(self._on_device_select)
         layout.addWidget(self.device_listbox)
@@ -85,10 +84,10 @@ class DevicesPanel(BasePanel):
         )
         if device_type:
             # Create a default device config
-            device_count = len(self.config.devices)
+            device_count = len(global_config.devices)
             device_id = f"{device_type_name}_{device_count}"
             if is_device_type(device_type_name):
-                self.config.devices[device_id] = DeviceConfigType(
+                global_config.devices[device_id] = DeviceConfigType(
                     {
                         "type": device_type_name,
                         "props": getattr(device_type, "DEFAULT_CONFIG", {}).copy(),

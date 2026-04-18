@@ -1,16 +1,15 @@
-from lightshow.audio.audio_streams import AAudioStreamHandler
 from lightshow.audio.data import AudioData
 
 from .spike_detector import DetectionType, SpikeDetector
 
 
 class KickDetector(SpikeDetector):
-    def __init__(self, AudioHandler: AAudioStreamHandler):
+    def __init__(self, AudioHandler):
         super().__init__(
             AudioHandler,
             1.75,
             20,
-            [40, 100],
+            [0, 1],  # kept here for SpikeDetector compat
             DetectionType.UPPER,
             1 / 10000,
             250 / 1000,
@@ -23,7 +22,7 @@ class KickDetector(SpikeDetector):
         self.cooldown_counter = 0
 
     def detect(self, data: AudioData, appendCurrentEnergy=True):
-        current_energy = data.get_ps_mean([0, 2])
+        current_energy = data.get_ps_mean([0, 1])
 
         if appendCurrentEnergy:
             self.energy_history.append(current_energy)

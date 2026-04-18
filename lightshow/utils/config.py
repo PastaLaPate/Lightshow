@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Type, TypedDict, TypeVar
 
+from lightshow.audio.audio_types import AudioDevice
 from lightshow.devices import DEVICES_STR_TYPES
 from lightshow.devices.device import Device
 from lightshow.utils.logger import Logger
@@ -60,10 +61,19 @@ class Config:
                 f"Config file {self.config_file} not found. Using default settings."
             )
             return {}
+        except json.JSONDecodeError:
+            self.logger.error(
+                f"Config file {self.config_file} is not a valid JSON. Using default settings."
+            )
+            return {}
 
     def reload_config(self):
         self.chunk_size = self.get("chunk_size", 1024)
-        self.device_index = self.get("device_index", -2)  # Auto-detect if -1
+        self.audio_device = AudioDevice.from_dict(
+            self.get(
+                "audio_device", AudioDevice(is_default=True, is_loopback=True).to_dict()
+            )
+        )  # Default to loopback speaker.
         self.max_fps = self.get("max_fps", 30)
         self.audio_sensitivity = self.get(
             "audio_sensitivity", 2.0
@@ -76,7 +86,7 @@ class Config:
     def save(self):
         with open(self.config_file, "w") as f:
             self.settings["chunk_size"] = self.chunk_size
-            self.settings["device_index"] = self.device_index
+            self.settings["audio_device"] = self.audio_device.to_dict()
             self.settings["max_fps"] = self.max_fps
             self.settings["audio_sensitivity"] = self.audio_sensitivity
             self.settings["devices"] = self.devices

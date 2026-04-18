@@ -39,7 +39,9 @@ class LoggerCore:
         timestamp = datetime.datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
 
         if os.name == "nt":  # Windows
-            base_dir = Path(os.getenv("LOCALAPPDATA"))
+            base_dir = Path(
+                os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local")
+            )
         else:  # Linux / macOS
             base_dir = Path(
                 os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share")
@@ -117,7 +119,7 @@ class Logger:
         self.core = LoggerCore()
 
     @classmethod
-    def for_class(cls, name):
+    def for_class(cls, name) -> "Logger":
         return Logger(name)
 
     def debug(self, msg):

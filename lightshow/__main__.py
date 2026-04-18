@@ -244,7 +244,7 @@ def main() -> None:
     listener.freq_visualizer = FrequenciesVisualizer()
     listener.changed_visualizer_settings()
 
-    ui_manager = UIManager(listener, audio_handler, config.global_config)
+    ui_manager = UIManager(listener, audio_handler)
     ui_manager.setProperty("_NET_WM_NAME", "Lightshow")
     ui_manager.resize(800, 600)
     listener.track_tracker.start()

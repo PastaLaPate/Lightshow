@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
 )
 
 from lightshow.devices.device import Device
-from lightshow.utils import Config, live_devices
+from lightshow.utils import global_config, live_devices
 
 from .base_panel import BasePanel
 
@@ -19,9 +19,8 @@ from .base_panel import BasePanel
 class DeviceDetailsPanel(BasePanel):
     """Panel for displaying and managing device configuration details."""
 
-    def __init__(self, config: Config, device_types: List[Type[Device]]):
+    def __init__(self, device_types: List[Type[Device]]):
         super().__init__()
-        self.config = config
         self.device_types = device_types
         self.selected_device_id = None
 
@@ -131,12 +130,12 @@ class DeviceDetailsPanel(BasePanel):
 
     def show_for(self, device_id):
         """Display details for a specific device."""
-        if not device_id or device_id not in self.config.devices:
+        if not device_id or device_id not in global_config.devices:
             self._set_details_visible(False)
             self.selected_device_id = None
             return
 
-        selected_device_obj = self.config.devices[device_id]
+        selected_device_obj = global_config.devices[device_id]
         self.selected_device_id = device_id
         self._set_details_visible(True)
 
@@ -296,7 +295,7 @@ class DeviceDetailsPanel(BasePanel):
                             casted = ptype(val)
                         except Exception:
                             casted = val
-                        self.config.devices[did]["props"][pname] = casted
+                        global_config.devices[did]["props"][pname] = casted
 
                     return handler
 

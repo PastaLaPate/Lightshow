@@ -7,7 +7,7 @@ from queue import Empty, Queue
 from typing import Dict, List, Literal  # Import Empty for cleaner queue handling
 
 import pyqtgraph as pg
-from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.utils.logger import Logger
@@ -85,9 +85,7 @@ class SpikeDetectorVisualizer(QWidget):
         # (Pens setup remains the same...)
         pen_energy = pg.mkPen(color=(0, 255, 255), width=2)
         pen_diff = pg.mkPen(color=(255, 255, 0), width=1)
-        pen_limit = pg.mkPen(
-            color=(255, 0, 0), width=2, style=pg.QtCore.Qt.PenStyle.DashLine
-        )
+        pen_limit = pg.mkPen(color=(255, 0, 0), width=2, style=Qt.PenStyle.DashLine)
 
         self.energy_curve = self.plot.plot([], [], pen=pen_energy, name="Energy")
         self.diff_curve = self.plot.plot([], [], pen=pen_diff, name="Diff")
@@ -155,7 +153,10 @@ class SpikeDetectorVisualizer(QWidget):
 
     def _on_update_data(self, data, beat_detected, break_detected, drop_detected):
         try:
-            current_energy = data.frequencies[0]
+            current_energy = data.frequencies[
+                self.spike_detector.freq_range[0] : self.spike_detector.freq_range[1]
+                + 1
+            ].mean()
 
             self.x_history.append(self.global_index)
             self.energy_history.append(current_energy)

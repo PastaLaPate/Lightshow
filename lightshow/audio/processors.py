@@ -7,23 +7,21 @@ np.seterr(all="ignore")
 
 
 class SpectrumProcessor(Processor):
-    """
-    Computes the FFT power spectrum with 20000 frequency elements.
-    No mel filterbank applied - pure FFT analysis.
-    """
-
-    def __init__(self, chunk_size, sample_rate, sensitivity=2.0):
+    def __init__(self, chunk_size, sample_rate, sensitivity=2.0, attack=0.9, decay=0.5):
         super().__init__(chunk_size, sample_rate)
         self.sensitivity = sensitivity
+        self.attack = attack
+        self.decay = decay
+        self._prev = None
 
     @staticmethod
-    def hz_to_bin(freq_hz, sample_rate, chunk_size):
-        return int(freq_hz * chunk_size / sample_rate)
+    def hz_to_bin(freq_hz, sample_rate, fft_size):
+        return int(freq_hz * fft_size / sample_rate)
 
     def process(self, data) -> AudioData:
         arr = np.asarray(data, dtype=np.float32)
         if arr.size == 0:
-            return AudioData(np.zeros(self.chunk_size // 2 + 1, dtype=np.float32))
+            return AudioData(np.zeros(self.chunk_size // 2 + 1))
 
         max_abs = float(np.abs(arr).max())
         if max_abs > 1.01:
@@ -31,17 +29,21 @@ class SpectrumProcessor(Processor):
         elif 0 < max_abs < 0.001:
             arr = arr / max_abs
 
-        # Zero-pad to 4x chunk size → 4x finer frequency resolution
-        # e.g. 1024 → 4096 points: 44100/4096 ≈ 10.8 Hz/bin
-        fft_size = self.chunk_size * 4
-        window = np.hanning(len(arr))
-        arr = arr * window
+        # NO window, NO zero-padding — keeps bin math identical to old code
+        fft_result = np.fft.rfft(arr)
+        power_spectrum = np.square(np.abs(fft_result)) * self.sensitivity
 
-        with np.errstate(all="ignore"):
-            fft_result = np.fft.rfft(arr, n=fft_size)  # <-- n= is the key
-            power_spectrum = np.square(np.abs(fft_result))
+        # Restore attack/decay smoothing to preserve transients
+        if self._prev is None or self._prev.shape != power_spectrum.shape:
+            self._prev = power_spectrum.copy()
+        rising = power_spectrum > self._prev
+        self._prev[rising] = (
+            self.attack * self._prev[rising]
+            + (1 - self.attack) * power_spectrum[rising]
+        )
+        self._prev[~rising] = (
+            self.decay * self._prev[~rising]
+            + (1 - self.decay) * power_spectrum[~rising]
+        )
 
-        p95 = np.percentile(power_spectrum, 95)
-        power_spectrum = np.clip(power_spectrum, 0, p95 * 2) * self.sensitivity
-
-        return AudioData(power_spectrum)
+        return AudioData(self._prev.copy())
