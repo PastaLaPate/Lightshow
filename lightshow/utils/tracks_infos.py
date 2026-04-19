@@ -5,6 +5,10 @@ import threading
 from abc import ABC, abstractmethod
 from typing import Callable, Final
 
+"""
+TODO: Standard playback status "playing", "paused", "stopped" seems hardcoded. Should use an Enum or similar to avoid typos and ensure consistency across platforms.
+"""
+
 # ─── winrt (Windows-only) ────────────────────────────────────────────────────
 
 if os.name == "nt":
