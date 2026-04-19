@@ -142,7 +142,7 @@ jobs:
       - name: Assemble AppDir
         run: |
           mkdir -p AppDir/usr/bin
-          cp -r dist/lightshow AppDir/usr/bin/lightshow
+          cp -r dist/lightshow-linux AppDir/usr/bin/lightshow  # ← updated path
           cp lightshow/gui/assets/lightshow_icon.png AppDir/lightshow.png
           cp installer/lightshow.desktop AppDir/lightshow.desktop
           cp installer/AppRun AppDir/AppRun
