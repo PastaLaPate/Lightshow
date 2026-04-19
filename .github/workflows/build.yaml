@@ -158,8 +158,43 @@ jobs:
         with:
           name: linux-appimage
           path: lightshow-${{ needs.check-version.outputs.version }}-x86_64.AppImage
+
+  build-wheel:
+    needs: [check-version, lint]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --tags
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
+        with:
+          enable-cache: true
+
+      - name: Install build dependencies
+        run: uv sync --locked --all-extras
+
+      - name: Build wheel
+        run: uv build
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: wheel
+          path: dist/*.whl
+
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: sdist
+          path: dist/*.tar.gz
+
   release:
-    needs: [check-version, build-windows, build-linux]
+    needs: [check-version, build-windows, build-linux, build-wheel]
     if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -179,6 +214,18 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: linux-appimage
+
+      - name: Download wheel artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: wheel
+          path: wheel/
+
+      - name: Download sdist artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: sdist
+          path: sdist/
 
       - name: Get previous release tag
         id: prev_release
@@ -208,4 +255,6 @@ jobs:
             win-installer/*.exe
             win-portable/*.zip
             linux-appimage/*.AppImage
+            wheel/*.whl
+            sdist/*.tar.gz
           body_path: CHANGELOG.md
