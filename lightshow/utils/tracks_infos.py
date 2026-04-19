@@ -11,6 +11,7 @@ if os.name == "nt":
     from winrt.windows.media.control import (
         GlobalSystemMediaTransportControlsSession,
         GlobalSystemMediaTransportControlsSessionManager,
+        GlobalSystemMediaTransportControlsSessionPlaybackStatus,
     )
 
 # ─── dbus (Linux-only) ───────────────────────────────────────────────────────
@@ -189,7 +190,14 @@ if os.name == "nt":
             raw = session.get_playback_info()
             if raw:
                 self._notify_playback_status_changed(
-                    "", PlaybackInfo(playback_status=str(raw.playback_status).lower())
+                    "",
+                    PlaybackInfo(
+                        playback_status=str(
+                            GlobalSystemMediaTransportControlsSessionPlaybackStatus(
+                                raw.playback_status
+                            ).name
+                        ).lower()
+                    ),
                 )
 
 # ─── Linux / MPRIS2 implementation ───────────────────────────────────────────
