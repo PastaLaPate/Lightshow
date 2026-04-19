@@ -28,7 +28,7 @@ exe = EXE(
     [],
     debug=False,
     runtime_tmpdir=None,
-    name="lightshow-linux",
+    name="lightshow",
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
