@@ -1,6 +1,7 @@
 import os
 import signal
 import sys
+from pathlib import Path
 from time import time_ns
 
 import pyqtgraph as pg
@@ -17,7 +18,8 @@ from lightshow.audio.processors import SpectrumProcessor
 from lightshow.devices.device import PacketData, PacketStatus, PacketType
 from lightshow.gui.main_window import UIManager
 from lightshow.utils import Logger, TracksInfoTracker
-from lightshow.utils.config import resource_path
+from lightshow.utils.config import ARCH, OS, PYTHON_VERSION, VERSION, resource_path
+from lightshow.utils.logger import configure_logging
 from lightshow.utils.tracks_infos import PlaybackInfo, TrackInfo
 from lightshow.visualization.frequencies_visualizer import FrequenciesVisualizer
 from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
@@ -213,6 +215,15 @@ class MainAudioListener(AudioListener):
 
 
 def main() -> None:
+    if os.name == "nt":
+        base = Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+    else:
+        base = Path(os.getenv("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+
+    configure_logging("Lightshow", base / ".LightShow")
+    logger = Logger("Main")
+    logger.info("Running on Lightshow version %s", VERSION)
+    logger.debug("OS: %s | Python: %s | Architecture: %s", OS, PYTHON_VERSION, ARCH)
     global ui_manager
     from PyQt6.QtCore import QTimer
     from PyQt6.QtGui import QIcon

@@ -274,9 +274,9 @@ class UIManager(QMainWindow):
     def _update_visualizations(self):
         """Update visualizations in real-time."""
         # Process queued log messages from background threads
-        from lightshow.utils.logger import LoggerCore
+        from lightshow.utils.logger import process_log_queue
 
-        LoggerCore().process_log_queue()
+        process_log_queue()
 
         # Process queued audio samples (from audio callback thread)
         if (

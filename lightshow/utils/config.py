@@ -1,8 +1,12 @@
 import json
 import os
+import platform
 import sys
+from importlib.metadata import version
 from pathlib import Path
 from typing import Any, Dict, Type, TypedDict, TypeVar
+
+import distro
 
 from lightshow.audio.audio_types import AudioDevice
 from lightshow.devices import DEVICES_STR_TYPES
@@ -28,6 +32,17 @@ def resource_path(relative_path):
         base_path = os.path.abspath(".")
 
     return os.path.join(base_path, relative_path)
+
+
+VERSION = version("lightshow")
+PYTHON_VERSION = ".".join(map(str, sys.version_info[:3]))
+if platform.system() == "Windows":
+    OS = f"Windows {platform.release()}"
+elif platform.system() == "Darwin":
+    OS = f"macOS {platform.mac_ver()[0]}"
+elif platform.system() == "Linux":
+    OS = distro.name(pretty=True)
+ARCH = " ".join(platform.architecture())
 
 
 class Config:
