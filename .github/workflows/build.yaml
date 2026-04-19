@@ -159,7 +159,7 @@ jobs:
           name: linux-appimage
           path: lightshow-${{ needs.check-version.outputs.version }}-x86_64.AppImage
   release:
-    needs: [check-version, build-windows]
+    needs: [check-version, build-windows, build-linux]
     if: needs.check-version.outputs.should_release == 'true'
     runs-on: ubuntu-latest
     steps:
