@@ -17,10 +17,11 @@ from lightshow.audio.audio_streams import (
 from lightshow.audio.processors import SpectrumProcessor
 from lightshow.devices.device import PacketData, PacketStatus, PacketType
 from lightshow.gui.main_window import UIManager
-from lightshow.utils import Logger, TracksInfoTracker
+from lightshow.tracks_tracker import PlatformSpecificTracker
+from lightshow.tracks_tracker.types import PlaybackStatus, TrackInfo
+from lightshow.utils import Logger
 from lightshow.utils.config import ARCH, OS, PYTHON_VERSION, VERSION, resource_path
 from lightshow.utils.logger import configure_logging
-from lightshow.utils.tracks_infos import PlaybackInfo, TrackInfo
 from lightshow.visualization.frequencies_visualizer import FrequenciesVisualizer
 from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
 
@@ -44,7 +45,7 @@ class MainAudioListener(AudioListener):
         self.kick_visualizer: SpikeDetectorVisualizer | None = None
         self.freq_visualizer: FrequenciesVisualizer | None = None
         self.gui_bridge = GuiBridge()
-        self.track_tracker = TracksInfoTracker()
+        self.track_tracker = PlatformSpecificTracker()
         self.logger.info("Adding track infos tracker")
         self.track_tracker.add_track_changed_listener(self.on_track_changed)
         self.track_tracker.add_playback_status_changed_listener(
@@ -68,16 +69,16 @@ class MainAudioListener(AudioListener):
             )
 
     def on_playback_status_changed(
-        self, player_name: str, status: PlaybackInfo
+        self, player_name: str, status: PlaybackStatus
     ) -> None:
-        self.logger.info(f"New playback status: {status.playback_status}")
+        self.logger.info(f"New playback status: {status.name}")
 
-        if status.playback_status == "paused":
+        if status == PlaybackStatus.PAUSED:
             self.music_paused = True
             self.paused_since = time_ns()
             self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.ON))
 
-        elif status.playback_status == "playing":
+        elif status == PlaybackStatus.PLAYING:
             self.music_paused = False
             self.break_detector.clear_old_beats()
             self.break_detector.clean_beats(time_ns() - self.paused_since)
