@@ -166,6 +166,8 @@ if os.name == "nt":
             session = self._manager.get_current_session()
             if session:
                 session.add_playback_info_changed(self._on_playback_status_changed)
+            await self._emit_track_info(session)
+            self._on_playback_status_changed(session, None)
 
         def _on_current_session_changed(
             self,
@@ -189,7 +191,7 @@ if os.name == "nt":
         def _on_playback_status_changed(
             self,
             session: GlobalSystemMediaTransportControlsSession,
-            _event: object,
+            _event: object | None,
         ) -> None:
             raw = session.get_playback_info()
             if raw:
