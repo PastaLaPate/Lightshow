@@ -171,7 +171,7 @@ class LinuxTracksInfoTracker(ATrackTracker):
             await self._emit_track_info_for(name, metadata=None)
 
         except Exception:
-            _log.exception("Failed to attach player %r", name)
+            _log.error("Failed to attach player %r", name)
 
     def _detach_player(self, name: str) -> None:
         self._players.pop(name, None)
@@ -265,7 +265,7 @@ class LinuxTracksInfoTracker(ATrackTracker):
             self._notify_track_changed(name, info)
 
         except Exception:
-            _log.exception("Error emitting track info for %r", name)
+            _log.error("Error emitting track info for %r", name)
 
     def _emit_playback_status(self, name: str) -> None:
         raw = self._status.get(name, "")
