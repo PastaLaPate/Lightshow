@@ -40,15 +40,13 @@ jobs:
 
   lint:
     needs: check-version
-    if: needs.check-version.outputs.should_release == 'true'
     uses: ./.github/workflows/ci.yaml
 
-  build:
+  build-windows:
     needs: [check-version, lint]
-    if: needs.check-version.outputs.should_release == 'true'
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6.0.2
         with:
           fetch-depth: 0
 
@@ -57,7 +55,7 @@ jobs:
         run: git fetch --tags
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@08807647e7069bb48b6ef5acd8ec9567f424441b # v8.1.0
         with:
           enable-cache: true
 
@@ -80,9 +78,46 @@ jobs:
       - name: Build with PyInstaller
         run: uv run pyinstaller lightshow.spec
 
+      - name: Zip portable
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist/lightshow/* `
+            -DestinationPath dist/lightshow-portable-win-${{ needs.check-version.outputs.version }}.zip
+
+      - name: Upload portable
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-portable
+          path: dist/lightshow-portable-win-${{ needs.check-version.outputs.version }}.zip
+
       - name: Create installer
+        if: needs.check-version.outputs.should_release == 'true'
         run: |
           cd installer && makensis /DPRODUCT_VERSION=${{ needs.check-version.outputs.version }} lightshow.nsi
+
+      - name: Upload installer # Build and upload the installer only if we are going to release, otherwise it would just be a waste of time and resources
+        if: needs.check-version.outputs.should_release == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-installer
+          path: installer/lightshow-setup-win-${{ needs.check-version.outputs.version }}.exe
+
+  release:
+    needs: [check-version, build-windows]
+    if: needs.check-version.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows installer artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-installer
+          path: win-installer/
+
+      - name: Download Windows portable artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-portable
+          path: win-portable/
 
       - name: Get previous release tag
         id: prev_release
@@ -105,8 +140,10 @@ jobs:
           }
 
       - name: Create Release
-        uses: softprops/action-gh-release@v2.5.0
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: v${{ needs.check-version.outputs.version }}
-          files: installer/lightshow-setup-win-${{ needs.check-version.outputs.version }}.exe
+          files: |
+            win-installer/*.exe
+            win-portable/*.zip
           body_path: CHANGELOG.md
