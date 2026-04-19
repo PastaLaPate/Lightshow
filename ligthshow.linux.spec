@@ -1,11 +1,8 @@
-# -*- mode: python ; coding: utf-8 -*-
-
-
 a = Analysis(
-    ["lightshow\\__main__.py"],
+    ["lightshow/__main__.py"],
     pathex=[],
     binaries=[],
-    datas=[("lightshow\\gui\\assets", ".\\lightshow\\gui\\assets")],
+    datas=[("lightshow/gui/assets", "./lightshow/gui/assets")],
     hiddenimports=[
         "PyQt6.QtCore",
         "PyQt6.QtGui",
@@ -41,12 +38,12 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="lightshow/gui/assets/lightshow_icon.ico",
+    icon="lightshow/gui/assets/lightshow_icon.png"
 )
+
 coll = COLLECT(
     exe,
     a.binaries,
-    a.zipfiles,
     a.datas,
     strip=False,
     upx=True,
