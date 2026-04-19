@@ -1,9 +1,5 @@
 import os
 
-from lightshow.tracks_tracker.abstract_tracker import ATrackTracker
-from lightshow.tracks_tracker.types import PlaybackStatus, TrackInfo
-from lightshow.utils import logger
-
 if not os.name == "posix":
     raise ImportError("This module is only for Linux.")
 
@@ -14,6 +10,10 @@ from typing import Callable, Final, Protocol, runtime_checkable
 from dbus_next.aio.message_bus import MessageBus
 from dbus_next.constants import BusType
 from dbus_next.signature import Variant
+
+from lightshow.tracks_tracker.abstract_tracker import ATrackTracker
+from lightshow.tracks_tracker.types import PlaybackStatus, TrackInfo
+from lightshow.utils import Logger
 
 
 @runtime_checkable
@@ -55,7 +55,7 @@ PLAYER_PRIORITY: Final[list[str]] = [
     "org.mpris.MediaPlayer2.chromium",
 ]
 
-_log = logger.getLogger("TracksInfoTracker")
+_log = Logger("TracksInfoTracker")
 
 
 def _extract_title(meta: "dict[str, Variant]") -> str:
