@@ -104,13 +104,16 @@ class AudioPanel(BasePanel):
         self.playing_label = QLabel("No track playing")
         topLayout.addWidget(self.playing_label)
 
+        spectrumWidget = QWidget()
+        spectrumLayout = QVBoxLayout(spectrumWidget)
+
         # Add spike detector visualizer from listener
         if self.listener and hasattr(self.listener, "kick_visualizer"):
             self.kick_visualizer = self.listener.kick_visualizer
             topLayout.addWidget(self.kick_visualizer, 1)
         if self.listener and hasattr(self.listener, "freq_visualizer"):
             self.freq_visualizer = self.listener.freq_visualizer
-            topLayout.addWidget(self.freq_visualizer, 1)
+            spectrumLayout.addWidget(self.freq_visualizer, 1)
 
         logsWidget = QWidget()
         logs_layout = QVBoxLayout(logsWidget)
@@ -118,9 +121,11 @@ class AudioPanel(BasePanel):
 
         splitter = QSplitter(Qt.Orientation.Vertical)
         splitter.addWidget(topWidget)
+        splitter.addWidget(spectrumWidget)
         splitter.addWidget(logsWidget)
-        splitter.setStretchFactor(0, 70)
-        splitter.setStretchFactor(1, 30)
+        splitter.setStretchFactor(0, 50)
+        splitter.setStretchFactor(1, 20)
+        splitter.setStretchFactor(2, 30)
         splitter.setHandleWidth(1)
         splitter.setStyleSheet(
             """
