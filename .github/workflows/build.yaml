@@ -218,6 +218,7 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: linux-appimage
+          path: linux-appimage/
 
       - name: Download wheel artifact
         uses: actions/download-artifact@v8
