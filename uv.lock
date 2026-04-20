@@ -612,7 +612,7 @@ wheels = [
 
 [[package]]
 name = "lightshow"
-version = "0.29.0"
+version = "0.29.1"
 source = { editable = "." }
 dependencies = [
     { name = "dbus-next" },
