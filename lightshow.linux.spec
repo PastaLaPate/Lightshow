@@ -1,8 +1,14 @@
+from PyInstaller.utils.hooks import collect_data_files
+
 a = Analysis(
     ["lightshow/__main__.py"],
     pathex=[],
     binaries=[],
-    datas=[("lightshow/gui/assets", "./lightshow/gui/assets")],
+    datas=[
+    (
+    "lightshow/gui/assets",
+    "./lightshow/gui/assets"),
+    *collect_data_files("soundcard"),],
     hiddenimports=[
         "PyQt6.QtCore",
         "PyQt6.QtGui",
