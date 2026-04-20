@@ -22,6 +22,7 @@ from lightshow.tracks_tracker.types import PlaybackStatus, TrackInfo
 from lightshow.utils import Logger
 from lightshow.utils.config import ARCH, OS, PYTHON_VERSION, VERSION, resource_path
 from lightshow.utils.logger import configure_logging
+from lightshow.utils.update_checker import is_update_available
 from lightshow.visualization.frequencies_visualizer import FrequenciesVisualizer
 from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
 
@@ -224,6 +225,11 @@ def main() -> None:
     configure_logging("Lightshow", base / ".LightShow")
     logger = Logger("Main")
     logger.info("Running on Lightshow version %s", VERSION)
+    update_available, update_message = is_update_available()
+    logger.info(
+        "Version status: %s",
+        update_message if update_message else "Unable to fetch latest version info.",
+    )
     logger.debug("OS: %s | Python: %s | Architecture: %s", OS, PYTHON_VERSION, ARCH)
     global ui_manager
     from PyQt6.QtCore import QTimer

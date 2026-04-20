@@ -13,7 +13,7 @@ from typing import Optional
 class _ColorFormatter(logging.Formatter):
     _COLORS = {
         logging.DEBUG: "\x1b[90m",
-        logging.INFO: "\x1b[96m",
+        logging.INFO: "\x1b[37m",
         logging.WARNING: "\x1b[93m",
         logging.ERROR: "\x1b[91m",
         logging.CRITICAL: "\x1b[31;1m",
@@ -57,7 +57,7 @@ class _ContextFilter(logging.Filter):
 class _QtQueueHandler(logging.Handler):
     _COLORS = {
         logging.DEBUG: "#9b9b9b",
-        logging.INFO: "#00ccff",
+        logging.INFO: "#ffffff",
         logging.WARNING: "#ffcc00",
         logging.ERROR: "#ff4444",
         logging.CRITICAL: "#ff0000",

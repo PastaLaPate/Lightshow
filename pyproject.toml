@@ -24,6 +24,7 @@ dependencies = [
     "pyopengl-accelerate>=3.1.10",
     "soundcard>=0.4.6",
     "distro>=1.9.0",
+    "semver>=3.0.4",
 ]
 
 [build-system]
