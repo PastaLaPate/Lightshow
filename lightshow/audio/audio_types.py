@@ -57,10 +57,10 @@ class AudioDevice:
             self._device = self._find_in_device_list(device_list, self.name)
 
     def _find_in_device_list(self, device_list, name):
-        raise ValueError(f"Device with name '{name}' not found")
         for device in device_list:
             if name in device.name or device.name == name:
                 return device
+        raise ValueError(f"Device with name '{name}' not found")
 
     def to_dict(self) -> dict:
         return {
