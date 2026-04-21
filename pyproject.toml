@@ -8,7 +8,7 @@ dependencies = [
     "PyQt6>=6.7.0",
     "PyQt6-Charts>=6.7.0",
     "librosa>=0.11.0",
-    "numpy>=2.2.6",
+    "numpy>=2.4.4",
     "typing-extensions>=4.15.0",
     "websocket-client>=1.8.0",
     "winrt-runtime>=3.2.1 ; platform_system == \"Windows\"",
@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["pdm-backend >= 2.4.0"]
+requires = ["pdm-backend>=2.4.8"]
 build-backend = "pdm.backend"
 
 [tool.setuptools]
