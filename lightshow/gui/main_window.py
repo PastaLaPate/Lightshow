@@ -196,13 +196,16 @@ class UIManager(QMainWindow):
             try:
                 live_devices[device_id].connect(fatal_non_discovery=True)
                 self.ui_signals.finish_connection.emit(device_id)
-            except Exception as e:
+            except Exception:
                 self.device_details.set_connecting(False)
                 if self.device_details.connect_button:
                     self.device_details.connect_button.setText("Connect")
                     self.device_details.connect_button.setEnabled(True)
                 self.ui_signals.connection_status_changed.emit("Disconnected")
-                self.ui_signals.show_error.emit("Connection error", repr(e))
+                self.ui_signals.show_error.emit(
+                    "Connection error",
+                    f"Failed to connect to device. Error details: {traceback.format_exc()}",
+                )
                 if device_id in live_devices:
                     del live_devices[device_id]
 
