@@ -12,7 +12,7 @@ from lightshow.audio.audio_types import (
     AudioListenerType,
     Processor,
 )
-from lightshow.gui.utils.message_box import post_ui_message
+from lightshow.gui.utils.ui_signals import ui_signals
 from lightshow.utils import global_config
 from lightshow.utils.config import Config
 from lightshow.utils.logger import Logger
@@ -265,15 +265,20 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
             for listener in self.pending_listeners:
                 self.audio_capture.add_listener(listener)
             self.pending_listeners.clear()
+            ui_signals.streaming_status_changed.emit(True)
 
         except Exception as e:
             self.logger.error(f"reinit_stream failed: {e}")
-            post_ui_message("error", "Audio Error", f"Loopback stream init failed: {e}")
+            ui_signals.show_error.emit(
+                "Audio Error", f"Loopback stream init failed: {e}"
+            )
 
     def setup_device(self) -> None:
         """Resolve the soundcard loopback microphone for the target speaker."""
         try:
             global_config.audio_device.fetch_device()
+            if not global_config.audio_device.device:
+                raise ValueError("No audio device found")
             self._loopback_mic = global_config.audio_device.device
             self.sample_rate = 44100  # soundcard accepts any common rate
             self.channels = 1  # always capture mono
@@ -285,7 +290,7 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
 
         except Exception as e:
             self.logger.error(f"setup_device failed: {e}")
-            raise
+            raise e
 
     def start_stream(self) -> None:
         try:
@@ -311,16 +316,18 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
             import traceback
 
             traceback.print_exc()
-            post_ui_message(
-                "error", "Audio Error", f"Loopback stream start failed: {e}"
+            ui_signals.show_error.emit(
+                "Audio Error",
+                f"Loopback stream start failed: {e}",
             )
 
     def stop_stream(self) -> None:
         if self.audio_capture:
+            self.logger.info("Stopping loopback stream")
             self.audio_capture.stop()
             self.pending_listeners = self.audio_capture.listeners.copy()
             self.audio_capture = None
-            self.logger.info("Stopping loopback stream")
+            ui_signals.streaming_status_changed.emit(False)
 
     def close(self) -> None:
         self.stop_stream()

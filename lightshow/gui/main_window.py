@@ -2,7 +2,7 @@ import threading
 import traceback
 from typing import List, Type
 
-from PyQt6.QtCore import QObject, Qt, QTimer, pyqtSignal
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
@@ -18,18 +18,10 @@ from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
+from lightshow.gui.utils.ui_signals import ui_signals
 from lightshow.utils import global_config
 from lightshow.utils.config import live_devices
 from lightshow.utils.logger import Logger
-
-
-class UISignals(QObject):
-    """Signals for thread-safe communication with UI."""
-
-    finish_connection = pyqtSignal(str)
-    show_error = pyqtSignal(str, str)
-    show_info = pyqtSignal(str, str)
-    connection_status_changed = pyqtSignal(str)
 
 
 class UIManager(QMainWindow):
@@ -41,7 +33,7 @@ class UIManager(QMainWindow):
         self.listener = audio_listener
         self.audio_handler = audio_handler
         self.device_types: List[Type[Device]] = [MovingHead]
-        self.ui_signals = UISignals()
+        self.ui_signals = ui_signals
 
         # Initialize panels
         self.audio_panel = AudioPanel(audio_listener, audio_handler)
@@ -70,6 +62,7 @@ class UIManager(QMainWindow):
         self.ui_signals.connection_status_changed.connect(
             self._on_connection_status_changed
         )
+        self.ui_signals.streaming_status_changed.connect(self._stream_status_changed)
 
         # Setup UI
         self._setup_ui()
@@ -230,6 +223,10 @@ class UIManager(QMainWindow):
         """Update connection status display."""
         self.device_details.set_status(f"Status: {status}")
 
+    def _stream_status_changed(self, is_streaming):
+        """Handle streaming status change."""
+        self.audio_panel.set_streaming(is_streaming)
+
     def _delete_device(self, device_id):
         """Handle device deletion."""
         if not device_id:
@@ -251,8 +248,8 @@ class UIManager(QMainWindow):
         try:
             self.audio_handler.reinit_stream()
             self.listener.clear_state()
-            # Note: reinit_stream() already starts the stream, no need to start again
-            self.audio_panel.set_streaming(True)
+            # As the stream is started in a separate thread, if it fails the exception won't be caught here. Instead, we rely on error handling in the audio stream thread to emit an error signal that we can show in the UI.
+            # self.audio_panel.set_streaming(True)
         except Exception:
             self.ui_signals.show_error.emit(
                 "Streaming Error",
@@ -263,7 +260,8 @@ class UIManager(QMainWindow):
     def _stop_stream_callback(self):
         """Stop audio stream."""
         self.audio_handler.stop_stream()
-        self.audio_panel.set_streaming(False)
+        # Same, we rely on the audio stream thread to emit a signal if stopping fails, so we don't wrap this in a try-except.
+        # self.audio_panel.set_streaming(False)
 
     def _send_packet_callback(self, packet_data):
         self.logger.info(

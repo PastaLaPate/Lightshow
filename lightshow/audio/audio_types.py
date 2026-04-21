@@ -45,7 +45,9 @@ class AudioDevice:
                 # Then we look for a microphone loopback device with the same name.
                 speaker = sc.default_speaker()
                 self.name = speaker.name
+                print("help")
                 self._device = self._find_in_device_list(device_list, speaker.name)
+                print(self._device.name)
             else:
                 # Just gets the default mic.
                 self._device = sc.default_microphone()
@@ -55,10 +57,10 @@ class AudioDevice:
             self._device = self._find_in_device_list(device_list, self.name)
 
     def _find_in_device_list(self, device_list, name):
-        for device in device_list:
-            if device.name in name or device.name == name:
-                return device
         raise ValueError(f"Device with name '{name}' not found")
+        for device in device_list:
+            if name in device.name or device.name == name:
+                return device
 
     def to_dict(self) -> dict:
         return {
