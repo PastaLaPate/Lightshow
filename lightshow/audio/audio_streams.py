@@ -1,4 +1,5 @@
 import threading
+import traceback
 from queue import Queue
 from typing import Callable, List, Optional, Type
 
@@ -118,11 +119,13 @@ class LoopbackAudioCapture(AAudioCapture):
                     # record() blocks until chunk_size frames are available
                     data = recorder.record(numframes=self.chunk_size)
                     self._enqueue(data)
-        except Exception as e:
-            self.logger.error(f"Loopback capture error: {e}")
-            import traceback
+        except Exception:
+            self.logger.error(f"Loopback capture error: {traceback.format_exc()}")
 
-            traceback.print_exc()
+            ui_signals.show_error.emit(
+                "Audio Error",
+                f"Loopback stream start failed: \n {traceback.format_exc()}",
+            )
         self.logger.info("Loopback capture thread stopped")
 
     # ------------------------------------------------------------------
@@ -163,14 +166,22 @@ class LoopbackAudioCapture(AAudioCapture):
                         keep = listener(treated)
                         if keep is False:
                             dead.append(listener)
-                    except Exception as e:
-                        self.logger.error(f"Listener error: {e}")
+                    except Exception:
+                        self.logger.error(f"Listener error: {traceback.format_exc()}")
+                        ui_signals.show_error.emit(
+                            "Audio Error",
+                            f"Error in callback for listener '{listener.__class__.__name__}': \n {traceback.format_exc()}",
+                        )
                 for d in dead:
                     self.listeners.remove(d)
 
                 processed += 1
             except Exception as e:
                 self.logger.error(f"Queue drain error: {e}")
+                ui_signals.show_error.emit(
+                    "Audio Error",
+                    f"An error occurred while processing queued samples: \n {traceback.format_exc()}",
+                )
                 break
 
     # ------------------------------------------------------------------
@@ -270,7 +281,8 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
         except Exception as e:
             self.logger.error(f"reinit_stream failed: {e}")
             ui_signals.show_error.emit(
-                "Audio Error", f"Loopback stream init failed: {e}"
+                "Audio Error",
+                f"Loopback stream init failed: \n {traceback.format_exc()}",
             )
 
     def setup_device(self) -> None:
@@ -311,14 +323,12 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
             self.audio_capture.start()
             self.logger.info("Loopback stream started")
 
-        except Exception as e:
-            self.logger.error(f"start_stream failed: {e}")
-            import traceback
+        except Exception:
+            self.logger.error(f"start_stream failed: {traceback.format_exc()}")
 
-            traceback.print_exc()
             ui_signals.show_error.emit(
                 "Audio Error",
-                f"Loopback stream start failed: {e}",
+                f"Loopback stream start failed: \n {traceback.format_exc()}",
             )
 
     def stop_stream(self) -> None:

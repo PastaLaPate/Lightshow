@@ -1,11 +1,14 @@
-import requests
 import socket
 import threading
+import traceback
 from typing import Any, List, Literal, Tuple
+
+import requests
 
 from lightshow.devices.animations.AAnimation import RGB, Command
 from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head_controller import MovingHeadController
+from lightshow.gui.utils import ui_signals
 from lightshow.utils.logger import Logger
 
 
@@ -68,6 +71,10 @@ class MovingHead(Device):
                 raise Exception("Not received resetIndex, ip problem?")
         except Exception as e:
             self.logger.error(f"Error connecting to {self.ip}: {e}")
+            ui_signals.show_error.emit(
+                "Connection Error",
+                f"Failed to connect to {self.ip}. Please check the IP address and ensure the device is powered on. Error details: {traceback.format_exc()}",
+            )
             self.socket = None
 
     def disconnect(self):
@@ -131,6 +138,10 @@ class MovingHead(Device):
 
         except Exception as e:
             self.logger.error(f"Error sending message : {e}")
+            ui_signals.show_error.emit(
+                "Connection Error",
+                f"Failed to send message to {self.ip}. Error details: {traceback.format_exc()}",
+            )
 
     def sendCommand(self, command: Command):
         # print(command.toMHCommand())

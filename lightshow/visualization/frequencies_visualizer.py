@@ -6,6 +6,7 @@ import pyqtgraph as pg
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.audio.audio_types import AudioData
+from lightshow.gui.utils import ui_signals
 from lightshow.utils.logger import Logger
 
 _logger = Logger.for_class("Audio Visualization")
@@ -204,4 +205,7 @@ class FrequenciesVisualizer(QWidget):
 
             self.energy_curve.setData(x_up, smoothed)
         except Exception:
-            traceback.print_exc()
+            ui_signals.show_error.emit(
+                "UI Error",
+                f"Error when updating frequencies visualizer: \n {traceback.format_exc()}",
+            )

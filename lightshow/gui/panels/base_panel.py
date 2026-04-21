@@ -1,5 +1,8 @@
 import traceback
-from PyQt6.QtWidgets import QWidget, QVBoxLayout
+
+from PyQt6.QtWidgets import QVBoxLayout, QWidget
+
+from lightshow.gui.utils import ui_signals
 
 
 class BasePanel(QWidget):
@@ -21,7 +24,10 @@ class BasePanel(QWidget):
             try:
                 cb(*args, **kwargs)
             except Exception:
-                traceback.print_exc()
+                ui_signals.show_error.emit(
+                    "UI Error",
+                    f"Error in callback for event '{event}': \n {traceback.format_exc()}",
+                )
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create Qt UI elements. Override in subclasses."""

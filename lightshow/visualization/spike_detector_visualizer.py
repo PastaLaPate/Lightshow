@@ -10,6 +10,7 @@ import pyqtgraph as pg
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
+from lightshow.gui.utils import ui_signals
 from lightshow.utils.logger import Logger
 
 _logger = Logger.for_class("Audio Visualization")
@@ -147,7 +148,10 @@ class SpikeDetectorVisualizer(QWidget):
             except Empty:
                 break
             except Exception:
-                traceback.print_exc()
+                ui_signals.show_error.emit(
+                    "UI Error",
+                    f"Error when updating spike detector visualizer: \n {traceback.format_exc()}",
+                )
         if has_new_data:
             self.qt_update()
 
@@ -186,7 +190,10 @@ class SpikeDetectorVisualizer(QWidget):
 
             self.global_index += 1
         except Exception:
-            traceback.print_exc()
+            ui_signals.show_error.emit(
+                "UI Error",
+                f"Error when updating spike detector visualizer: \n {traceback.format_exc()}",
+            )
 
     def _add_marker(self, marker_type, detected, current_energy):
         if detected:
