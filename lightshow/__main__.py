@@ -13,6 +13,7 @@ logger = None
 
 
 def terminate(sig: int, frame: object) -> None:
+    global logger
     # Type ignore as signal is registered after the logger is initialized, so it will always be set when this function is called
     logger.info("Interrupt signal caught! Stopping gracefully...")  # type: ignore
     from .app import terminate
@@ -26,7 +27,8 @@ def terminate(sig: int, frame: object) -> None:
     sys.exit(0)
 
 
-if __name__ == "__main__":
+def main():
+    global logger
     if os.name == "nt":
         base = Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
     else:
@@ -37,4 +39,8 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, terminate)
     from .app import main
 
+    main()
+
+
+if __name__ == "__main__":
     main()
