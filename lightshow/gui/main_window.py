@@ -48,10 +48,11 @@ class UIManager(QMainWindow):
 
         self.devices_panel.register("device_selected", self._on_device_select)
         self.devices_panel.register("device_added", lambda name: None)
+        self.devices_panel.register("device_deleted", self._delete_device)
 
         self.device_details.register("connect_clicked", self._connect_device_callback)
-        self.device_details.register("delete_clicked", self._delete_device)
         self.device_details.register("device_renamed", self._on_device_renamed)
+        self.device_details.register("delete_clicked", self._delete_device)
 
         self.manual_packets.register("send_manual_packet", self._send_packet_callback)
 

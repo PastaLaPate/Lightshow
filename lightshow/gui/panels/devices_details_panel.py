@@ -132,6 +132,7 @@ class DeviceDetailsPanel(BasePanel):
         """Display details for a specific device."""
         if not device_id or device_id not in global_config.devices:
             self._set_details_visible(False)
+            self.prop_widgets.clear()
             self.selected_device_id = None
             return
 
@@ -153,25 +154,7 @@ class DeviceDetailsPanel(BasePanel):
 
         # Populate editable properties for this device type
         # Clear existing prop widgets
-        self.prop_widgets.clear()
-        if self.props_layout:
-            while self.props_layout.count():
-                item = self.props_layout.takeAt(0)
-                if item:
-                    w = item.widget()
-                    if w:
-                        w.deleteLater()
-                    else:
-                        # if it's a layout, clear its children
-                        sub_layout = item.layout()
-                        if sub_layout:
-                            while sub_layout.count():
-                                si = sub_layout.takeAt(0)
-                                if not si:
-                                    return
-                                w = si.widget()
-                                if si and w:
-                                    w.deleteLater()
+        self.clear_props()
 
         # Find device type class
         device_type_name = selected_device_obj.get("type")
@@ -185,24 +168,7 @@ class DeviceDetailsPanel(BasePanel):
 
         # Populate showed (runtime) properties section
         # Clear existing showed props widgets
-        self.showed_prop_labels.clear()
-        if self.showed_props_layout:
-            while self.showed_props_layout.count():
-                item = self.showed_props_layout.takeAt(0)
-                if item:
-                    w = item.widget()
-                    if w:
-                        w.deleteLater()
-                    else:
-                        sub_layout = item.layout()
-                        if sub_layout:
-                            while sub_layout.count():
-                                si = sub_layout.takeAt(0)
-                                if not si:
-                                    break
-                                w = si.widget()
-                                if w:
-                                    w.deleteLater()
+        self.clear_showed_props()
 
         device_type_name = selected_device_obj.get("type")
         device_type_cls = next(
@@ -348,6 +314,49 @@ class DeviceDetailsPanel(BasePanel):
             return
         self.status_label.setText(status)
 
+    def clear_showed_props(self):
+        """Clear showed (runtime) properties from the UI."""
+        self.showed_prop_labels.clear()
+        if self.showed_props_layout:
+            while self.showed_props_layout.count():
+                item = self.showed_props_layout.takeAt(0)
+                if item:
+                    w = item.widget()
+                    if w:
+                        w.deleteLater()
+                    else:
+                        sub_layout = item.layout()
+                        if sub_layout:
+                            while sub_layout.count():
+                                si = sub_layout.takeAt(0)
+                                if not si:
+                                    break
+                                w = si.widget()
+                                if w:
+                                    w.deleteLater()
+
+    def clear_props(self):
+        """Clear editable properties from the UI."""
+        self.prop_widgets.clear()
+        if self.props_layout:
+            while self.props_layout.count():
+                item = self.props_layout.takeAt(0)
+                if item:
+                    w = item.widget()
+                    if w:
+                        w.deleteLater()
+                    else:
+                        # if it's a layout, clear its children
+                        sub_layout = item.layout()
+                        if sub_layout:
+                            while sub_layout.count():
+                                si = sub_layout.takeAt(0)
+                                if not si:
+                                    return
+                                w = si.widget()
+                                if si and w:
+                                    w.deleteLater()
+
     def clear(self):
         """Clear the details panel."""
         # detach showed props listener if set
@@ -359,6 +368,8 @@ class DeviceDetailsPanel(BasePanel):
         except Exception:
             pass
         self._current_live_device = None
+        self.clear_showed_props()
+        self.clear_props()
 
         self._set_details_visible(False)
         self.selected_device_id = None
