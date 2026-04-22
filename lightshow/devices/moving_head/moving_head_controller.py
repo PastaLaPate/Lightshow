@@ -22,13 +22,11 @@ from lightshow.devices.moving_head.moving_head_animations import (
 )
 from lightshow.devices.moving_head.moving_head_colors import (
     COLOR_TRANSFORMER,
-    RAINBOW_KICK_COLORS,
     DEFAULT_RGBs,
+    RedLowsModulator,
     nothingTransformer,
-    random_rainbow_color,
     startFlicker,
     toFadeBlack,
-    RedLowsModulator,
 )
 from lightshow.utils.config import global_config
 from lightshow.utils.logger import Logger
@@ -89,11 +87,11 @@ class MovingHeadController:
 
     def init_lists(self):
         self.anim_list: typing.List[AMHAnimation] = [
-            TRIANGLE_ANIMATION,
+            # TRIANGLE_ANIMATION,
             CIRCLE_ANIMATION,
             LEMNISCATE_ANIMATION,
-            SQUARE_ANIMATION,
-            BOUNCE_ANIMATION,
+            # SQUARE_ANIMATION,
+            # BOUNCE_ANIMATION,
         ]
 
         self.transformers: typing.List[COLOR_TRANSFORMER] = [
@@ -103,8 +101,8 @@ class MovingHeadController:
         ]
 
         self.color_mode_list = [
-            RAINBOW_KICK_COLORS,
-            random_rainbow_color,
+            # RAINBOW_KICK_COLORS,
+            # random_rainbow_color,
             self.red_lows_modulator,
         ]
 
@@ -123,7 +121,12 @@ class MovingHeadController:
         """Select appropriate color mode for the given animation."""
         if self._is_circle_animation(anim):
             # For circle-like animations, include red lows modulator
-            return random.choice(self.color_mode_list)
+            choice = random.choice(self.color_mode_list)
+            if choice == self.red_lows_modulator:
+                anim.change_color_on_tick = True
+            else:
+                anim.change_color_on_tick = False
+            return choice
         else:
             # For other animations, exclude the red lows modulator
             non_lows_color_modes = [

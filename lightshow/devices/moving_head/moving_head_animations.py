@@ -8,7 +8,10 @@ from lightshow.devices.animations.AAnimation import (
     FadeCommand,
     FlickerCommand,
 )
-from lightshow.devices.moving_head.moving_head_colors import COLOR_TRANSFORMER
+from lightshow.devices.moving_head.moving_head_colors import (
+    COLOR_MODE,
+    COLOR_TRANSFORMER,
+)
 
 
 def QUART_OUT(t):
@@ -57,6 +60,9 @@ class AMHAnimation(AAnimation):
 
     def setTransformer(self, transformer: COLOR_TRANSFORMER):
         self.transformer = transformer
+
+    def setRGB(self, color_mode: COLOR_MODE):
+        self.color_mode = color_mode
 
     def apply_transformer(self, color: RGB) -> RGB | FlickerCommand | FadeCommand:
         if self.transformer:

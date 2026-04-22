@@ -1,8 +1,9 @@
-import time
-from typing import List, Callable, Tuple
-from itertools import cycle
-import numpy as np
 import random
+import time
+from itertools import cycle
+from typing import Callable, List, Tuple
+
+import numpy as np
 
 from lightshow.devices.animations import RGB
 from lightshow.devices.moving_head.moving_head_animations import (

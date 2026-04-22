@@ -1,5 +1,5 @@
 import random
-from typing import List, Callable
+from typing import Callable, List
 
 from lightshow.devices.animations.AAnimation import RGB, FadeCommand, FlickerCommand
 from lightshow.utils.colors import hsv_to_rgb
@@ -30,32 +30,36 @@ def random_rainbow_color():
 class RedLowsModulator:
     """Color mode that returns red with brightness modulated by low-frequency energy."""
 
+    DECAY = 0.95  # Peak decays 5% per frame — tune this
+    MIN_BRIGHTNESS = 50
+    MAX_BRIGHTNESS = 255
+
     def __init__(self):
         self.last_audio_data = None
-        self.min_brightness = 50  # Minimum brightness for red (0-255)
-        self.max_brightness = 255  # Maximum brightness for red
+        self.peak_energy = 1.0  # Avoid division by zero, self-calibrates upward
 
     def set_audio_data(self, audio_data):
-        """Update audio data for modulation."""
         self.last_audio_data = audio_data
 
     def __call__(self):
-        """Return red color with brightness modulated by lows energy."""
-        brightness = self.max_brightness  # Default to full brightness
+        brightness = self.MAX_BRIGHTNESS
 
         if self.last_audio_data is not None:
-            # Get low-frequency energy from first few FFT bins (typically 0-4 represent lows)
             try:
-                lows_energy = self.last_audio_data.get_ps_mean([0, 4])
-                # Normalize energy to 0-1 range (assuming typical values are 0-1, adjust if needed)
-                normalized_energy = min(max(lows_energy, 0), 1)
-                # Map energy to brightness range
+                lows_energy = self.last_audio_data.get_ps_mean([0, 2])
+
+                # Track peak with decay for dynamic normalization
+                self.peak_energy = max(self.peak_energy * self.DECAY, lows_energy, 1.0)
+
+                # Normalize to [0.0, 1.0] relative to recent peak
+                normalized = min(lows_energy / self.peak_energy, 1.0)
+
                 brightness = int(
-                    self.min_brightness
-                    + normalized_energy * (self.max_brightness - self.min_brightness)
+                    self.MIN_BRIGHTNESS
+                    + normalized * (self.MAX_BRIGHTNESS - self.MIN_BRIGHTNESS)
                 )
             except (AttributeError, IndexError, ValueError):
-                pass  # If audio data is invalid, use default brightness
+                pass
 
         return RGB(brightness, 0, 0)
 
