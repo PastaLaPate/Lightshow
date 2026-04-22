@@ -11,10 +11,12 @@ from PyQt6.QtWidgets import (
 
 from lightshow.devices import is_device_type
 from lightshow.devices.device import Device
-from lightshow.utils import global_config
+from lightshow.utils import Logger, global_config
 from lightshow.utils.config import DeviceConfigType
 
 from .base_panel import BasePanel
+
+logger = Logger.for_class("DevicesPanel")
 
 
 class DevicesPanel(BasePanel):
@@ -28,7 +30,7 @@ class DevicesPanel(BasePanel):
 
     def refresh_list(self):
         """Refresh the device listbox with current devices."""
-        if self.device_listbox:
+        if self.device_listbox is not None:
             self.device_listbox.clear()
             for device_name in global_config.devices.keys():
                 self.device_listbox.addItem(device_name)
