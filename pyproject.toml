@@ -47,7 +47,7 @@ members = ["."]
 lightshow = { workspace = true }
 
 [dependency-groups]
-dev = ["lightshow", "pre-commit>=4.5.1"]
+dev = ["lightshow", "pre-commit>=4.6.0"]
 
 [project.scripts]
 lightshow = "lightshow.__main__:main"
