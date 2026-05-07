@@ -67,14 +67,10 @@ class SpikeDetectorVisualizer(QWidget):
         self.update_timer.timeout.connect(self._process_queued_updates)
         self.update_timer.start(int(1000 / 30))  # ~30 FPS
 
-        # --- OPTIMIZATION 2: Enable OpenGL ---
-        # useOpenGL=True offloads rendering to GPU.
-        # Requires: pip install PyOpenGL
         self.plot = pg.PlotWidget(title="Spike Detector", useOpenGL=OPENGL_AVAILABLE)
 
         self.plot.setBackground("#1e1e1e")
-        # Ensure antialiasing is off on the plot item specifically
-        self.plot.setAntialiasing(False)
+        self.plot.setAntialiasing(True)
         plot_item = self.plot.getPlotItem()
         if plot_item:
             plot_item.setClipToView(True)
