@@ -72,8 +72,7 @@ class _QtQueueHandler(logging.Handler):
             msg = self.format(record)
             color = self._COLORS.get(record.levelno, "#ffffff")
             html = f'<span style="color:{color}">{msg}</span>'
-            is_fps = "Average fps" in record.getMessage()
-            self._queue.put_nowait((html, is_fps))
+            self._queue.put_nowait((html, False))
         except Exception:
             self.handleError(record)
 

@@ -573,6 +573,12 @@ wheels = [
 ]
 
 [[package]]
+name = "launchpad-py"
+version = "0.9.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/60/c1/be10a6cc85481db07af9327a3a70e70f68197a86cb29adf910d7f9765c9e/launchpad_py-0.9.1.tar.gz", hash = "sha256:9c70885a9079d9960a066515f4b83727e7c475543da8ef68786f00a8ef10727c", size = 549666, upload-time = "2021-01-24T22:08:26.299Z" }
+
+[[package]]
 name = "lazy-loader"
 version = "0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -617,6 +623,7 @@ source = { editable = "." }
 dependencies = [
     { name = "dbus-next" },
     { name = "distro" },
+    { name = "launchpad-py" },
     { name = "librosa" },
     { name = "matplotlib" },
     { name = "numpy" },
@@ -648,6 +655,7 @@ dev = [
 requires-dist = [
     { name = "dbus-next", specifier = ">=0.2.3" },
     { name = "distro", specifier = ">=1.9.0" },
+    { name = "launchpad-py", specifier = ">=0.9.1" },
     { name = "librosa", specifier = ">=0.11.0" },
     { name = "matplotlib", specifier = ">=3.8.0" },
     { name = "numpy", specifier = ">=2.4.4" },

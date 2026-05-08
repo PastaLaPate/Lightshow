@@ -18,6 +18,7 @@ from lightshow.devices.device import Device
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
+from lightshow.gui.panels.stats import StatsPanel
 from lightshow.gui.utils.ui_signals import ui_signals
 from lightshow.utils import global_config
 from lightshow.utils.config import live_devices
@@ -26,6 +27,9 @@ from lightshow.utils.logger import Logger
 
 class UIManager(QMainWindow):
     """Main Qt-based GUI manager for Lightshow."""
+
+    _instance = None
+    _lock = threading.Lock()
 
     def __init__(self, audio_listener, audio_handler: LoopbackAudioStreamHandler):
         super().__init__()
@@ -40,6 +44,7 @@ class UIManager(QMainWindow):
         self.devices_panel = DevicesPanel(self.device_types)
         self.device_details = DeviceDetailsPanel(self.device_types)
         self.manual_packets = ManualPacketsSenderPanel()
+        self.stats_panel = StatsPanel()
 
         # Register internal handlers
         self.audio_panel.register("start_stream", self._start_stream_callback)
@@ -73,6 +78,18 @@ class UIManager(QMainWindow):
         self.update_timer.timeout.connect(self._update_visualizations)
         self.update_timer.start(int(1000 / 60))  # Target X Fps
 
+    @staticmethod
+    def init_singleton(audio_listener, audio_handler):
+        with UIManager._lock:
+            if UIManager._instance is None:
+                UIManager._instance = UIManager(audio_listener, audio_handler)
+
+    @staticmethod
+    def get():
+        if UIManager._instance is None:
+            raise RuntimeError("UIManager not initialized. Call init_singleton first.")
+        return UIManager._instance
+
     def register(self, panel: str, event: str, callback):
         """Public API to register custom callbacks on panels."""
         mapping = {
@@ -97,9 +114,11 @@ class UIManager(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
+        full_layout = QVBoxLayout(central_widget)
+        full_layout.setContentsMargins(10, 10, 10, 10)
+
         # Main layout
-        main_layout = QHBoxLayout(central_widget)
-        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout = QHBoxLayout()
 
         # Left side: Audio panel (65%)
         left_widget = QWidget()
@@ -151,6 +170,12 @@ class UIManager(QMainWindow):
         )
 
         main_layout.addWidget(splitter)
+        full_layout.addLayout(main_layout, 1)
+
+        stats_layout = QVBoxLayout()
+        self.stats_panel.create_qt_ui(stats_layout)
+        full_layout.addLayout(stats_layout, 0)
+
         splitter.setSizes([650, 350])
         right_widget.setSizes([300, 500, 200])
 

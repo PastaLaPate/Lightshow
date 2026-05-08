@@ -218,11 +218,11 @@ class MovingHeadController:
 
     def calcAverageFPS(self):
         if len(self.avg_fps) < 2:
-            return 0  # Not enough data to calculate FPS
+            return 0.0  # Not enough data to calculate FPS
         # Calculate time differences between consecutive frames (in seconds)
         time_diffs = np.diff(self.avg_fps) / 1e9
         # Calculate average FPS
-        return 1 / np.mean(time_diffs)
+        return float(1 / np.mean(time_diffs))
 
     def tickFillingAnim(self):
         self.updateFromFrame(
@@ -261,13 +261,15 @@ class MovingHeadController:
                     self.BREAK_ADDED_TIME_CURVE(added_time_t)
                     * self.BREAK_ADDED_TIME_MAX
                 )
-                self.next_beat_cool = (
-                    current_time + added_time * 1e9
-                )  # Set next cooldown to 2 seconds
                 self.randomAnimation()
-                self.device.sendCommand(
-                    FlickerCommand(RGB(255, 255, 255), (2 + added_time) * 1000)
-                )
+                # Block tick and flicker only if the break was long enough
+                if self.breaking_since > 1e9:
+                    self.next_beat_cool = (
+                        current_time + added_time * 1e9
+                    )  # Set next cooldown to 2 seconds
+                    self.device.sendCommand(
+                        FlickerCommand(RGB(255, 255, 255), (2 + added_time) * 1000)
+                    )
             else:
                 self.breaking_since = current_time
                 self.breaking = True
@@ -276,11 +278,13 @@ class MovingHeadController:
         # Throttle FPS logging to every 2 seconds
         current_time = time.time_ns()
         if current_time - self.last_fps_log_time > 2 * 1e9:
+            from lightshow.gui.main_window import UIManager
+
             # Store FPS in a way that can be accessed for display
             fps_value = self.calcAverageFPS()
-            self.device.controller.current_fps = fps_value
-            self.logger.info(f"Average fps : {fps_value}")
+            self.current_fps = fps_value
             self.last_fps_log_time = current_time
+            UIManager.get().stats_panel.update_fps(fps_value)
 
         if packet.packet_status == PacketStatus.ON:
             self.beats_time.append(time.time_ns())

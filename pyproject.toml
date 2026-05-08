@@ -25,6 +25,7 @@ dependencies = [
     "soundcard>=0.4.6",
     "distro>=1.9.0",
     "semver>=3.0.4",
+    "launchpad-py>=0.9.1",
 ]
 
 [build-system]
