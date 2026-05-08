@@ -34,5 +34,6 @@ build-windows:
 installer-windows:
 	cd installer && makensis /DPRODUCT_VERSION=$(version) lightshow.nsi
 
-.PHONY: hooks:
+.PHONY: hooks
+hooks:
 	uv run pre-commit install

@@ -5,6 +5,7 @@ from collections import deque
 
 import numpy as np
 
+from lightshow.audio.data import AudioData
 from lightshow.devices.animations.AAnimation import RGB, FlickerCommand
 from lightshow.devices.device import PacketData, PacketStatus, PacketType
 from lightshow.devices.moving_head.animations import (
@@ -21,12 +22,10 @@ from lightshow.devices.moving_head.moving_head_animations import (
     MHAnimationFrame,
 )
 from lightshow.devices.moving_head.moving_head_colors import (
-    COLOR_TRANSFORMER,
+    RAINBOW_KICK_COLORS,
+    TRANSFORMERS,
     DEFAULT_RGBs,
-    RedLowsModulator,
-    nothingTransformer,
-    startFlicker,
-    toFadeBlack,
+    random_rainbow_color,
 )
 from lightshow.utils.config import global_config
 from lightshow.utils.logger import Logger
@@ -51,9 +50,6 @@ class MovingHeadController:
         self.device = device
         self.waiting_music = False
         self.logger = Logger(f"MovingHeadController{{{device.id}}}")
-
-        # Initialize red lows modulator for audio-reactive effects
-        self.red_lows_modulator = RedLowsModulator()
 
         # =====================
         #      Cooldowns
@@ -91,19 +87,11 @@ class MovingHeadController:
             CIRCLE_ANIMATION,
             LEMNISCATE_ANIMATION,
             # SQUARE_ANIMATION,
-            # BOUNCE_ANIMATION,
+            BOUNCE_ANIMATION,
         ]
-
-        self.transformers: typing.List[COLOR_TRANSFORMER] = [
-            nothingTransformer,
-            toFadeBlack,
-            startFlicker,
-        ]
-
         self.color_mode_list = [
-            # RAINBOW_KICK_COLORS,
-            # random_rainbow_color,
-            self.red_lows_modulator,
+            RAINBOW_KICK_COLORS,
+            random_rainbow_color,
         ]
 
     def init_state(self):
@@ -119,20 +107,7 @@ class MovingHeadController:
 
     def _select_color_mode_for_anim(self, anim):
         """Select appropriate color mode for the given animation."""
-        if self._is_circle_animation(anim):
-            # For circle-like animations, include red lows modulator
-            choice = random.choice(self.color_mode_list)
-            if choice == self.red_lows_modulator:
-                anim.change_color_on_tick = True
-            else:
-                anim.change_color_on_tick = False
-            return choice
-        else:
-            # For other animations, exclude the red lows modulator
-            non_lows_color_modes = [
-                m for m in self.color_mode_list if m != self.red_lows_modulator
-            ]
-            return random.choice(non_lows_color_modes)
+        return random.choice(self.color_mode_list)
 
     def update_anim_color_mode(self):
         if isinstance(
@@ -140,7 +115,10 @@ class MovingHeadController:
             (ListAnimation, CircleAnimation, RegularPolygonAnimation, BounceAnimation),
         ):
             self.current_anim.setRGB(self.color_mode)
-        self.current_anim.setTransformer(random.choice(self.transformers))
+        available_transformers = [
+            trans for trans in TRANSFORMERS if trans.filter()(self.current_anim)
+        ]
+        self.current_anim.setTransformer(random.choice(available_transformers)())
         """
         if len(self.beats_time) > 1:
             bpm = self.calcBPM()
@@ -159,32 +137,18 @@ class MovingHeadController:
             [x for x in self.anim_list if x != self.current_anim] or self.anim_list
         )
         # Select a different color mode appropriate for the new animation
-        available_modes = [
-            m
-            for m in (
-                self.color_mode_list
-                if self._is_circle_animation(self.current_anim)
-                else [m for m in self.color_mode_list if m != self.red_lows_modulator]
-            )
-            if m != self.color_mode
-        ]
-        self.color_mode = (
-            available_modes[0]
-            if available_modes
-            else self._select_color_mode_for_anim(self.current_anim)
-        )
+        self.color_mode = self._select_color_mode_for_anim(self.current_anim)
         self.beats_since_anim_change = 0
         self.update_anim_color_mode()
         self.device.current_anim = self.current_anim.__class__.__name__
         self.device.showed_props_update()
-        frm = self.current_anim.next(False, time.time_ns() / 1e9 - self.last_tick)
+        frm = self.current_anim.next(
+            AudioData(np.zeros(20000)), False, time.time_ns() / 1e9 - self.last_tick
+        )
         self.last_tick = time.time_ns() / 1e9
         self.updateFromFrame(frm)
 
     def handlePacket(self, packet: PacketData):
-        # Update audio data if available
-        if packet.audio_data is not None:
-            self.red_lows_modulator.set_audio_data(packet.audio_data)
 
         if self.beats_since_anim_change > 20:
             self.randomAnimation()
@@ -194,10 +158,10 @@ class MovingHeadController:
             case PacketType.BREAK:
                 self.handleBreak(packet)
         if self.breaking or self.waiting_music:
-            self.tickFillingAnim()
+            self.tickFillingAnim(packet.audio_data)
             return
         if self.current_anim.isTickeable():
-            self.tickCurrentAnim()
+            self.tickCurrentAnim(packet.audio_data)
 
         if packet.packet_type == PacketType.BEAT:
             self.handleBeat(packet)
@@ -224,18 +188,22 @@ class MovingHeadController:
         # Calculate average FPS
         return float(1 / np.mean(time_diffs))
 
-    def tickFillingAnim(self):
+    def tickFillingAnim(self, audio_data):
         self.updateFromFrame(
-            CIRCLE_BREAK_ANIMATION.next(True, time.time_ns() / 1e9 - self.last_tick)
+            CIRCLE_BREAK_ANIMATION.next(
+                audio_data, True, time.time_ns() / 1e9 - self.last_tick
+            )
         )
         self.last_tick = time.time_ns() / 1e9
 
-    def tickCurrentAnim(self):
+    def tickCurrentAnim(self, audio_data):
         if time.time_ns() < self.next_beat_cool:
             # Skip tick
             return False
         self.updateFromFrame(
-            self.current_anim.next(True, time.time_ns() / 1e9 - self.last_tick)
+            self.current_anim.next(
+                audio_data, True, time.time_ns() / 1e9 - self.last_tick
+            )
         )
         self.last_tick = time.time_ns() / 1e9
 
@@ -293,7 +261,9 @@ class MovingHeadController:
                 return False
             self.beats_since_anim_change += 1
             self.next_beat_cool += self.cooldown_time
-            frame = self.current_anim.next(False, time.time_ns() / 1e9 - self.last_tick)
+            frame = self.current_anim.next(
+                packet.audio_data, False, time.time_ns() / 1e9 - self.last_tick
+            )
             self.last_tick = time.time_ns() / 1e9
             self.updateFromFrame(frame)
             # bpm = self.calcBPM()

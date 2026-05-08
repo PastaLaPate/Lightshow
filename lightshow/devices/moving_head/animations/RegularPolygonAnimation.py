@@ -3,6 +3,7 @@ import random
 from itertools import cycle
 from typing import List
 
+from lightshow.devices.animations.AAnimation import RGB
 from lightshow.devices.moving_head.moving_head_animations import (
     AMHAnimation,
     MHAnimationFrame,
@@ -31,10 +32,10 @@ class RegularPolygonAnimation(AMHAnimation):
         self.angle_offset_cycle = angle_offset_cycle
         self.calculateServoPoses(self.angle_offset)
 
-    def setRGB(self, rgb: COLOR_MODE):
-        self.rgb = cycle(rgb) if isinstance(rgb, list) else rgb
+    def setRGB(self, color_mode: COLOR_MODE):
+        self.rgb = cycle(color_mode) if isinstance(color_mode, list) else color_mode
 
-    def next(self, isTick=False, dt=0.0) -> MHAnimationFrame:
+    def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
         if isTick:
             raise NotImplementedError("PolygonAnimation shouldn't be ticked.")
         self.cycle_progress += 1
@@ -46,11 +47,11 @@ class RegularPolygonAnimation(AMHAnimation):
                 self.reverse()
                 self.cycle_progress = 0
             self.calculateServoPoses(self.angle_offset)
-        color = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
-        color = self.apply_transformer(color)
+        color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-assignment]
+        tcolor = self.apply_transformer(color, audio_data)
         return MHAnimationFrame(
             duration=0,
-            rgb=color,
+            rgb=tcolor,
             topServo=next(self.topServo),
             baseServo=next(self.baseServo),
         )

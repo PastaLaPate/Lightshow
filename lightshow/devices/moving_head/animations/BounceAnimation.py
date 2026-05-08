@@ -1,4 +1,6 @@
 from itertools import cycle
+from typing import Callable
+
 from lightshow.devices.animations.AAnimation import RGB, FadeCommand
 from lightshow.devices.moving_head.moving_head_animations import (
     AMHAnimation,
@@ -31,8 +33,10 @@ class BounceAnimation(AMHAnimation):
         self.y_f = lambda x: 0.7 - 2 * (x - 0.5) ** 2
         self.color = RGB(255, 255, 255)
 
-    def setRGB(self, rgb: COLOR_MODE):
-        self.rgb = cycle(rgb) if isinstance(rgb, list) else rgb
+    def setRGB(self, color_mode: COLOR_MODE):
+        self.rgb: cycle[RGB] | Callable[[], RGB] = (
+            cycle(color_mode) if isinstance(color_mode, list) else color_mode  # ty:ignore[invalid-assignment]
+        )
 
     def _compute_required_velocity(self, dt_est=1 / 60):
         # dt_est = estimated frame dt (60 FPS default)
@@ -67,7 +71,7 @@ class BounceAnimation(AMHAnimation):
 
         return v0 * 1.05  # small boost
 
-    def next(self, isTick=False, dt=0.0) -> MHAnimationFrame:
+    def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
         self.velocity *= max(0, 1.0 - 3.0 * dt)  # 3.0 = damping strength
         if isTick:
             # Damping proportional to dt (decays similarly regardless of frame rate)
@@ -94,8 +98,8 @@ class BounceAnimation(AMHAnimation):
             self.velocity = v
 
             # Update color
-            color = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
-            self.color = self.apply_transformer(color)
+            color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-assignment]
+            self.color = self.apply_transformer(color, audio_data)
 
         # Servo interpolation
         base_angle = int(

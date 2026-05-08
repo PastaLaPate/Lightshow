@@ -1,7 +1,8 @@
-from typing import List
-from itertools import cycle
 import random
+from itertools import cycle
+from typing import List
 
+from lightshow.devices.animations.AAnimation import RGB
 from lightshow.devices.moving_head.moving_head_animations import (
     AMHAnimation,
     MHAnimationFrame,
@@ -32,10 +33,10 @@ class ListAnimation(AMHAnimation):
         self.baseServo = cycle(self.baseServoPositions)
         self.cycle_progress = 0
 
-    def setRGB(self, rgb: COLOR_MODE):
-        self.rgb = cycle(rgb) if isinstance(rgb, list) else rgb
+    def setRGB(self, color_mode: COLOR_MODE):
+        self.rgb = cycle(color_mode) if isinstance(color_mode, list) else color_mode
 
-    def next(self, isTick=False, dt=0.0) -> MHAnimationFrame:
+    def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
         if isTick:
             raise NotImplementedError("ListAnimation shouldn't be ticked.")
         self.cycle_progress += 1
@@ -45,11 +46,11 @@ class ListAnimation(AMHAnimation):
             if random.uniform(0, 1) < 1 / 2:
                 self.reverse()
                 self.cycle_progress = 0
-        color = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
-        color = self.apply_transformer(color)
+        color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-assignment]
+        tcolor = self.apply_transformer(color, audio_data)
         return MHAnimationFrame(
             duration=0,
-            rgb=color,
+            rgb=tcolor,
             topServo=next(self.topServo),
             baseServo=next(self.baseServo),
         )

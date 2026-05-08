@@ -45,12 +45,12 @@ class CircleAnimation(AMHAnimation):
         self.circle_progress = 0
         self.color_cooldown = 0
 
-    def setRGB(self, rgb: List[RGB] | Callable[[], RGB]):
-        self.rgb = cycle(rgb) if isinstance(rgb, list) else rgb
+    def setRGB(self, color_mode: List[RGB] | Callable[[], RGB]):
+        self.rgb = cycle(color_mode) if isinstance(color_mode, list) else color_mode
 
     # dt in seconds
     # dt in seconds
-    def next(self, isTick=False, dt=0.0) -> MHAnimationFrame:
+    def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
         rgb = self.last_color
 
         # Handle tick-based color switching
@@ -61,7 +61,7 @@ class CircleAnimation(AMHAnimation):
             if not self.change_color_on_tick:
                 rgb = self.nextRGB()
             self.last_color = rgb
-            rgb = self.apply_transformer(rgb)
+            rgb = self.apply_transformer(rgb, audio_data)
             self.color_cooldown = time.time_ns() + 0.2 * 1e9
 
         else:
@@ -115,7 +115,7 @@ class CircleAnimation(AMHAnimation):
         return (base, top)
 
     def nextRGB(self) -> RGB:
-        return next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
+        return next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-return-type]
 
     def reverse(self):
         super().reverse()

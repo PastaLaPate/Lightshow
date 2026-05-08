@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any, Tuple, List
+from typing import Any, List, Tuple
+
+from lightshow.audio.data import AudioData
 
 
 class Command(ABC):
@@ -118,7 +120,7 @@ class AAnimation(ABC):
 
     # dt: time since last frame in s
     @abstractmethod
-    def next(self, isTick: bool = False, dt: float = 0) -> Any:
+    def next(self, audio_data: AudioData, isTick: bool = False, dt: float = 0) -> Any:
         pass
 
     def isTickeable(self) -> bool:
