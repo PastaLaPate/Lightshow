@@ -12,6 +12,7 @@ from lightshow.devices.animations.AAnimation import (
 from lightshow.devices.moving_head.moving_head_colors import (
     COLOR_MODE,
     ColorTransformer,
+    DEFAULT_RGBs,
 )
 
 
@@ -58,6 +59,7 @@ class AMHAnimation(AAnimation):
     def __init__(self):
         super().__init__()
         self.transformer = None
+        self.color_mode = DEFAULT_RGBs
 
     @abstractmethod
     def next(self, audio_data: AudioData, isTick=False, dt=0) -> MHAnimationFrame:

@@ -23,6 +23,29 @@ RAINBOW_KICK_COLORS = RGB.fromRGBsTupleList(
     ]
 )
 
+BLUE_COLORS = RGB.fromRGBsTupleList(
+    [
+        (0, 0, 255),
+        (0, 150, 255),
+        (0, 0, 139),
+        (20, 52, 164),
+        (63, 0, 255),
+        (93, 63, 211),
+    ]
+)
+
+RED_COLORS = RGB.fromRGBsTupleList(
+    [
+        (136, 8, 8),
+        (255, 0, 0),
+        (215, 0, 64),
+        (210, 4, 45),
+        (139, 0, 0),
+        (128, 0, 0),
+        (99, 3, 48),
+    ]
+)
+
 
 def random_rainbow_color():
     return RGB.fromList(

@@ -6,7 +6,7 @@ from typing import Any, List, Literal, Tuple
 import requests
 
 from lightshow.devices.animations.AAnimation import RGB, Command
-from lightshow.devices.device import OutputDevice
+from lightshow.devices.device import OutputDevice, PacketStatus, PacketType
 from lightshow.devices.devices_types import DeviceTypeName
 from lightshow.devices.moving_head.moving_head_controller import MovingHeadController
 from lightshow.gui.utils import ui_signals
@@ -36,7 +36,9 @@ class MovingHead(OutputDevice):
 
         self.device_name = ""  # Eg "Living Room Moving Head"
 
-        self.current_anim = "None"
+        self.manual = False
+        self.auto_tick = False
+        self.current_anim = ""
         self.controller = MovingHeadController(self)
         self.base_offset = 0
         self.base_range = (0, 180)
@@ -154,6 +156,13 @@ class MovingHead(OutputDevice):
 
     def on(self, packet):
         if not self.socket:
+            return
+
+        if packet.packet_type == PacketType.MANUAL_MODE:
+            self.manual = packet.packet_status == PacketStatus.ON
+            return
+        elif packet.packet_type == PacketType.AUTO_TICK:
+            self.auto_tick = packet.packet_status == PacketStatus.ON
             return
 
         # Queue the packet for async processing instead of blocking

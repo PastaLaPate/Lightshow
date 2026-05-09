@@ -34,6 +34,7 @@ class BounceAnimation(AMHAnimation):
         self.color = RGB(255, 255, 255)
 
     def setRGB(self, color_mode: COLOR_MODE):
+        self.color_mode = color_mode
         self.rgb: cycle[RGB] | Callable[[], RGB] = (
             cycle(color_mode) if isinstance(color_mode, list) else color_mode  # ty:ignore[invalid-assignment]
         )

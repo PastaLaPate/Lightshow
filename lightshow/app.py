@@ -14,6 +14,7 @@ from lightshow.audio.audio_streams import (
 )
 from lightshow.audio.processors import SpectrumProcessor
 from lightshow.devices.device import OutputDevice, PacketData, PacketStatus, PacketType
+from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.gui.main_window import UIManager
 from lightshow.tracks_tracker import PlatformSpecificTracker
 from lightshow.tracks_tracker.types import PlaybackStatus, TrackInfo
@@ -45,8 +46,6 @@ class MainAudioListener(AudioListener):
         self.kick_visualizer: SpikeDetectorVisualizer | None = None
         self.freq_visualizer: FrequenciesVisualizer | None = None
         self.gui_bridge = GuiBridge()
-        self.manual_mode = False
-        self.auto_tick = False
         self.track_tracker = PlatformSpecificTracker()
         self.logger.info("Adding track infos tracker")
         self.track_tracker.add_track_changed_listener(self.on_track_changed)
@@ -115,18 +114,17 @@ class MainAudioListener(AudioListener):
             except Exception:
                 pass
 
-    def manual_packet(self, packet: PacketData) -> None:
-        if packet.packet_type == PacketType.MANUAL_MODE:
-            self.manual_mode = packet.packet_status == PacketStatus.ON
-        if packet.packet_type == PacketType.AUTO_TICK:
-            self.auto_tick = packet.packet_status == PacketStatus.ON
-        self.send_packet_to_devices(packet)
-
     def send_packet_to_devices(self, packet: PacketData, force=False) -> None:
         devices = config.live_devices.copy()
         for device in devices.values():
             if device.ready and isinstance(device, OutputDevice):
-                device.on(packet)
+                if isinstance(device, MovingHead):
+                    if not device.manual or (
+                        device.auto_tick and packet.packet_type == PacketType.TICK
+                    ):
+                        device.on(packet)
+                else:
+                    device.on(packet)
 
     def set_beat_power(self, beat_intensity: float) -> None:
         """
@@ -155,20 +153,17 @@ class MainAudioListener(AudioListener):
 
     def __call__(self, data) -> bool:
         current_power = self.get_current_power()
-        if not self.manual_mode or (self.manual_mode and self.auto_tick):
-            self.send_packet_to_devices(
-                PacketData(
-                    PacketType.TICK,
-                    PacketStatus.ON,
-                    audio_data=data,
-                    power=current_power,
-                )
+        self.send_packet_to_devices(
+            PacketData(
+                PacketType.TICK,
+                PacketStatus.ON,
+                audio_data=data,
+                power=current_power,
             )
+        )
         if self.freq_visualizer:
             self.freq_visualizer(data)
         if self.music_paused:
-            return True
-        if self.manual_mode:
             return True
         beat = self.kick_detector.detect(
             data, appendCurrentEnergy=not self.break_detected
@@ -222,6 +217,7 @@ class MainAudioListener(AudioListener):
             self.send_packet_to_devices(
                 PacketData(PacketType.DROP, PacketStatus.OFF, audio_data=data)
             )
+
         if self.kick_visualizer:
             self.kick_visualizer(
                 data, beat_detected=beat, break_detected=mbreak, drop_detected=drop

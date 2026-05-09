@@ -2,9 +2,6 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Tuple
 
-import PyQt6
-import PyQt6.QtCore
-
 
 class PacketType(Enum):
     # Output [0, 255]
@@ -141,19 +138,6 @@ class OutputDevice(Device):
         pass
 
 
-class DeviceSignals(PyQt6.QtCore.QObject):
-    onPacket = PyQt6.QtCore.pyqtSignal(PacketData)
-
-
 class InputDevice(Device):
-    signals = DeviceSignals()
-
     def __init__(self):
         super().__init__()
-
-        self.signals.onPacket.connect(self.onPacket)
-
-    def onPacket(self, packet: PacketData):
-        from lightshow.gui.main_window import UIManager
-
-        UIManager.get().listener.manual_packet(packet)

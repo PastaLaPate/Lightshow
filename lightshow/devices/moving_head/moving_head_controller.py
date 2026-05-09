@@ -70,6 +70,7 @@ class MovingHeadController:
         self.breaking_since = 0
 
         self.beats_since_anim_change = 0
+        self.disable_anim_change = False
         self.beats_time = deque(maxlen=30)  # last 30 beats to calculate average for BPM
         self.last_fps_log_time = 0  # Throttle FPS logging
         self.current_fps = 0  # Store current FPS for display
@@ -78,6 +79,8 @@ class MovingHeadController:
         self.frame_time = 1 / self.max_fps * 1e9  # For nanoseconds
         self.next_frame_time = 0
         self.avg_fps = deque(maxlen=self.max_fps * 2)
+
+        self.blackout = False
 
         self.latest_audio_data = AudioData(np.zeros(20000))
 
@@ -156,10 +159,6 @@ class MovingHeadController:
         self.updateFromFrame(frm)
 
     def handlePacket(self, packet: PacketData):
-        if packet.audio_data:
-            self.latest_audio_data = packet.audio_data
-        if self.beats_since_anim_change > 20:
-            self.randomAnimation()
 
         if packet.packet_type == PacketType.FLICKER:
             if packet.packet_status == PacketStatus.ON:
@@ -169,6 +168,15 @@ class MovingHeadController:
                 return
             else:
                 self.device.sendCommands([RGB(0, 0, 0)])
+
+        if self.blackout:
+            self.device.sendCommand(RGB(0, 0, 0))
+            return
+
+        if packet.audio_data:
+            self.latest_audio_data = packet.audio_data
+        if self.beats_since_anim_change > 20 and not self.disable_anim_change:
+            self.randomAnimation()
 
         match packet.packet_type:
             case PacketType.NEW_MUSIC:

@@ -45,6 +45,7 @@ class CircleAnimation(AMHAnimation):
         self.color_cooldown = 0
 
     def setRGB(self, color_mode: List[RGB] | Callable[[], RGB]):
+        self.color_mode = color_mode
         self.rgb = cycle(color_mode) if isinstance(color_mode, list) else color_mode
 
     # dt in seconds

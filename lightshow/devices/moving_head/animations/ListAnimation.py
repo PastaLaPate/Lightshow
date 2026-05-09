@@ -37,6 +37,7 @@ class ListAnimation(AMHAnimation):
         self.cycle_progress = 0
 
     def setRGB(self, color_mode: COLOR_MODE):
+        self.color_mode = color_mode
         self.rgb = cycle(color_mode) if isinstance(color_mode, list) else color_mode
 
     def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
