@@ -1,6 +1,6 @@
 [project]
 name = "lightshow"
-version = "0.30.0"
+version = "0.31.0"
 description = ""
 readme = "README.md"
 requires-python = ">=3.14"
@@ -49,11 +49,7 @@ members = ["."]
 lightshow = { workspace = true }
 
 [dependency-groups]
-dev = [
-    "lightshow",
-    "pre-commit>=4.6.0",
-    "ty>=0.0.34",
-]
+dev = ["lightshow", "pre-commit>=4.6.0", "ty>=0.0.34"]
 
 [project.scripts]
 lightshow = "lightshow.__main__:main"
