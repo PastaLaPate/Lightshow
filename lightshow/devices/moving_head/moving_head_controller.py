@@ -86,10 +86,10 @@ class MovingHeadController:
 
     def init_lists(self):
         self.anim_list: typing.List[AMHAnimation] = [
-            # TRIANGLE_ANIMATION,
+            TRIANGLE_ANIMATION,
             CIRCLE_ANIMATION,
             LEMNISCATE_ANIMATION,
-            # SQUARE_ANIMATION,
+            SQUARE_ANIMATION,
             BOUNCE_ANIMATION,
         ]
         self.color_mode_list = [
@@ -122,10 +122,10 @@ class MovingHeadController:
             trans for trans in TRANSFORMERS if trans.filter()(self.current_anim)
         ]
         self.current_anim.setTransformer(random.choice(available_transformers)())
-        if self._is_circle_animation(self.current_anim) and isinstance(
-            self.current_anim.transformer, RedLowsModulator
-        ):
-            self.current_anim.change_color_on_tick = True  # type: ignore
+        if self._is_circle_animation(self.current_anim):
+            self.current_anim.change_color_on_tick = isinstance(  # type: ignore
+                self.current_anim.transformer, RedLowsModulator
+            )
         """
         if len(self.beats_time) > 1:
             bpm = self.calcBPM()
@@ -168,15 +168,14 @@ class MovingHeadController:
         if self.breaking or self.waiting_music:
             self.tickFillingAnim()
             return
-        if self.current_anim.isTickeable():
-            self.tickCurrentAnim()
+        self.tickCurrentAnim()
 
         if packet.packet_type == PacketType.BEAT:
             self.handleBeat(packet)
         # Change animation after 14 beats
 
     def updateFromFrame(self, frame: MHAnimationFrame):
-        if self.next_frame_time > time.time_ns():
+        if self.next_frame_time > time.time_ns() or frame["duration"] == -1:
             return
         self.next_frame_time = time.time_ns() + self.frame_time
         self.avg_fps.append(time.time_ns())

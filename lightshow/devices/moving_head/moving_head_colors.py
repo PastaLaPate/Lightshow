@@ -76,14 +76,8 @@ class RedLowsModulator(ColorTransformer):
 
     @staticmethod
     def filter() -> Callable[[AAnimation], bool]:
-        from lightshow.devices.moving_head.animations.BounceAnimation import (
-            BounceAnimation,
-        )
-        from lightshow.devices.moving_head.animations.CircleAnimation import (
-            CircleAnimation,
-        )
 
-        return lambda x: isinstance(x, (CircleAnimation, BounceAnimation))
+        return lambda x: True
 
     def next(self, color, audio_data):
         brightness = self.MAX_BRIGHTNESS
@@ -165,8 +159,8 @@ class StartWhiteTransformer(ColorTransformer):
 
 
 TRANSFORMERS = [
-    # BlankTransformer,
+    BlankTransformer,
     RedLowsModulator,
-    # ToBlackTransformer,
-    # StartWhiteTransformer,
+    ToBlackTransformer,
+    StartWhiteTransformer,
 ]

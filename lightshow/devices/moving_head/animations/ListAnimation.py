@@ -5,8 +5,10 @@ from typing import List
 from lightshow.devices.animations.AAnimation import RGB
 from lightshow.devices.moving_head.moving_head_animations import (
     AMHAnimation,
+    BaseServoCommand,
     MHAnimationFrame,
     ServoCommand,
+    TopServoCommand,
 )
 from lightshow.devices.moving_head.moving_head_colors import COLOR_MODE
 
@@ -19,7 +21,8 @@ class ListAnimation(AMHAnimation):
         baseServo: List[ServoCommand | int],
     ):
         super().__init__()
-        self.tickeable = False
+        self.cached_rgb = RGB(0, 0, 0)
+        self.cached_poses = (TopServoCommand(0), BaseServoCommand(0))
         self.setRGB(rgb)
         self.topServoPositions = [
             x if isinstance(x, ServoCommand) else ServoCommand("top", angle=x)
@@ -38,7 +41,12 @@ class ListAnimation(AMHAnimation):
 
     def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
         if isTick:
-            raise NotImplementedError("ListAnimation shouldn't be ticked.")
+            return MHAnimationFrame(
+                duration=0,
+                rgb=self.apply_transformer(self.cached_rgb, audio_data),
+                topServo=self.cached_poses[0],
+                baseServo=self.cached_poses[1],
+            )
         self.cycle_progress += 1
         if self.cycle_progress == min(
             len(self.topServoPositions), len(self.baseServoPositions)
@@ -47,12 +55,14 @@ class ListAnimation(AMHAnimation):
                 self.reverse()
                 self.cycle_progress = 0
         color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-assignment]
+        self.cached_rgb = color
+        self.cached_poses = (next(self.topServo), next(self.baseServo))
         tcolor = self.apply_transformer(color, audio_data)
         return MHAnimationFrame(
             duration=0,
             rgb=tcolor,
-            topServo=next(self.topServo),
-            baseServo=next(self.baseServo),
+            topServo=self.cached_poses[0],
+            baseServo=self.cached_poses[1],
         )
 
     def reverse(self):

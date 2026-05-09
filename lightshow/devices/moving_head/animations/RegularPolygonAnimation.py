@@ -6,8 +6,10 @@ from typing import List
 from lightshow.devices.animations.AAnimation import RGB
 from lightshow.devices.moving_head.moving_head_animations import (
     AMHAnimation,
+    BaseServoCommand,
     MHAnimationFrame,
     ServoCommand,
+    TopServoCommand,
 )
 from lightshow.devices.moving_head.moving_head_colors import COLOR_MODE
 
@@ -22,14 +24,19 @@ class RegularPolygonAnimation(AMHAnimation):
         angle_offset_cycle=15,
     ):
         super().__init__()
-        self.tickeable = False
-        self.points_num = points_num
         self.setRGB(rgb)
+
+        self.cached_rgb = RGB(0, 0, 0)
+        self.cached_poses = (TopServoCommand(0), BaseServoCommand(0))
+
         self.cycle_progress = 0
+        self.points_num = points_num
+
         self.baseRange = baseRange
         self.topRange = topRange
         self.angle_offset = 0
         self.angle_offset_cycle = angle_offset_cycle
+
         self.calculateServoPoses(self.angle_offset)
 
     def setRGB(self, color_mode: COLOR_MODE):
@@ -37,7 +44,21 @@ class RegularPolygonAnimation(AMHAnimation):
 
     def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
         if isTick:
-            raise NotImplementedError("PolygonAnimation shouldn't be ticked.")
+            return (
+                MHAnimationFrame(
+                    duration=0,
+                    rgb=self.apply_transformer(self.cached_rgb, audio_data),
+                    topServo=self.cached_poses[0],
+                    baseServo=self.cached_poses[1],
+                )
+                if self.transformer and self.transformer.reactive()
+                else MHAnimationFrame(
+                    duration=-1,
+                    rgb=RGB(0, 0, 0),
+                    topServo=TopServoCommand(0),
+                    baseServo=BaseServoCommand(0),
+                )
+            )
         self.cycle_progress += 1
         if self.cycle_progress == min(
             len(self.topServoPositions), len(self.baseServoPositions)
@@ -49,11 +70,13 @@ class RegularPolygonAnimation(AMHAnimation):
             self.calculateServoPoses(self.angle_offset)
         color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-assignment]
         tcolor = self.apply_transformer(color, audio_data)
+        self.cached_rgb = color
+        self.cached_poses = (next(self.topServo), next(self.baseServo))
         return MHAnimationFrame(
             duration=0,
             rgb=tcolor,
-            topServo=next(self.topServo),
-            baseServo=next(self.baseServo),
+            topServo=self.cached_poses[0],
+            baseServo=self.cached_poses[1],
         )
 
     def calculateServoPoses(self, angle_offset=0):

@@ -115,16 +115,12 @@ class FadeCommand(Command):
 
 class AAnimation(ABC):
     def __init__(self):
-        self.tickeable = False
         self.reversed = False
 
     # dt: time since last frame in s
     @abstractmethod
     def next(self, audio_data: AudioData, isTick: bool = False, dt: float = 0) -> Any:
         pass
-
-    def isTickeable(self) -> bool:
-        return self.tickeable
 
     @abstractmethod
     def reverse(self):

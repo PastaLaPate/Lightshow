@@ -27,7 +27,6 @@ class CircleAnimation(AMHAnimation):
         self.change_color_on_tick = False
         self.cached_color = RGB(0, 0, 0)  # In case if we move but dont change color
 
-        self.tickeable = True
         self.progress_speed = speed
 
         self.baseAngleRange = (0, 120)
