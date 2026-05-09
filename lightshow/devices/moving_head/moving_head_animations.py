@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Literal, TypedDict, Union, override
+from typing import Literal, TypedDict, Union
 
 from lightshow.audio.data import AudioData
 from lightshow.devices.animations.AAnimation import (
@@ -55,7 +55,10 @@ class MHAnimationFrame(TypedDict):
 
 
 class AMHAnimation(AAnimation):
-    @override
+    def __init__(self):
+        super().__init__()
+        self.transformer = None
+
     @abstractmethod
     def next(self, audio_data: AudioData, isTick=False, dt=0) -> MHAnimationFrame:
         pass
@@ -70,5 +73,6 @@ class AMHAnimation(AAnimation):
         self, color: RGB, audio_data: AudioData
     ) -> RGB | FlickerCommand | FadeCommand:
         if self.transformer:
-            return self.transformer.next(color, audio_data)
+            transformed = self.transformer.next(color, audio_data)
+            return transformed
         return color

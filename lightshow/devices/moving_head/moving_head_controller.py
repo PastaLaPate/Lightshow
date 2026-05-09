@@ -25,6 +25,7 @@ from lightshow.devices.moving_head.moving_head_colors import (
     RAINBOW_KICK_COLORS,
     TRANSFORMERS,
     DEFAULT_RGBs,
+    RedLowsModulator,
     random_rainbow_color,
 )
 from lightshow.utils.config import global_config
@@ -78,6 +79,8 @@ class MovingHeadController:
         self.next_frame_time = 0
         self.avg_fps = deque(maxlen=self.max_fps * 2)
 
+        self.latest_audio_data = AudioData(np.zeros(20000))
+
         self.init_lists()
         self.init_state()
 
@@ -119,6 +122,10 @@ class MovingHeadController:
             trans for trans in TRANSFORMERS if trans.filter()(self.current_anim)
         ]
         self.current_anim.setTransformer(random.choice(available_transformers)())
+        if self._is_circle_animation(self.current_anim) and isinstance(
+            self.current_anim.transformer, RedLowsModulator
+        ):
+            self.current_anim.change_color_on_tick = True  # type: ignore
         """
         if len(self.beats_time) > 1:
             bpm = self.calcBPM()
@@ -143,13 +150,14 @@ class MovingHeadController:
         self.device.current_anim = self.current_anim.__class__.__name__
         self.device.showed_props_update()
         frm = self.current_anim.next(
-            AudioData(np.zeros(20000)), False, time.time_ns() / 1e9 - self.last_tick
+            self.latest_audio_data, False, time.time_ns() / 1e9 - self.last_tick
         )
         self.last_tick = time.time_ns() / 1e9
         self.updateFromFrame(frm)
 
     def handlePacket(self, packet: PacketData):
-
+        if packet.audio_data:
+            self.latest_audio_data = packet.audio_data
         if self.beats_since_anim_change > 20:
             self.randomAnimation()
         match packet.packet_type:
@@ -158,10 +166,10 @@ class MovingHeadController:
             case PacketType.BREAK:
                 self.handleBreak(packet)
         if self.breaking or self.waiting_music:
-            self.tickFillingAnim(packet.audio_data)
+            self.tickFillingAnim()
             return
         if self.current_anim.isTickeable():
-            self.tickCurrentAnim(packet.audio_data)
+            self.tickCurrentAnim()
 
         if packet.packet_type == PacketType.BEAT:
             self.handleBeat(packet)
@@ -188,21 +196,21 @@ class MovingHeadController:
         # Calculate average FPS
         return float(1 / np.mean(time_diffs))
 
-    def tickFillingAnim(self, audio_data):
+    def tickFillingAnim(self):
         self.updateFromFrame(
             CIRCLE_BREAK_ANIMATION.next(
-                audio_data, True, time.time_ns() / 1e9 - self.last_tick
+                self.latest_audio_data, True, time.time_ns() / 1e9 - self.last_tick
             )
         )
         self.last_tick = time.time_ns() / 1e9
 
-    def tickCurrentAnim(self, audio_data):
+    def tickCurrentAnim(self):
         if time.time_ns() < self.next_beat_cool:
             # Skip tick
             return False
         self.updateFromFrame(
             self.current_anim.next(
-                audio_data, True, time.time_ns() / 1e9 - self.last_tick
+                self.latest_audio_data, True, time.time_ns() / 1e9 - self.last_tick
             )
         )
         self.last_tick = time.time_ns() / 1e9
@@ -262,7 +270,7 @@ class MovingHeadController:
             self.beats_since_anim_change += 1
             self.next_beat_cool += self.cooldown_time
             frame = self.current_anim.next(
-                packet.audio_data, False, time.time_ns() / 1e9 - self.last_tick
+                self.latest_audio_data, False, time.time_ns() / 1e9 - self.last_tick
             )
             self.last_tick = time.time_ns() / 1e9
             self.updateFromFrame(frame)

@@ -25,7 +25,7 @@ class CircleAnimation(AMHAnimation):
         self.setRGB(rgb)
 
         self.change_color_on_tick = False
-        self.last_color = RGB(255, 255, 255)
+        self.cached_color = RGB(0, 0, 0)  # In case if we move but dont change color
 
         self.tickeable = True
         self.progress_speed = speed
@@ -49,10 +49,7 @@ class CircleAnimation(AMHAnimation):
         self.rgb = cycle(color_mode) if isinstance(color_mode, list) else color_mode
 
     # dt in seconds
-    # dt in seconds
     def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
-        rgb = self.last_color
-
         # Handle tick-based color switching
         if not isTick:
             self.boost_progress = 0
@@ -60,14 +57,16 @@ class CircleAnimation(AMHAnimation):
                 self.reverse()
             if not self.change_color_on_tick:
                 rgb = self.nextRGB()
-            self.last_color = rgb
-            rgb = self.apply_transformer(rgb, audio_data)
-            self.color_cooldown = time.time_ns() + 0.2 * 1e9
+                rgb = self.apply_transformer(rgb, audio_data)
+                self.cached_color = rgb
+
+                self.color_cooldown = time.time_ns() + 0.2 * 1e9
 
         else:
             if self.change_color_on_tick and time.time_ns() >= self.color_cooldown:
                 rgb = self.nextRGB()
-                self.last_color = rgb
+                rgb = self.apply_transformer(rgb, audio_data)
+                self.cached_color = rgb
 
         # ---- BOOST HANDLING (now dt-based) ----
         if self.boost_progress < 1:
@@ -94,7 +93,7 @@ class CircleAnimation(AMHAnimation):
 
         return MHAnimationFrame(
             duration=0,
-            rgb=rgb,
+            rgb=self.cached_color,
             topServo=ServoCommand(servo="top", angle=int(top)),
             baseServo=ServoCommand(
                 servo="base", angle=int(base + self.base_angle_offset)
