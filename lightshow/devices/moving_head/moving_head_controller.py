@@ -160,6 +160,16 @@ class MovingHeadController:
             self.latest_audio_data = packet.audio_data
         if self.beats_since_anim_change > 20:
             self.randomAnimation()
+
+        if packet.packet_type == PacketType.FLICKER:
+            if packet.packet_status == PacketStatus.ON:
+                # Trigger a strobe/flicker effect.
+                # Duration is set high (e.g., 60s) because we stop it manually on OFF
+                self.device.sendCommand(FlickerCommand(RGB(255, 255, 255), 60000))
+                return
+            else:
+                self.device.sendCommands([RGB(0, 0, 0)])
+
         match packet.packet_type:
             case PacketType.NEW_MUSIC:
                 self.handleNewMusic(packet)

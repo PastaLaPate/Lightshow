@@ -2,8 +2,12 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any, Tuple
 
+import PyQt6
+import PyQt6.QtCore
+
 
 class PacketType(Enum):
+    # Output [0, 255]
     BEAT = 0
     SNARE = 1
     BREAK = 2
@@ -11,6 +15,10 @@ class PacketType(Enum):
     DROP = 4
     TICK = 5
     PAUSE = 6
+    FLICKER = 7
+    # Input [256, 511]
+    MANUAL_MODE = 256
+    AUTO_TICK = 257  # Enables/Disables auto ticking, useful when in manual mode
 
 
 class PacketStatus(Enum):
@@ -96,10 +104,6 @@ class Device(ABC):
     def name(self) -> str:
         pass
 
-    @abstractmethod
-    def on(self, packet: PacketData):
-        pass
-
     def hsv_to_rgb(self, h: float, s: float, v: float, a: float) -> tuple:
         if s:
             if h == 1.0:
@@ -129,3 +133,27 @@ class Device(ABC):
 
     def __str__(self):
         return self.name or "Device"
+
+
+class OutputDevice(Device):
+    @abstractmethod
+    def on(self, packet: PacketData):
+        pass
+
+
+class DeviceSignals(PyQt6.QtCore.QObject):
+    onPacket = PyQt6.QtCore.pyqtSignal(PacketData)
+
+
+class InputDevice(Device):
+    signals = DeviceSignals()
+
+    def __init__(self):
+        super().__init__()
+
+        self.signals.onPacket.connect(self.onPacket)
+
+    def onPacket(self, packet: PacketData):
+        from lightshow.gui.main_window import UIManager
+
+        UIManager.get().listener.manual_packet(packet)

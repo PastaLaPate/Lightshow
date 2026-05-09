@@ -15,6 +15,7 @@ from PyQt6.QtWidgets import (
 from lightshow.audio.audio_streams import LoopbackAudioStreamHandler
 from lightshow.audio.audio_types import AudioDevice
 from lightshow.devices.device import Device
+from lightshow.devices.launchpad.launchpad import LaunchpadX
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
@@ -36,7 +37,7 @@ class UIManager(QMainWindow):
         self.logger = Logger("UIManager")
         self.listener = audio_listener
         self.audio_handler = audio_handler
-        self.device_types: List[Type[Device]] = [MovingHead]
+        self.device_types: List[Type[Device]] = [MovingHead, LaunchpadX]
         self.ui_signals = ui_signals
 
         # Initialize panels
@@ -296,7 +297,7 @@ class UIManager(QMainWindow):
         self.logger.info(
             f"Sending manual packet: {packet_data.packet_type}, {packet_data.packet_status}"
         )
-        self.listener.send_packet_to_devices(packet_data)
+        self.listener.send_packet_to_devices(packet_data, True)
 
     def _update_visualizations(self):
         """Update visualizations in real-time."""

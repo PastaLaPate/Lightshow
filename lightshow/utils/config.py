@@ -4,18 +4,18 @@ import platform
 import sys
 from importlib.metadata import version
 from pathlib import Path
-from typing import Any, Dict, Type, TypedDict, TypeVar
+from typing import Any, Dict, TypedDict, TypeVar
 
 import distro
 
 from lightshow.audio.audio_types import AudioDevice
-from lightshow.devices import DEVICES_STR_TYPES
 from lightshow.devices.device import Device
+from lightshow.devices.devices_types import DeviceTypeName
 from lightshow.utils.logger import Logger
 
 
 class DeviceConfigType(TypedDict):
-    type: Type[DEVICES_STR_TYPES]
+    type: DeviceTypeName
     props: Dict[str, Any]
 
 

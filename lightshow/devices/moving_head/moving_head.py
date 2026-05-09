@@ -6,14 +6,15 @@ from typing import Any, List, Literal, Tuple
 import requests
 
 from lightshow.devices.animations.AAnimation import RGB, Command
-from lightshow.devices.device import Device
+from lightshow.devices.device import OutputDevice
+from lightshow.devices.devices_types import DeviceTypeName
 from lightshow.devices.moving_head.moving_head_controller import MovingHeadController
 from lightshow.gui.utils import ui_signals
 from lightshow.utils.logger import Logger
 
 
-class MovingHead(Device):
-    DEVICE_TYPE_NAME: Literal["LED Moving Head"] = "LED Moving Head"
+class MovingHead(OutputDevice):
+    DEVICE_TYPE_NAME: Literal["LED Moving Head"] = DeviceTypeName.MOVING_HEAD.value
 
     SHOWED_PROPS = [
         "udp_address",

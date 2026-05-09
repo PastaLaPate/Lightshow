@@ -1,8 +1,8 @@
-from typing import Literal, TypeGuard
+from typing import TypeGuard
 
-DEVICES_STR_TYPES = Literal["LED Moving Head"]
-VALID_DEVICE_TYPES: tuple[DEVICES_STR_TYPES, ...] = ("LED Moving Head",)
+from lightshow.devices.devices_types import DeviceTypeName
 
 
-def is_device_type(value: str) -> TypeGuard[DEVICES_STR_TYPES]:
-    return value in VALID_DEVICE_TYPES
+def is_device_type(value: str) -> TypeGuard[DeviceTypeName]:
+    # This checks if the string exists in the Enum values
+    return value in {item.value for item in DeviceTypeName}
