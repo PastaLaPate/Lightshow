@@ -12,6 +12,7 @@ from lightshow.devices.moving_head.moving_head_animations import AMHAnimation
 from lightshow.devices.moving_head.moving_head_colors import (
     BLUE_COLORS,
     RED_COLORS,
+    BlankTransformer,
     RedLowsModulator,
     StartWhiteTransformer,
     ToBlackTransformer,
@@ -178,13 +179,29 @@ class MovingHeadPanelSlot(PanelSlot):
         elif key == Buttons.COLOR_BLUE:
             self.moving_head.controller.current_anim.setRGB(BLUE_COLORS)
         elif key == Buttons.FLASH_WHITE:
-            self.moving_head.controller.current_anim.setTransformer(
-                StartWhiteTransformer()
-            )
+            if not isinstance(
+                self.moving_head.controller.current_anim.transformer,
+                StartWhiteTransformer,
+            ):
+                self.moving_head.controller.current_anim.setTransformer(
+                    StartWhiteTransformer()
+                )
+            else:
+                self.moving_head.controller.current_anim.setTransformer(
+                    BlankTransformer()
+                )
         elif key == Buttons.FADE_BLACK:
-            self.moving_head.controller.current_anim.setTransformer(
-                ToBlackTransformer()
-            )
+            if not isinstance(
+                self.moving_head.controller.current_anim.transformer,
+                ToBlackTransformer,
+            ):
+                self.moving_head.controller.current_anim.setTransformer(
+                    ToBlackTransformer()
+                )
+            else:
+                self.moving_head.controller.current_anim.setTransformer(
+                    BlankTransformer()
+                )
         elif key in [
             Buttons.ANIM_CIRCLE,
             Buttons.ANIM_SQUARE,
@@ -199,15 +216,23 @@ class MovingHeadPanelSlot(PanelSlot):
                 elif key == Buttons.ANIM_LEMNISCATE:
                     self.set_current_anim(LEMNISCATE_ANIMATION)
                 elif key == Buttons.RED_MODULATOR:
-                    self.moving_head.controller.current_anim.setTransformer(
-                        RedLowsModulator()
-                    )
-                    if self.moving_head.controller._is_circle_animation(
-                        self.moving_head.controller.current_anim
+                    if isinstance(
+                        self.moving_head.controller.current_anim.transformer,
+                        RedLowsModulator,
                     ):
-                        self.moving_head.controller.current_anim.change_color_on_tick = (  # type: ignore
-                            True
+                        self.moving_head.controller.current_anim.setTransformer(
+                            BlankTransformer()
                         )
+                    else:
+                        self.moving_head.controller.current_anim.setTransformer(
+                            RedLowsModulator()
+                        )
+                        if self.moving_head.controller._is_circle_animation(
+                            self.moving_head.controller.current_anim
+                        ):
+                            self.moving_head.controller.current_anim.change_color_on_tick = (  # type: ignore
+                                True
+                            )
 
         # --- ROW 3: TICKING & RANDOM ---
         elif key == Buttons.AUTO_TICK:
