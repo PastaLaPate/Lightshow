@@ -9,7 +9,7 @@ dependencies = [
     "PyQt6-Charts>=6.7.0",
     "librosa>=0.11.0",
     "numpy>=2.4.6",
-    "ty>=0.0.37",
+    "ty>=0.0.39",
     "websocket-client>=1.8.0",
     "winrt-runtime>=3.2.1 ; platform_system == \"Windows\"",
     "winrt-windows-media>=3.2.1 ; platform_system == \"Windows\"",
@@ -26,7 +26,7 @@ dependencies = [
     "distro>=1.9.0",
     "semver>=3.0.4",
     "mido[ports-rtmidi]>=1.3.3",
-    "ty>=0.0.37",
+    "ty>=0.0.39",
 ]
 
 [build-system]
@@ -49,7 +49,7 @@ members = ["."]
 lightshow = { workspace = true }
 
 [dependency-groups]
-dev = ["lightshow", "pre-commit>=4.6.0", "ty>=0.0.37"]
+dev = ["lightshow", "pre-commit>=4.6.0", "ty>=0.0.39"]
 
 [project.scripts]
 lightshow = "lightshow.__main__:main"
