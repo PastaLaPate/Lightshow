@@ -52,7 +52,7 @@ Im not even sure it works.
    `cd Lightshow`
 3. Install dependencies
    `uv sync`
-  3.1. Linux dev dependencies
+3.1. Linux dev dependencies
    `sudo apt install libsdl-image1.2-dev libsdl-mixer1.2-dev libsdl-ttf2.0-dev libsdl1.2-dev libsmpeg-dev`
 4. Start
    `uv run lightshow`
