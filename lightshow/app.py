@@ -116,6 +116,14 @@ class MainAudioListener(AudioListener):
 
     def send_packet_to_devices(self, packet: PacketData, force=False) -> None:
         devices = config.live_devices.copy()
+        if force:  # Manual packets
+            # Update state accordingly
+            if packet.packet_type == PacketType.BREAK:
+                self.break_detected = packet.packet_status == PacketStatus.ON
+                if packet.packet_status == PacketStatus.OFF:
+                    self._stop_break(packet.audio_data)
+            elif packet.packet_type == PacketType.DROP:
+                self.drop_detected = packet.packet_status == PacketStatus.ON
         for device in devices.values():
             if device.ready and isinstance(device, OutputDevice):
                 if isinstance(device, MovingHead):
@@ -151,6 +159,15 @@ class MainAudioListener(AudioListener):
             return 0
         return power
 
+    def _stop_break(self, data) -> None:
+        self.break_detected = False
+        self.kick_detector.reset_state()
+        self.break_detector.clear_old_beats()
+        self.break_detector.clean_beats(time_ns() - self.break_detector.beats[-1])
+        self.send_packet_to_devices(
+            PacketData(PacketType.BREAK, PacketStatus.OFF, audio_data=data)
+        )
+
     def __call__(self, data) -> bool:
         current_power = self.get_current_power()
         self.send_packet_to_devices(
@@ -179,15 +196,7 @@ class MainAudioListener(AudioListener):
             self.set_beat_power(beat_intensity)
 
             if self.break_detected:
-                self.break_detected = False
-                self.kick_detector.reset_state()
-                self.break_detector.clear_old_beats()
-                self.break_detector.clean_beats(
-                    time_ns() - self.break_detector.beats[-1]
-                )
-                self.send_packet_to_devices(
-                    PacketData(PacketType.BREAK, PacketStatus.OFF, audio_data=data)
-                )
+                self._stop_break(data)
             self.break_detector.on_beat()
             self.drop_detector.on_beat()
             self.send_packet_to_devices(
