@@ -1,6 +1,9 @@
 from lightshow.audio.data import AudioData
+from lightshow.utils.logger import Logger
 
 from .spike_detector import DetectionType, SpikeDetector
+
+logger = Logger.for_class("KickDetector")
 
 
 class KickDetector(SpikeDetector):
@@ -22,7 +25,7 @@ class KickDetector(SpikeDetector):
         self.cooldown_counter = 0
 
     def detect(self, data: AudioData, appendCurrentEnergy=True):
-        current_energy = data.get_ps_mean([0, 1])
+        current_energy = data.get_ps_mean([0, 2])
 
         if appendCurrentEnergy:
             self.energy_history.append(current_energy)
@@ -51,5 +54,8 @@ class KickDetector(SpikeDetector):
             self.cooldown_counter = self.cooldown_frame_duration
             self.was_above = True
             return True
+        else:
+            # logger.debug("nope")
+            pass
         self.was_above = is_above
         return False

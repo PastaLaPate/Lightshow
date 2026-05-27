@@ -1,6 +1,8 @@
 import threading
 import time
 from dataclasses import dataclass
+from enum import IntEnum
+from itertools import cycle
 from typing import Callable, Dict, List, Literal
 
 import mido
@@ -119,6 +121,12 @@ class PanelSlot:
         self.launchpad.set_color(self.idx_to_note[key], color_code, mode)
 
 
+class ControlMode(IntEnum):
+    AUTO = 0
+    MANUAL = 1
+    HYBRID = 2  # Receives beat, but can still control animations
+
+
 class MovingHeadPanelSlot(PanelSlot):
     def __init__(self, launchpad: LaunchpadX, device_id: str, index: int) -> None:
         super().__init__(launchpad, device_id, index)
@@ -128,7 +136,10 @@ class MovingHeadPanelSlot(PanelSlot):
         self.moving_head: MovingHead = device
 
         # Internal States
-        self.manual_mode = False
+        self.control_mode = ControlMode.AUTO
+        self.controls_mode = cycle(
+            [ControlMode.AUTO, ControlMode.MANUAL, ControlMode.HYBRID]
+        )
         self.auto_tick = False
         self.breaking = False
         self.random_anim = True
@@ -157,20 +168,22 @@ class MovingHeadPanelSlot(PanelSlot):
     def _on_pressed(self, key: int):
         # --- SYSTEM BUTTONS ---
         if key == Buttons.MANUAL_MODE:
-            self.manual_mode = not self.manual_mode
+            self.control_mode = next(self.controls_mode)
             self.auto_tick = False
             self.breaking = False
             self.random_anim = True  # default
             self.moving_head.on(
                 PacketData(
                     PacketType.MANUAL_MODE,
-                    PacketStatus.ON if self.manual_mode else PacketStatus.OFF,
+                    PacketStatus.ON
+                    if self.control_mode == ControlMode.MANUAL
+                    else PacketStatus.OFF,
                 )
             )
             self.update_state()
             return
 
-        if not self.manual_mode:
+        if self.control_mode == ControlMode.AUTO:
             return
 
         # --- ROW 1: COLORS & FLASH ---
@@ -290,7 +303,7 @@ class MovingHeadPanelSlot(PanelSlot):
         self.update_state()
 
     def update_state(self):
-        if not self.manual_mode:
+        if self.control_mode == ControlMode.AUTO:
             # Global Off State
             for b in range(16):
                 self.set_color(b, Colors.BLACK)
@@ -298,7 +311,10 @@ class MovingHeadPanelSlot(PanelSlot):
             return
 
         # --- ROW 4 (Bottom) ---
-        self.set_color(Buttons.MANUAL_MODE, Colors.BRIGHT_GREEN)
+        self.set_color(
+            Buttons.MANUAL_MODE,
+            Colors.BRIGHT_GREEN if self.control_mode == ControlMode.MANUAL else 45,
+        )
         # BEAT disabled when breaking
         self.set_color(
             Buttons.BEAT, Colors.ORANGE if not self.breaking else Colors.BLACK
@@ -463,7 +479,7 @@ class LaunchpadX(InputDevice):
             )
             self.out_port = mido.open_output(self.device_name)  # type: ignore
             self.ready = True
-            self.out_port.send(mido.Message("sysex", data=[0, 32, 41, 2, 12, 14, 1]))
+            self.out_port.send(mido.Message("sysex", data=[0, 32, 41, 2, 12, 14, 1]))  # pyright: ignore[reportOptionalMemberAccess]
 
             self.start_effect_engine()  # Start the single shared thread
             for device_id in config.live_devices.keys():

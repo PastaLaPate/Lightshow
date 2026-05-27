@@ -4,7 +4,8 @@
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.fixAll.ruff": "always",
-    "source.organizeImports.ruff": "always"
+    "source.organizeImports.ruff": "always",
+    "source.organizeImports": "always"
   },
   "python.analysis.indexing": true,
   "python.analysis.autoImportCompletions": true,
