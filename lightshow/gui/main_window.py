@@ -3,9 +3,11 @@ import traceback
 from typing import List, Type
 
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
+    QMenuBar,
     QMessageBox,
     QSplitter,
     QVBoxLayout,
@@ -17,6 +19,7 @@ from lightshow.audio.audio_types import AudioDevice
 from lightshow.devices.device import Device
 from lightshow.devices.launchpad.launchpad import LaunchpadX
 from lightshow.devices.moving_head.moving_head import MovingHead
+from lightshow.gui.dialogs.about_dialog import AboutDialog
 from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.gui.panels.stats import StatsPanel
@@ -118,6 +121,8 @@ class UIManager(QMainWindow):
         full_layout = QVBoxLayout(central_widget)
         full_layout.setContentsMargins(10, 10, 10, 10)
 
+        self._create_menu()
+
         # Main layout
         main_layout = QHBoxLayout()
 
@@ -179,6 +184,29 @@ class UIManager(QMainWindow):
 
         splitter.setSizes([650, 350])
         right_widget.setSizes([300, 500, 200])
+
+    def _create_menu(self):
+        if self.menuBar() is None:
+            self.setMenuBar(QMenuBar())
+
+        menu_bar = self.menuBar()
+        if menu_bar is None:
+            return
+
+        edit_menu = menu_bar.addMenu("Edit")
+        assert edit_menu is not None
+        settings_action = QAction("Settings", self)
+        edit_menu.addAction(settings_action)
+
+        help_menu = menu_bar.addMenu("Help")
+        assert help_menu is not None
+        about_action = QAction("About Lightshow", self)
+        about_action.triggered.connect(self._show_about_dialog)
+
+        help_menu.addAction(about_action)
+
+    def _show_about_dialog(self):
+        AboutDialog(self).exec()
 
     def _on_device_select(self, device_name):
         """Handle device selection."""
