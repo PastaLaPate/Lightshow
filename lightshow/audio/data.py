@@ -12,7 +12,7 @@ class AudioData:
         """
         self.frequencies = frequencies
 
-    def get_freq_mean(self, range):
+    def get_freq_mean(self, range) -> float:
         """Get mean frequency magnitude over a range of indices."""
         if len(range) > 2:
             raise ValueError("Range must be a list of two elements.")

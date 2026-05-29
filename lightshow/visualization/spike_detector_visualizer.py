@@ -47,6 +47,14 @@ class SpikeDetectorVisualizer(QWidget):
         self.visualization_len = visualization_len
         self.expected_max = expected_max
 
+        # Support both old and new architecture
+        # New architecture: detector has a .detector attribute with DetectionMethod
+        # Fall back to spike_detector itself if no .detector attribute exists
+        if hasattr(spike_detector, "detector") and spike_detector.detector is not None:
+            self.detection_method = spike_detector.detector
+        else:
+            self.detection_method = spike_detector
+
         pg.setConfigOption("antialias", True)
 
         self.x_history = deque(maxlen=visualization_len)
@@ -153,10 +161,14 @@ class SpikeDetectorVisualizer(QWidget):
 
     def _on_update_data(self, data, beat_detected, break_detected, drop_detected):
         try:
-            current_energy = data.frequencies[
-                self.spike_detector.freq_range[0] : self.spike_detector.freq_range[1]
-                + 1
-            ].mean()
+            # Get freq_range from spike_detector or its parent if using new architecture
+            freq_range = getattr(
+                self.spike_detector,
+                "freq_range",
+                getattr(self.spike_detector, "bin_range", [0, 1]),
+            )
+
+            current_energy = data.frequencies[freq_range[0] : freq_range[1] + 1].mean()
 
             self.x_history.append(self.global_index)
             self.energy_history.append(current_energy)
@@ -171,14 +183,22 @@ class SpikeDetectorVisualizer(QWidget):
                 diff = 0
             self.diff_history.append(diff)
 
-            if len(self.spike_detector.energy_history) < 1:
+            # Get energy_history from detection method (new architecture) or spike_detector (old)
+            detector_energy_history = (
+                self.detection_method.energy_history
+                if hasattr(self.detection_method, "energy_history")
+                else []
+            )
+
+            if len(detector_energy_history) < 1:
                 self.global_index += 1
                 return
 
-            avg_energy = sum(self.spike_detector.energy_history) / len(
-                self.spike_detector.energy_history
-            )
-            limit = self.spike_detector.sensitivity * avg_energy
+            if hasattr(self.detection_method, "get_limit"):
+                limit = self.detection_method.get_limit()
+            else:
+                # Fallback for old detectors without get_limit
+                limit = 0
             self.limit_history.append(limit)
             self._add_marker("beat", beat_detected, current_energy)
             self._add_marker("break", break_detected, current_energy)
