@@ -12,7 +12,7 @@ from lightshow.audio.audio_streams import (
     AudioListener,
     LoopbackAudioStreamHandler,
 )
-from lightshow.audio.detectors.methods.average_difference import AverageDifference
+from lightshow.audio.detectors.methods.percentil import Percentile
 from lightshow.audio.processors import SpectrumProcessor
 from lightshow.devices.device import OutputDevice, PacketData, PacketStatus, PacketType
 from lightshow.devices.moving_head.moving_head import MovingHead
@@ -40,7 +40,7 @@ class MainAudioListener(AudioListener):
     def __init__(self, AudioHandler: AAudioStreamHandler):
         super().__init__(AudioHandler)
         self.logger = Logger("AudioListener")
-        self.kick_detector = detectors.KickDetector(AudioHandler, AverageDifference)
+        self.kick_detector = detectors.KickDetector(AudioHandler, Percentile)
         self.silent_detector = detectors.SilentDetector()
         self.break_detector = detectors.BreakDetector(30)
         self.drop_detector = detectors.DropDetector(30, 5)
@@ -184,7 +184,7 @@ class MainAudioListener(AudioListener):
         if self.music_paused:
             return True
         beat = self.kick_detector.detect(
-            data, appendCurrentEnergy=not self.break_detected
+            data, append_current_energy=not self.break_detected
         )
 
         if beat:

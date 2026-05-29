@@ -29,5 +29,5 @@ class KickDetector(SpikeDetector):
     def clear(self):
         self.detector.clean()
 
-    def detect(self, data: AudioData, appendCurrentEnergy=True):
-        return self.detector.detect(data, appendCurrentEnergy)
+    def detect(self, data: AudioData, append_current_energy=True):
+        return self.detector.detect(data, append_current_energy)

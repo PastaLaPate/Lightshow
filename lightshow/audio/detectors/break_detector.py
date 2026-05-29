@@ -12,7 +12,7 @@ class BreakDetector(SpikeDetector):
         self.beats = []
         self.window_size = window_size
 
-    def detect(self, data: AudioData, appendCurrentEnergy=True):
+    def detect(self, data: AudioData, append_current_energy=True):
         if len(self.beats) < self.window_size - 5:
             return False
         time_since_last_beat = time.time_ns() - self.beats[-1]

@@ -7,7 +7,7 @@ np.seterr(all="ignore")
 
 
 class SpectrumProcessor(Processor):
-    def __init__(self, chunk_size, sample_rate, sensitivity=2.0, attack=0.9, decay=0.5):
+    def __init__(self, chunk_size, sample_rate, sensitivity=2.0, attack=0.7, decay=0.4):
         super().__init__(chunk_size, sample_rate)
         self.sensitivity = sensitivity
         self.attack = attack

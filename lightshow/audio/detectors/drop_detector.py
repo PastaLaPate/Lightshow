@@ -1,5 +1,7 @@
 import time
+
 import numpy as np
+
 from .spike_detector import SpikeDetector
 
 
@@ -11,7 +13,7 @@ class DropDetector(SpikeDetector):
         self.window_size = window_size
         self.comparing_window_size = comparing_window_size
 
-    def detect(self, data, appendCurrentEnergy=True):
+    def detect(self, data, append_current_energy=True):
         if len(self.beats) < self.comparing_window_size:
             return False
 

@@ -77,9 +77,9 @@ class SpikeDetector:
     def clear(self):
         self.energy_history.clear()
 
-    def detect(self, data: AudioData, appendCurrentEnergy=True):
+    def detect(self, data: AudioData, append_current_energy=True):
         current_energy = data.get_ps_mean(self.bin_range)
-        if appendCurrentEnergy:
+        if append_current_energy:
             self.energy_history.append(current_energy)
         if len(self.energy_history) < 1:
             return False
