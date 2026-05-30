@@ -56,7 +56,14 @@ class Percentile(DetectionMethod):
         if detected:
             self.cooldown_counter = self.cooldown_frame_duration
 
-        self.was_above = is_above
+        is_settled = current_energy < (self.smoothed_baseline or 0 * 0.8)
+
+        if is_above and not self.was_above:
+            detected = True
+            self.cooldown_counter = self.cooldown_frame_duration
+            self.was_above = True
+        elif not is_above and is_settled:
+            self.was_above = False
         return detected
 
     def get_limit(self) -> float:

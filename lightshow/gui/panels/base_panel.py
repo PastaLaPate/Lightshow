@@ -8,8 +8,8 @@ from lightshow.gui.utils import ui_signals
 class BasePanel(QWidget):
     """Base class for all UI panels with callback support."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self._callbacks = {}
 
     def register(self, event: str, callback):
