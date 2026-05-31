@@ -192,15 +192,6 @@ wheels = [
 ]
 
 [[package]]
-name = "darkdetect"
-version = "0.8.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/45/77/7575be73bf12dee231d0c6e60ce7fb7a7be4fcd58823374fc59a6e48262e/darkdetect-0.8.0.tar.gz", hash = "sha256:b5428e1170263eb5dea44c25dc3895edd75e6f52300986353cd63533fe7df8b1", size = 7681, upload-time = "2022-12-16T14:14:42.113Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f2/f2/728f041460f1b9739b85ee23b45fa5a505962ea11fd85bdbe2a02b021373/darkdetect-0.8.0-py3-none-any.whl", hash = "sha256:a7509ccf517eaad92b31c214f593dbcf138ea8a43b2935406bbd565e15527a85", size = 8955, upload-time = "2022-12-16T14:14:40.92Z" },
-]
-
-[[package]]
 name = "dbus-next"
 version = "0.2.3"
 source = { registry = "https://pypi.org/simple" }
@@ -384,7 +375,7 @@ wheels = [
 
 [[package]]
 name = "lightshow"
-version = "0.31.0"
+version = "0.32.0"
 source = { editable = "." }
 dependencies = [
     { name = "dbus-next" },
@@ -398,7 +389,6 @@ dependencies = [
     { name = "pyopengl-accelerate" },
     { name = "pyqt6" },
     { name = "pyqt6-charts" },
-    { name = "pyqtdarktheme-fork" },
     { name = "pyqtgraph" },
     { name = "semver" },
     { name = "soundcard" },
@@ -433,7 +423,6 @@ requires-dist = [
     { name = "pyopengl-accelerate", specifier = ">=3.1.10" },
     { name = "pyqt6", specifier = ">=6.7.0" },
     { name = "pyqt6-charts", specifier = ">=6.7.0" },
-    { name = "pyqtdarktheme-fork", specifier = ">=2.3.6" },
     { name = "pyqtgraph", specifier = ">=0.14.0" },
     { name = "semver", specifier = ">=3.0.4" },
     { name = "soundcard", specifier = ">=0.4.6" },
@@ -858,18 +847,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/98/f4/886f901f1e04da717a11e180ba19a9c7fc62da170966d57206006f173bda/pyqt6_sip-13.11.1-cp314-cp314-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:fcadd68e09ee24cdda8f8bfcba52e59c9b297055d2c450f0eb89afa61a8dc31a", size = 321846, upload-time = "2026-03-09T13:01:29.817Z" },
     { url = "https://files.pythonhosted.org/packages/96/f2/b68fd566f7f86dbb53d933489e70487cabaea0e0161690e4899653bbc7fb/pyqt6_sip-13.11.1-cp314-cp314-win_amd64.whl", hash = "sha256:581e287bf42587593b88b30d9db06ed0fccbf40f345a5bd3ec3f00a5692e2430", size = 55055, upload-time = "2026-03-09T13:01:33.467Z" },
     { url = "https://files.pythonhosted.org/packages/8d/42/efb7ced69f7d1d31eb8f19b2d778aeb182be7e070569d02b9057ac478e3e/pyqt6_sip-13.11.1-cp314-cp314-win_arm64.whl", hash = "sha256:42b62530a9b6a9c6e29c2941b8ab78258652da0aeae4eb1fc9a0631d19a7a7b2", size = 49597, upload-time = "2026-03-09T13:01:34.49Z" },
-]
-
-[[package]]
-name = "pyqtdarktheme-fork"
-version = "2.3.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "darkdetect" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/e8/9d/2ce9dca0e37e4ef2385102effec80457e981b0a64923376d122a52190bef/pyqtdarktheme_fork-2.3.6.tar.gz", hash = "sha256:9ab287a033a4742767bcb6698fb60247beef7967d74eb949f7ab36ee866ff1d7", size = 40476, upload-time = "2026-03-04T12:50:23.721Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/8e/fecdf206415c432fcc301a19701ea437af5dbdcd33020ac4f5288d060a65/pyqtdarktheme_fork-2.3.6-py3-none-any.whl", hash = "sha256:876dc8cc0e01468a3f7fe5a860dfd422ccab48b33beef18dfdecb6312c20c556", size = 54552, upload-time = "2026-03-04T12:50:21.311Z" },
 ]
 
 [[package]]
