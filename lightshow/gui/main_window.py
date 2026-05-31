@@ -26,7 +26,7 @@ from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.gui.panels.stats import StatsPanel
 from lightshow.gui.utils.ui_signals import ui_signals
 from lightshow.utils import global_config
-from lightshow.utils.config import SETTINGS, live_devices
+from lightshow.utils.config import SETTINGS_CATEGORIES, _Settings, live_devices
 from lightshow.utils.logger import Logger
 
 
@@ -74,11 +74,12 @@ class UIManager(QMainWindow):
             self._on_connection_status_changed
         )
         self.ui_signals.streaming_status_changed.connect(self._stream_status_changed)
-
         self.about_dialog = AboutDialog(self)
         self.settings_dialog = SettingsDialog(self)
         self.settings_dialog.register("apply", self._apply_settings)
-        self.settings_dialog.load(SETTINGS)
+        self.settings_dialog.load(
+            SETTINGS_CATEGORIES, saved_values=global_config.settings.as_dict()
+        )
 
         # Setup UI
         self._setup_ui()
@@ -95,7 +96,7 @@ class UIManager(QMainWindow):
                 UIManager._instance = UIManager(audio_listener, audio_handler)
 
     @staticmethod
-    def get():
+    def get() -> UIManager:
         if UIManager._instance is None:
             raise RuntimeError("UIManager not initialized. Call init_singleton first.")
         return UIManager._instance
@@ -191,6 +192,17 @@ class UIManager(QMainWindow):
         splitter.setSizes([650, 350])
         right_widget.setSizes([300, 500, 200])
 
+    def _apply_initial_visibility(self) -> None:
+        show_spectrum = global_config.settings[_Settings.SHOW_SPECTRUM]
+        show_beat = global_config.settings[_Settings.SHOW_BEAT_DETECTION]
+
+        if not show_spectrum:
+            QTimer.singleShot(0, lambda: self.audio_panel.spectrumWidget.hide())
+
+        kv = self.audio_panel.kick_visualizer
+        if isinstance(kv, QWidget) and not show_beat:
+            QTimer.singleShot(0, kv.hide)
+
     def _create_menu(self):
         if self.menuBar() is None:
             self.setMenuBar(QMenuBar())
@@ -218,15 +230,24 @@ class UIManager(QMainWindow):
     def _show_settings_dialog(self):
         self.settings_dialog.exec()
 
-    def _apply_settings(self, settings: dict[str, Any]):
+    def _apply_settings(self, settings: dict[str, Any]) -> None:
         for sid, value in settings.items():
-            if sid == "ui.layout.show_spectrum":
-                self.audio_panel.spectrumWidget.setVisible(value or False)
-            elif sid == "ui.layout.show_beat_detection":
+            if sid == _Settings.SHOW_SPECTRUM.id:
+                if value:
+                    QTimer.singleShot(50, self.audio_panel.spectrumWidget.show)
+                else:
+                    self.audio_panel.spectrumWidget.hide()
+
+            elif sid == _Settings.SHOW_BEAT_DETECTION.id:
                 w = self.audio_panel.kick_visualizer
                 if isinstance(w, QWidget):
-                    w.setVisible(value)
+                    if value:
+                        QTimer.singleShot(50, w.show)
+                    else:
+                        w.hide()
+
         global_config.apply(settings)
+        global_config.save()
 
     def _on_device_select(self, device_name):
         """Handle device selection."""

@@ -28,7 +28,7 @@ from lightshow.devices.moving_head.moving_head_colors import (
     RedLowsModulator,
     random_rainbow_color,
 )
-from lightshow.utils.config import global_config
+from lightshow.utils.config import _Settings, global_config
 from lightshow.utils.logger import Logger
 
 if typing.TYPE_CHECKING:
@@ -75,7 +75,7 @@ class MovingHeadController:
         self.last_fps_log_time = 0  # Throttle FPS logging
         self.current_fps = 0  # Store current FPS for display
 
-        self.max_fps = global_config.max_fps or 60
+        self.max_fps = global_config.settings[_Settings.MAX_FPS] or 60
         self.frame_time = 1 / self.max_fps * 1e9  # For nanoseconds
         self.next_frame_time = 0
         self.avg_fps = deque(maxlen=self.max_fps * 2)

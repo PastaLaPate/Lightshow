@@ -27,7 +27,7 @@ from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisua
 
 pg.setConfigOptions(useOpenGL=True, enableExperimental=True)
 
-ui_manager: "UIManager | None" = None
+ui_manager: UIManager | None = None
 
 logger = Logger("Main")
 
@@ -280,6 +280,7 @@ def main() -> None:
     ui_manager.resize(800, 600)
     listener.track_tracker.start()
     ui_manager.show()
+    ui_manager._apply_initial_visibility()
     ui_manager.setWindowIcon(QIcon(ICON_PATH))
 
     sys.exit(app.exec())

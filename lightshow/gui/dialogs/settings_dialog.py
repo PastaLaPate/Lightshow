@@ -1,13 +1,21 @@
+from __future__ import annotations
+
+from typing import Any
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
+    QCheckBox,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
+    QDoubleSpinBox,
     QFormLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
     QListWidgetItem,
+    QSpinBox,
     QStackedWidget,
     QTabWidget,
     QVBoxLayout,
@@ -19,12 +27,12 @@ from lightshow.utils.config import Setting, SettingListItem, SettingTab
 
 
 class SettingsDialog(QDialog, BasePanel):
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Settings")
         self.setMinimumSize(700, 450)
 
-        self._pending_changes: dict[str, int | float | str | bool | list] = {}
+        self._pending_changes: dict[str, Any] = {}
         self._setting_widgets: dict[str, QWidget] = {}
         self._list_items: list[SettingListItem] = []
 
@@ -32,9 +40,13 @@ class SettingsDialog(QDialog, BasePanel):
         self.settings_list = QListWidget()
         self.settings_stack = QStackedWidget()
 
-        self.setup_ui()
+        self._setup_ui()
 
-    def setup_ui(self):
+    # ──────────────────────────────────────────────────────────────────────────
+    # Layout
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _setup_ui(self) -> None:
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(8, 8, 8, 8)
         root_layout.setSpacing(6)
@@ -64,28 +76,43 @@ class SettingsDialog(QDialog, BasePanel):
         )
         button_box.accepted.connect(self._on_accept)
         button_box.rejected.connect(self.reject)
+
         apply_button = button_box.button(QDialogButtonBox.StandardButton.Apply)
         assert apply_button is not None
         apply_button.clicked.connect(self._on_apply)
+
         restore_button = button_box.button(
             QDialogButtonBox.StandardButton.RestoreDefaults
         )
         assert restore_button is not None
         restore_button.clicked.connect(self._on_restore)
+
         root_layout.addWidget(button_box)
 
-    # ------------------------------------------------------------------ #
-    # Public API                                                           #
-    # ------------------------------------------------------------------ #
+    # ──────────────────────────────────────────────────────────────────────────
+    # Public API
+    # ──────────────────────────────────────────────────────────────────────────
 
-    def load(self, items: list[SettingListItem]) -> None:
-        """Populate the dialog from a list of SettingListItems."""
+    def load(
+        self,
+        items: list[SettingListItem],
+        saved_values: dict[str, Any] | None = None,
+    ) -> None:
+        """
+        Populate the dialog from the SETTINGS_CATEGORIES tree, then optionally
+        pre-fill every widget with the current saved values.
+
+        Parameters
+        ----------
+        items:
+            Pass ``SETTINGS_CATEGORIES`` from config.py.
+        saved_values:
+            Flat ``{setting_id: value}`` dict — use
+            ``global_config.settings.as_dict()`` to build it.
+            When omitted, widgets show their declared defaults.
+        """
         self._list_items = items
-        self.settings_list.clear()
-        while self.settings_stack.count():
-            self.settings_stack.removeWidget(self.settings_stack.widget(0))
-        self._setting_widgets.clear()
-        self._pending_changes.clear()
+        self._clear()
 
         for item in items:
             list_entry = QListWidgetItem(item.name)
@@ -100,9 +127,33 @@ class SettingsDialog(QDialog, BasePanel):
         if items:
             self.settings_list.setCurrentRow(0)
 
-    # ------------------------------------------------------------------ #
-    # Page / widget builders                                               #
-    # ------------------------------------------------------------------ #
+        if saved_values:
+            self.load_saved(saved_values)
+
+    def load_saved(self, values: dict[str, Any]) -> None:
+        """
+        Pre-populate every widget from a flat ``{setting_id: value}`` dict
+        without marking any change as pending.
+
+        Typically called right after ``load()``::
+
+            dialog.load(SETTINGS_CATEGORIES, saved_values=global_config.settings.as_dict())
+
+        Can also be called standalone to refresh an already-open dialog.
+        """
+        for item in self._list_items:
+            for tab in item.tabs:
+                for setting in tab.settings:
+                    if setting.id not in values:
+                        continue
+                    widget = self._setting_widgets.get(setting.id)
+                    if widget is None:
+                        continue
+                    self._set_widget_value(widget, values[setting.id], setting)
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Page / widget builders
+    # ──────────────────────────────────────────────────────────────────────────
 
     def _build_page(self, item: SettingListItem) -> QWidget:
         page = QWidget()
@@ -118,74 +169,123 @@ class SettingsDialog(QDialog, BasePanel):
 
         tabs = QTabWidget()
         for tab in item.tabs:
-            tabs.addTab(self._build_tab(tab, item.id), tab.name)
+            tabs.addTab(self._build_tab(tab), tab.name)
         layout.addWidget(tabs, stretch=1)
         return page
 
-    def _build_tab(self, tab: SettingTab, section_id: str) -> QWidget:
+    def _build_tab(self, tab: SettingTab) -> QWidget:
         widget = QWidget()
         form = QFormLayout(widget)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
-
         for setting in tab.settings:
             control = self._build_control(setting)
             form.addRow(setting.name, control)
-
         return widget
 
-    def _build_control(self, setting: Setting) -> QWidget:
-        from PyQt6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QSpinBox
-
+    def _build_control(self, setting: Setting[Any]) -> QWidget:
         widget: QWidget
 
         if setting.type is bool:
-            widget = QCheckBox()
-            widget.setChecked(setting.default is True)
-            widget.checkStateChanged.connect(
+            cb = QCheckBox()
+            cb.setChecked(bool(setting.default))
+            cb.checkStateChanged.connect(
                 lambda state, sid=setting.id: self._record(
                     sid, state == Qt.CheckState.Checked
                 )
             )
+            widget = cb
 
-        elif setting.type is int:
-            widget = QSpinBox()
-            widget.setRange(-2147483648, 2147483647)
-            if isinstance(setting.default, int):
-                widget.setValue(setting.default)
-            widget.valueChanged.connect(lambda v, sid=setting.id: self._record(sid, v))
-
-        elif setting.type is float:
-            widget = QDoubleSpinBox()
-            widget.setRange(-2147483648, 2147483647)
-            if isinstance(setting.default, (int, float)):
-                widget.setValue(float(setting.default))
-            widget.valueChanged.connect(lambda v, sid=setting.id: self._record(sid, v))
-
-        elif setting.type is list and setting.options:
-            widget = QComboBox()
-            widget.addItems([str(o) for o in setting.options])
+        elif setting.type is int and setting.options:
+            combo = QComboBox()
+            combo.addItems([str(o) for o in setting.options])
             if setting.default in setting.options:
-                widget.setCurrentIndex(setting.options.index(setting.default))
-            widget.currentIndexChanged.connect(
+                combo.setCurrentIndex(setting.options.index(setting.default))
+            combo.currentIndexChanged.connect(
                 lambda i, sid=setting.id, opts=setting.options: self._record(
                     sid, opts[i]
                 )
             )
+            widget = combo
+
+        elif setting.type is int:
+            spin = QSpinBox()
+            spin.setRange(-2_147_483_648, 2_147_483_647)
+            spin.setValue(int(setting.default))
+            spin.valueChanged.connect(lambda v, sid=setting.id: self._record(sid, v))
+            widget = spin
+
+        elif setting.type is float:
+            dspin = QDoubleSpinBox()
+            dspin.setRange(-2_147_483_648.0, 2_147_483_647.0)
+            dspin.setDecimals(3)
+            dspin.setValue(float(setting.default))
+            dspin.valueChanged.connect(lambda v, sid=setting.id: self._record(sid, v))
+            widget = dspin
+
+        elif setting.type is str and setting.options:
+            combo = QComboBox()
+            combo.addItems([str(o) for o in setting.options])
+            if setting.default in setting.options:
+                combo.setCurrentIndex(setting.options.index(setting.default))
+            combo.currentIndexChanged.connect(
+                lambda i, sid=setting.id, opts=setting.options: self._record(
+                    sid, opts[i]
+                )
+            )
+            widget = combo
 
         else:
-            widget = QLineEdit()
-            widget.setText(str(setting.default) if setting.default is not None else "")
-            widget.textChanged.connect(lambda v, sid=setting.id: self._record(sid, v))
+            line = QLineEdit()
+            line.setText(str(setting.default) if setting.default is not None else "")
+            line.textChanged.connect(lambda v, sid=setting.id: self._record(sid, v))
+            widget = line
 
         widget.setToolTip(setting.description)
         self._setting_widgets[setting.id] = widget
         return widget
 
-    # ------------------------------------------------------------------ #
-    # Slots                                                                #
-    # ------------------------------------------------------------------ #
+    # ──────────────────────────────────────────────────────────────────────────
+    # Widget value helper (shared by load_saved and _restore_widget)
+    # ──────────────────────────────────────────────────────────────────────────
 
-    def _record(self, setting_id: str, value: int | float | str | bool | list) -> None:
+    def _set_widget_value(
+        self,
+        widget: QWidget,
+        value: Any,
+        setting: Setting[Any],
+    ) -> None:
+        """
+        Write *value* into *widget* without triggering _record().
+        Signals are blocked for the duration so no pending change is created.
+        """
+        widget.blockSignals(True)
+        try:
+            if isinstance(widget, QCheckBox):
+                widget.setChecked(bool(value))
+
+            elif isinstance(widget, QDoubleSpinBox):
+                widget.setValue(float(value))
+
+            elif isinstance(widget, QSpinBox):
+                widget.setValue(int(value))
+
+            elif isinstance(widget, QComboBox):
+                # Options may be ints or strings — match by string representation
+                idx = widget.findText(str(value))
+                if idx >= 0:
+                    widget.setCurrentIndex(idx)
+
+            elif isinstance(widget, QLineEdit):
+                widget.setText(str(value))
+
+        finally:
+            widget.blockSignals(False)
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Slots
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _record(self, setting_id: str, value: Any) -> None:
         self._pending_changes[setting_id] = value
 
     def _on_apply(self) -> None:
@@ -201,32 +301,10 @@ class SettingsDialog(QDialog, BasePanel):
         for item in self._list_items:
             for tab in item.tabs:
                 for setting in tab.settings:
-                    self._restore_widget(setting)
+                    widget = self._setting_widgets.get(setting.id)
+                    if widget is not None:
+                        self._set_widget_value(widget, setting.default, setting)
         self._pending_changes.clear()
-
-    def _restore_widget(self, setting: Setting) -> None:
-        from PyQt6.QtWidgets import QCheckBox, QComboBox, QDoubleSpinBox, QSpinBox
-
-        widget = self._setting_widgets.get(setting.id)
-        if widget is None or setting.default is None:
-            return
-
-        if isinstance(widget, QCheckBox):
-            widget.setChecked(setting.default is True)
-        elif isinstance(widget, QSpinBox) and isinstance(setting.default, int):
-            widget.setValue(setting.default)
-        elif isinstance(widget, QDoubleSpinBox) and isinstance(
-            setting.default, (int, float)
-        ):
-            widget.setValue(float(setting.default))
-        elif (
-            isinstance(widget, QComboBox)
-            and setting.options
-            and setting.default in setting.options
-        ):
-            widget.setCurrentIndex(setting.options.index(setting.default))
-        elif isinstance(widget, QLineEdit):
-            widget.setText(str(setting.default))
 
     def _on_search(self, text: str) -> None:
         query = text.strip().lower()
@@ -234,3 +312,14 @@ class SettingsDialog(QDialog, BasePanel):
             item = self.settings_list.item(i)
             assert item is not None
             item.setHidden(bool(query and query not in item.text().lower()))
+
+    # ──────────────────────────────────────────────────────────────────────────
+    # Helpers
+    # ──────────────────────────────────────────────────────────────────────────
+
+    def _clear(self) -> None:
+        self.settings_list.clear()
+        while self.settings_stack.count():
+            self.settings_stack.removeWidget(self.settings_stack.widget(0))
+        self._setting_widgets.clear()
+        self._pending_changes.clear()
