@@ -62,16 +62,17 @@ class AudioPanel(BasePanel):
         self.device_combo = None
         self.playing_label = None
         self.kick_visualizer = None
+        self.spectrumWidget = QWidget()
         self.logs = Logs()
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the audio panel UI elements."""
         # Title
         topWidget = QWidget()
-        topLayout = QVBoxLayout(topWidget)
+        self.topLayout = QVBoxLayout(topWidget)
         title_label = QLabel("Audio")
         title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
-        topLayout.addWidget(title_label)
+        self.topLayout.addWidget(title_label)
 
         # Control buttons and combo
         controls_layout = QHBoxLayout()
@@ -99,21 +100,20 @@ class AudioPanel(BasePanel):
         self.device_combo.currentTextChanged.connect(self._device_selection_callback)
         controls_layout.addWidget(self.device_combo)
 
-        topLayout.addLayout(controls_layout)
+        self.topLayout.addLayout(controls_layout)
 
         self.playing_label = QLabel("No track playing")
-        topLayout.addWidget(self.playing_label)
+        self.topLayout.addWidget(self.playing_label)
 
-        spectrumWidget = QWidget()
-        spectrumLayout = QVBoxLayout(spectrumWidget)
+        self.spectrumLayout = QVBoxLayout(self.spectrumWidget)
 
         # Add spike detector visualizer from listener
         if self.listener and hasattr(self.listener, "kick_visualizer"):
             self.kick_visualizer = self.listener.kick_visualizer
-            topLayout.addWidget(self.kick_visualizer, 1)
+            self.topLayout.addWidget(self.kick_visualizer, 1)
         if self.listener and hasattr(self.listener, "freq_visualizer"):
             self.freq_visualizer = self.listener.freq_visualizer
-            spectrumLayout.addWidget(self.freq_visualizer, 1)
+            self.spectrumLayout.addWidget(self.freq_visualizer, 1)
 
         logsWidget = QWidget()
         logs_layout = QVBoxLayout(logsWidget)
@@ -121,7 +121,7 @@ class AudioPanel(BasePanel):
 
         splitter = QSplitter(Qt.Orientation.Vertical)
         splitter.addWidget(topWidget)
-        splitter.addWidget(spectrumWidget)
+        splitter.addWidget(self.spectrumWidget)
         splitter.addWidget(logsWidget)
         splitter.setStretchFactor(0, 50)
         splitter.setStretchFactor(1, 20)

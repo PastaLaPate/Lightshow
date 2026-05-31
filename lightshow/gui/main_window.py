@@ -2,11 +2,9 @@ import threading
 import traceback
 from typing import Any, List, Type
 
-import qdarktheme
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QAction, QGuiApplication
+from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import (
-    QApplication,
     QHBoxLayout,
     QMainWindow,
     QMenuBar,
@@ -28,7 +26,7 @@ from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.gui.panels.stats import StatsPanel
 from lightshow.gui.utils.ui_signals import ui_signals
 from lightshow.utils import global_config
-from lightshow.utils.config import ACCENT_COLORS, SETTINGS, live_devices
+from lightshow.utils.config import SETTINGS, live_devices
 from lightshow.utils.logger import Logger
 
 
@@ -221,53 +219,13 @@ class UIManager(QMainWindow):
         self.settings_dialog.exec()
 
     def _apply_settings(self, settings: dict[str, Any]):
-        should_update_palette = False
-        for key, value in settings.items():
-            if key.startswith("ui."):
-                self.logger.info(f"Applying UI setting {key}={value}")
-                if "ui_theme" in key or "ui_accent_color" in key:
-                    should_update_palette = True
-
-        # 2. Extract and regenerate colors if necessary
-        if should_update_palette:
-            app = QApplication.instance()
-            if isinstance(app, QApplication):
-                self.logger.info(
-                    "Updating application palette based on new UI settings."
-                )
-                # Resolve target theme (Handles flat keys or nested dictionary formats)
-                theme_setting = next(
-                    (v for k, v in settings.items() if "ui_theme" in k), "auto"
-                )
-
-                # Parse 'auto' using Qt6's native background color scheme detector
-                if theme_setting == "auto":
-                    scheme = QGuiApplication.styleHints().colorScheme()
-                    theme_mode = "dark" if scheme == Qt.ColorScheme.Dark else "light"
-                else:
-                    theme_mode = (
-                        theme_setting if theme_setting in ["light", "dark"] else "light"
-                    )
-
-                # Resolve accent selection
-                accent_setting = next(
-                    (v for k, v in settings.items() if "ui_accent_color" in k),
-                    "Default",
-                )
-                hex_color = ACCENT_COLORS.get(accent_setting, None)
-
-                # Format the customization payload for pyqtdarktheme
-                custom_payload = {"primary": hex_color} if hex_color else None
-
-                # Ensure the underlying engine uses 'Fusion' geometry to ensure it responds properly to palettes
-                if app.style().objectName() != "fusion":
-                    app.setStyle("Fusion")
-
-                # Extract the palette with your custom configurations loaded over it
-                palette = qdarktheme.load_palette(
-                    theme_mode, custom_colors=custom_payload
-                )
-                app.setPalette(palette)
+        for sid, value in settings.items():
+            if sid == "ui.layout.show_spectrum":
+                self.audio_panel.spectrumWidget.setVisible(value or False)
+            elif sid == "ui.layout.show_beat_detection":
+                w = self.audio_panel.kick_visualizer
+                if isinstance(w, QWidget):
+                    w.setVisible(value)
         global_config.apply(settings)
 
     def _on_device_select(self, device_name):

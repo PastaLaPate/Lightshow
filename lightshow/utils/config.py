@@ -14,10 +14,6 @@ from lightshow.devices.device import Device
 from lightshow.devices.devices_types import DeviceTypeName
 from lightshow.utils.logger import Logger
 
-# ─────────────────────────────────────────────
-# Shared setting dataclasses (used by UI too)
-# ─────────────────────────────────────────────
-
 
 class DeviceConfigType(TypedDict):
     type: DeviceTypeName
@@ -51,20 +47,6 @@ class SettingTab:
     settings: list[Setting] = field(default_factory=list)
 
 
-# ─────────────────────────────────────────────
-# Settings tree — the single source of truth
-# Add a Setting here → Config gets it for free
-# ─────────────────────────────────────────────
-
-ACCENT_COLORS = {
-    "Default": None,  # Let pyqtdarktheme use its default theme primary color
-    "Blue": "#1a73e8",
-    "Purple": "#7050e0",
-    "Green": "#2ecc71",
-    "Red": "#e74c3c",
-    "Orange": "#e67e22",
-}
-
 SETTINGS: list[SettingListItem] = [
     SettingListItem(
         id="ui",
@@ -76,22 +58,26 @@ SETTINGS: list[SettingListItem] = [
                 id="ui.general",
                 name="General",
                 description="General UI settings",
+                settings=[],
+            ),
+            SettingTab(
+                id="ui.layout",
+                name="Layout",
+                description="Change the ui's layout",
                 settings=[
                     Setting(
-                        id="ui.general.ui_theme",
-                        name="Theme",
-                        description="Light or dark theme for the application",
-                        type=list,
-                        options=["light", "dark"],
-                        default="light",
+                        id="ui.layout.show_spectrum",
+                        name="Show Spectrum",
+                        description="Show the spectrum visualization",
+                        type=bool,
+                        default=True,
                     ),
                     Setting(
-                        id="ui.general.accent_color",
-                        name="Accent Color",
-                        description="The main focus and selection color for UI elements",
-                        type=list,
-                        options=list(ACCENT_COLORS.keys()),
-                        default="Default",
+                        id="ui.layout.show_beat_detection",
+                        name="Show Beat Detection",
+                        description="Show the beat detection visualization",
+                        type=bool,
+                        default=True,
                     ),
                 ],
             ),
@@ -125,6 +111,21 @@ SETTINGS: list[SettingListItem] = [
                     ),
                 ],
             ),
+            SettingTab(
+                id="audio.detection",
+                name="Beat detection",
+                description="Beat detection settings",
+                settings=[
+                    Setting(
+                        id="audio.detection.beat_algorithm",
+                        name="Algorithm",
+                        description="Beat detection algorithm",
+                        type=list,
+                        options=["Average Diff", "Percentile"],
+                        default="Percentile",
+                    ),
+                ],
+            ),
         ],
     ),
     SettingListItem(
@@ -139,7 +140,7 @@ SETTINGS: list[SettingListItem] = [
                 description="General performance settings",
                 settings=[
                     Setting(
-                        id="max_fps",
+                        id="performance.general.max_fps",
                         name="Max FPS",
                         description="Maximum frames per second for light output",
                         type=int,
@@ -179,8 +180,9 @@ class _ConfigAttrs:
     audio_sensitivity: float
     chunk_size: int
     max_fps: int
-    ui_theme: str
-    accent_color: str
+    show_spectrum: bool
+    show_beat_detection: bool
+    beat_algorithm: str
 
 
 # ─────────────────────────────────────────────
