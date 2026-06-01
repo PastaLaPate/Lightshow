@@ -62,19 +62,19 @@ class RGB(Command):  # out of 255
         return f"r={self.r};g={self.g};b={self.b}"
 
     @classmethod
-    def fromTuple(cls, tuple: Tuple[int, int, int]):
+    def fromTuple(cls, tuple: Tuple[int, int, int]) -> RGB:
         return cls.fromList(list(tuple))
 
     @classmethod
-    def fromList(cls, list: List[int]):
+    def fromList(cls, list: List[int]) -> RGB:
         return cls(list[0], list[1], list[2])
 
     @classmethod
-    def fromRGBsList(cls, list: List[List[int]]):
+    def fromRGBsList(cls, list: List[List[int]]) -> List[RGB]:
         return [cls.fromList(x) for x in list]
 
     @classmethod
-    def fromRGBsTupleList(cls, list: List[Tuple[int, int, int]]):
+    def fromRGBsTupleList(cls, list: List[Tuple[int, int, int]]) -> List[RGB]:
         return [cls.fromTuple(x) for x in list]
 
 

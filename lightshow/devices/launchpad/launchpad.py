@@ -1,7 +1,7 @@
 import threading
 import time
 from dataclasses import dataclass
-from enum import IntEnum
+from enum import Enum, IntEnum
 from itertools import cycle
 from typing import Callable, Dict, List, Literal
 
@@ -9,6 +9,7 @@ import mido
 
 from lightshow.devices.device import InputDevice, PacketData, PacketStatus, PacketType
 from lightshow.devices.devices_types import DeviceTypeName
+from lightshow.devices.moving_head.animations import BounceAnimation
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.devices.moving_head.moving_head_animations import AMHAnimation
 from lightshow.devices.moving_head.moving_head_colors import (
@@ -18,6 +19,7 @@ from lightshow.devices.moving_head.moving_head_colors import (
     RedLowsModulator,
     StartWhiteTransformer,
     ToBlackTransformer,
+    random_rainbow_color,
 )
 from lightshow.devices.moving_head.moving_head_controller import (
     CIRCLE_ANIMATION,
@@ -31,8 +33,8 @@ from lightshow.utils import config
 @dataclass
 class Buttons:
     # Row 1 (Top / Indices 12-15)
-    COLOR_RED: int = 12
-    COLOR_BLUE: int = 13
+    COLORS_MODES: int = 12
+    Temp: int = 13
     FLASH_WHITE: int = 14
     FADE_BLACK: int = 15
 
@@ -67,6 +69,7 @@ class Colors:
     GRAY: int = 2
     DARK_GRAY: int = 1
     BLACK: int = 0
+    BLUE: int = 45
 
 
 # From bottom left to top right
@@ -127,6 +130,13 @@ class ControlMode(IntEnum):
     HYBRID = 2  # Receives beat, but can still control animations
 
 
+class ColorModes(Enum):
+    RED = RED_COLORS
+    BLUE = BLUE_COLORS
+    RAINBOW = random_rainbow_color
+    RANDOM = 4
+
+
 class MovingHeadPanelSlot(PanelSlot):
     def __init__(self, launchpad: LaunchpadX, device_id: str, index: int) -> None:
         super().__init__(launchpad, device_id, index)
@@ -140,6 +150,8 @@ class MovingHeadPanelSlot(PanelSlot):
         self.controls_mode = cycle(
             [ControlMode.AUTO, ControlMode.MANUAL, ControlMode.HYBRID]
         )
+        self.color_mode = ColorModes.RANDOM
+        self.colors_modes = cycle([e.value for e in ColorModes])
         self.auto_tick = False
         self.breaking = False
         self.random_anim = True
@@ -155,7 +167,7 @@ class MovingHeadPanelSlot(PanelSlot):
             self.moving_head.controller.current_anim.setTransformer(transformer)
             if self.moving_head.controller._is_circle_animation(
                 self.moving_head.controller.current_anim
-            ):
+            ) or isinstance(self.moving_head.controller.current_anim, BounceAnimation):
                 self.moving_head.controller.current_anim.change_color_on_tick = (  # type: ignore
                     isinstance(
                         self.moving_head.controller.current_anim.transformer,
@@ -187,10 +199,18 @@ class MovingHeadPanelSlot(PanelSlot):
             return
 
         # --- ROW 1: COLORS & FLASH ---
-        if key == Buttons.COLOR_RED:
-            self.moving_head.controller.current_anim.setRGB(RED_COLORS)
-        elif key == Buttons.COLOR_BLUE:
-            self.moving_head.controller.current_anim.setRGB(BLUE_COLORS)
+        if key == Buttons.COLORS_MODES:
+            next_mode = next(self.colors_modes)
+            self.moving_head.controller.current_anim.setRGB(
+                next_mode
+                if not isinstance(next_mode, int)
+                else self.moving_head.controller._select_color_mode_for_anim(
+                    self.moving_head.controller.current_anim
+                )
+            )
+
+        # elif key == Buttons.COLOR_BLUE:
+        #    self.moving_head.controller.current_anim.setRGB(BLUE_COLORS)
         elif key == Buttons.FLASH_WHITE:
             if not isinstance(
                 self.moving_head.controller.current_anim.transformer,
@@ -236,6 +256,10 @@ class MovingHeadPanelSlot(PanelSlot):
                         self.moving_head.controller.current_anim.setTransformer(
                             BlankTransformer()
                         )
+                        if self.moving_head.controller._is_circle_animation(
+                            self.moving_head.controller.current_anim
+                        ):
+                            self.moving_head.controller.current_anim.change_color_on_tick = False
                     else:
                         self.moving_head.controller.current_anim.setTransformer(
                             RedLowsModulator()
@@ -243,9 +267,7 @@ class MovingHeadPanelSlot(PanelSlot):
                         if self.moving_head.controller._is_circle_animation(
                             self.moving_head.controller.current_anim
                         ):
-                            self.moving_head.controller.current_anim.change_color_on_tick = (  # type: ignore
-                                True
-                            )
+                            self.moving_head.controller.current_anim.change_color_on_tick = True
 
         # --- ROW 3: TICKING & RANDOM ---
         elif key == Buttons.AUTO_TICK:
@@ -355,8 +377,15 @@ class MovingHeadPanelSlot(PanelSlot):
         )
 
         # --- ROW 1 (Top) ---
-        self.set_color(Buttons.COLOR_RED, Colors.BRIGHT_RED)
-        self.set_color(Buttons.COLOR_BLUE, 45)
+        COLOR_MODES_COLORS = {
+            ColorModes.BLUE: Colors.BLUE,
+            ColorModes.RED: Colors.BRIGHT_RED,
+            ColorModes.RAINBOW: Colors.WHITE,
+        }
+        if not self.color_mode == ColorModes.RANDOM:
+            self.set_color(Buttons.COLORS_MODES, COLOR_MODES_COLORS[self.color_mode])
+        else:
+            self.set_color(Buttons.COLORS_MODES, Colors.WHITE, mode="pulse")
         self.set_color(Buttons.FLASH_WHITE, Colors.WHITE)
         self.set_color(Buttons.FADE_BLACK, Colors.GRAY, mode="pulse")
 

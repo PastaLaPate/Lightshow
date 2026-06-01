@@ -2,6 +2,7 @@ import random
 import time
 import typing
 from collections import deque
+from typing import TypeGuard
 
 import numpy as np
 
@@ -107,7 +108,9 @@ class MovingHeadController:
         self.device.current_anim = self.current_anim.__class__.__name__
         self.device.showed_props_update()
 
-    def _is_circle_animation(self, anim):
+    def _is_circle_animation(
+        self, anim
+    ) -> TypeGuard[CircleAnimation | BernoulliLemniscateAnimation]:
         """Check if animation is a circle-like animation."""
         return isinstance(anim, (CircleAnimation, BernoulliLemniscateAnimation))
 
@@ -126,7 +129,7 @@ class MovingHeadController:
         ]
         self.current_anim.setTransformer(random.choice(available_transformers)())
         if self._is_circle_animation(self.current_anim):
-            self.current_anim.change_color_on_tick = isinstance(  # type: ignore
+            self.current_anim.change_color_on_tick = isinstance(
                 self.current_anim.transformer, RedLowsModulator
             )
         """
