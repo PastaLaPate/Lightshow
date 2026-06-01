@@ -6,10 +6,12 @@ from dataclasses import dataclass
 from queue import Empty, Queue
 from typing import Dict, List, Literal  # Import Empty for cleaner queue handling
 
+import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
+from lightshow.audio.data import AudioData
 from lightshow.gui.utils import ui_signals
 from lightshow.utils.logger import Logger
 
@@ -85,7 +87,6 @@ class SpikeDetectorVisualizer(QWidget):
             plot_item.setDownsampling(mode="peak")
 
         self.plot.showGrid(x=False, y=False)
-        self.plot.addLegend(offset=(10, 10))
 
         # (Pens setup remains the same...)
         pen_energy = pg.mkPen(color=(0, 255, 255), width=2)
@@ -122,9 +123,34 @@ class SpikeDetectorVisualizer(QWidget):
             item.setPxMode(True)
             self.plot.addItem(item)
 
+        self._global_vb = pg.ViewBox()
+        pen_global = pg.mkPen(color=(255, 100, 100), width=1, style=Qt.PenStyle.DotLine)
+        self.global_curve = pg.PlotDataItem(
+            [], [], pen=pen_global, name="Global Energy"
+        )
+        self._global_vb.addItem(self.global_curve)
+        self.global_curve.setZValue(5)
+
+        plot_item = self.plot.getPlotItem()
+        if plot_item:
+            plot_item.showAxis("right")
+            plot_item.scene().addItem(self._global_vb)
+            plot_item.getAxis("right").linkToView(self._global_vb)
+            self._global_vb.setXLink(plot_item)
+            plot_item.getAxis("right").setLabel("Global Energy")
+
+            # Keep the second ViewBox geometry in sync when the main one resizes
+            plot_item.vb.sigResized.connect(self._sync_views)
+
+        self.global_energy_history: deque = deque(maxlen=visualization_len)
+
+        plot_item.addLegend(offset=(10, 10))
+        plot_item.legend.addItem(self.global_curve, "Global Energy")
+
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.plot)
+
         self.setLayout(layout)
 
     def __call__(
@@ -136,6 +162,11 @@ class SpikeDetectorVisualizer(QWidget):
             )
         except Exception:
             pass
+
+    def _sync_views(self) -> None:
+        plot_item = self.plot.getPlotItem()
+        if plot_item:
+            self._global_vb.setGeometry(plot_item.vb.sceneBoundingRect())
 
     def _process_queued_updates(self):
         """Process ALL pending updates, then repaint ONCE."""
@@ -159,7 +190,9 @@ class SpikeDetectorVisualizer(QWidget):
         if has_new_data:
             self.qt_update()
 
-    def _on_update_data(self, data, beat_detected, break_detected, drop_detected):
+    def _on_update_data(
+        self, data: AudioData, beat_detected, break_detected, drop_detected
+    ):
         try:
             # Get freq_range from spike_detector or its parent if using new architecture
             freq_range = getattr(
@@ -169,7 +202,12 @@ class SpikeDetectorVisualizer(QWidget):
             )
 
             current_energy = data.frequencies[freq_range[0] : freq_range[1] + 1].mean()
-
+            raw = np.log1p(data.frequencies).mean()
+            alpha = 0.02
+            if not hasattr(self, "smoothed_global"):
+                self.smoothed_global = raw
+            self.smoothed_global = alpha * raw + (1 - alpha) * self.smoothed_global
+            self.global_energy_history.append(self.smoothed_global)
             self.x_history.append(self.global_index)
             self.energy_history.append(current_energy)
 
@@ -239,6 +277,11 @@ class SpikeDetectorVisualizer(QWidget):
         self.energy_curve.setData(xs, energies)
         self.diff_curve.setData(xs, diffs)
 
+        globals_ = list(self.global_energy_history)
+        if globals_:
+            gx = xs[-len(globals_) :]
+            self.global_curve.setData(gx, globals_)
+
         if len(limits) > 0:
             lx = xs[-len(limits) :]
             self.limit_curve.setData(lx, list(limits))
@@ -266,12 +309,14 @@ class SpikeDetectorVisualizer(QWidget):
         self.energy_history.clear()
         self.diff_history.clear()
         self.limit_history.clear()
+        self.global_energy_history.clear()
         for marker_type in self.marker_data:
             self.marker_data[marker_type].x.clear()
             self.marker_data[marker_type].y.clear()
         self.energy_curve.setData([], [])
         self.diff_curve.setData([], [])
         self.limit_curve.setData([], [])
+        self.global_curve.setData([], [])
         for item in self.marker_items.values():
             item.setData([], [])
         while not self.update_queue.empty():

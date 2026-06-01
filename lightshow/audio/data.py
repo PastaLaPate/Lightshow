@@ -3,12 +3,12 @@ import numpy as np
 
 class AudioData:
     """
-    Audio data containing frequency spectrum (FFT) with 20000 frequency elements.
+    Audio data containing frequency spectrum (FFT) with X frequency elements.
     """
 
     def __init__(self, frequencies):
         """
-        :param frequencies: Array of 20000 frequency magnitude values from FFT
+        :param frequencies: Array of X frequency magnitude values from FFT
         """
         self.frequencies = frequencies
 

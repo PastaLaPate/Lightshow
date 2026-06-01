@@ -1,7 +1,12 @@
+from collections import deque
+
 import numpy as np
 
 from lightshow.audio.data import AudioData
 from lightshow.audio.detectors.methods.detection_method import DetectionMethod
+from lightshow.utils import Logger
+
+logger = Logger.for_class("PercentileDetection")
 
 
 class Percentile(DetectionMethod):
@@ -10,7 +15,7 @@ class Percentile(DetectionMethod):
             sensitivity=1.75,
             sample_rate=44100,
             chunk_size=1024,
-            window_size=20.0,
+            window_size=10.0,
             bin_range=[0, 2],
             cooldown_time=0.25,
         )
@@ -21,6 +26,8 @@ class Percentile(DetectionMethod):
         self.baseline_attack = 0.995
         self.baseline_decay = 0.999
 
+        self.temp_energy_history = deque(maxlen=10)
+
         self.append_energy = False
 
     @classmethod
@@ -29,6 +36,10 @@ class Percentile(DetectionMethod):
 
     def detect(self, audio_data: AudioData, append_current_energy=True) -> bool:
         current_energy = self.register_energy(audio_data, append_current_energy)
+        if not append_current_energy:
+            if self._update_baseline:
+                self.temp_energy_history.clear()
+            self.temp_energy_history.append(current_energy)
 
         sub_energy = audio_data.get_ps_mean([0, 2])
         transient_energy = audio_data.get_ps_mean([2, 5])
@@ -43,9 +54,17 @@ class Percentile(DetectionMethod):
             self.was_above = False
             return False
 
-        current_diff = 0
-        if len(self.energy_history) > 4:
-            prev = self.energy_history[-4]
+        current_diff = current_energy
+        if (
+            len(self.energy_history) > 4
+            if append_current_energy
+            else len(self.temp_energy_history) > 4
+        ):
+            prev = (
+                self.energy_history[-4]
+                if append_current_energy
+                else self.temp_energy_history[-4]
+            )
             current_diff = max(0.0, current_energy - prev)
 
         self._update_baseline = append_current_energy
@@ -56,14 +75,16 @@ class Percentile(DetectionMethod):
         if detected:
             self.cooldown_counter = self.cooldown_frame_duration
 
-        is_settled = current_energy < (self.smoothed_baseline or 0 * 0.8)
+        is_settled = current_energy < ((self.smoothed_baseline or 0) * 0.8)
 
+        detected = False
         if is_above and not self.was_above:
             detected = True
             self.cooldown_counter = self.cooldown_frame_duration
             self.was_above = True
         elif not is_above and is_settled:
             self.was_above = False
+
         return detected
 
     def get_limit(self) -> float:
