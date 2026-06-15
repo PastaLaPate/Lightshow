@@ -48,7 +48,6 @@ lightshow = { workspace = true }
 [dependency-groups]
 dev = [
     "isort>=8.0.1",
-    "lightshow",
     "pre-commit>=4.6.0",
     "ruff>=0.15.15",
     "ty>=0.0.42",

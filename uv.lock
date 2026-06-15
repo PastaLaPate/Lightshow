@@ -404,7 +404,6 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "isort" },
-    { name = "lightshow" },
     { name = "pre-commit" },
     { name = "ruff" },
     { name = "ty" },
@@ -438,7 +437,6 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "isort", specifier = ">=8.0.1" },
-    { name = "lightshow", editable = "." },
     { name = "pre-commit", specifier = ">=4.6.0" },
     { name = "ruff", specifier = ">=0.15.15" },
     { name = "ty", specifier = ">=0.0.42" },
