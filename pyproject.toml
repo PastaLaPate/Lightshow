@@ -9,15 +9,15 @@ dependencies = [
     "PyQt6-Charts>=6.7.0",
     "librosa>=0.11.0",
     "numpy>=2.4.6",
-    "ty>=0.0.42",
+    "ty>=0.0.49",
     "websocket-client>=1.8.0",
     "winrt-runtime>=3.2.1 ; platform_system == \"Windows\"",
     "winrt-windows-media>=3.2.1 ; platform_system == \"Windows\"",
     "winrt-windows-media-control>=3.2.1 ; platform_system == \"Windows\"",
     "winrt-windows-foundation>=3.2.1 ; platform_system == \"Windows\"",
     "winrt-windows-foundation-collections>=3.2.1 ; platform_system == \"Windows\"",
-    "pyinstaller>=6.20.0",
-    "matplotlib>=3.10.9",
+    "pyinstaller>=6.21.0",
+    "matplotlib>=3.11.0",
     "pyqtgraph>=0.14.0",
     "dbus-next>=0.2.3",
     "pyopengl>=3.1.10",
@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["pdm-backend>=2.4.8"]
+requires = ["pdm-backend>=2.4.9"]
 build-backend = "pdm.backend"
 
 [tool.setuptools]
@@ -50,8 +50,8 @@ dev = [
     "isort>=8.0.1",
     "lightshow",
     "pre-commit>=4.6.0",
-    "ruff>=0.15.15",
-    "ty>=0.0.42",
+    "ruff>=0.15.17",
+    "ty>=0.0.49",
 ]
 
 [project.scripts]
