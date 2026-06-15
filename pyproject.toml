@@ -50,7 +50,7 @@ dev = [
     "isort>=8.0.1",
     "lightshow",
     "pre-commit>=4.6.0",
-    "ruff>=0.15.15",
+    "ruff>=0.15.17",
     "ty>=0.0.42",
 ]
 
