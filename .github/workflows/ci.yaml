@@ -20,8 +20,8 @@ jobs:
         with:
           enable-cache: true
       - name: Install PortAudio
-        run: sudo apt install -y portaudio19-dev
-
+        run: sudo apt-get update |
+             sudo apt install -y portaudio19-dev
       - name: Install dependencies
         run: uv sync --locked --all-extras
 
