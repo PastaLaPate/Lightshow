@@ -3,7 +3,6 @@ import threading
 from datetime import datetime
 from pathlib import Path
 from queue import Queue
-from typing import Optional
 
 # ---------------------------------------------------------------------------
 # Formatters & Filters
@@ -83,7 +82,7 @@ class _QtQueueHandler(logging.Handler):
 
 
 class _RootLoggerConfig:
-    _instance: Optional["_RootLoggerConfig"] = None
+    _instance: _RootLoggerConfig | None = None
     _lock = threading.Lock()
 
     def __new__(cls):
@@ -96,7 +95,7 @@ class _RootLoggerConfig:
     def __init_once(self) -> None:
         self._configured = False
         self._qt_queue: Queue = Queue()
-        self._last_fps_html: Optional[str] = None
+        self._last_fps_html: str | None = None
         self._qt_widget = None
         self.app_name: str = "App"
 
@@ -196,7 +195,7 @@ class Logger:
         self._log = logging.getLogger(f"{app_name}.{cls_name}")
 
     @classmethod
-    def for_class(cls, name: str) -> "Logger":
+    def for_class(cls, name: str) -> Logger:
         return cls(name)
 
     def debug(self, msg: str, *args) -> None:

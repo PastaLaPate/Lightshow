@@ -1,15 +1,15 @@
-from .ListAnimation import ListAnimation
+from .BernoulliLemniscateAnimation import BernoulliLemniscateAnimation
+from .BounceAnimation import BounceAnimation
 from .BreakCircleAnimation import BreakCircleAnimation
 from .CircleAnimation import CircleAnimation
-from .BounceAnimation import BounceAnimation
+from .ListAnimation import ListAnimation
 from .RegularPolygonAnimation import RegularPolygonAnimation
-from .BernoulliLemniscateAnimation import BernoulliLemniscateAnimation
 
 __all__ = [
-    "ListAnimation",
+    "BernoulliLemniscateAnimation",
+    "BounceAnimation",
     "BreakCircleAnimation",
     "CircleAnimation",
-    "BounceAnimation",
+    "ListAnimation",
     "RegularPolygonAnimation",
-    "BernoulliLemniscateAnimation",
 ]

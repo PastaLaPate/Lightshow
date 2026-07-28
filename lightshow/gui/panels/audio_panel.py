@@ -1,5 +1,4 @@
 import threading
-from typing import Dict
 
 import soundcard
 from PyQt6.QtCore import Qt
@@ -35,7 +34,7 @@ class AudioPanel(BasePanel):
         self.listener = listener
         listener.track_tracker.add_track_changed_listener(self.on_track_changed)
         self.audio_handler = audio_handler
-        self.audio_devices: Dict[
+        self.audio_devices: dict[
             str, dict
         ] = {}  # Name -> Serialized device info (id, is_loopback, etc)
         self.audio_devices["Autodetect used speaker"] = AudioDevice(
@@ -93,7 +92,7 @@ class AudioPanel(BasePanel):
             if selected_device:
                 self.device_combo.setCurrentText(selected_device)
         except Exception:
-            logger.warn(
+            logger.warning(
                 "Failed to set audio device combo to saved config value, defaulting to first option."
             )
             self.device_combo.setCurrentIndex(0)

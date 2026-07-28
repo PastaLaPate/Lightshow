@@ -1,15 +1,15 @@
 import random
 from abc import ABC, abstractmethod
-from typing import Callable, List
+from collections.abc import Callable
 
 from lightshow.audio.data import AudioData
 from lightshow.devices.animations import AAnimation
 from lightshow.devices.animations.AAnimation import RGB, FadeCommand, FlickerCommand
 from lightshow.utils.colors import hsv_to_rgb
 
-COLOR_MODE = List[RGB] | Callable[[], RGB]
+COLOR_MODE = list[RGB] | Callable[[], RGB]
 
-DEFAULT_RGBs: List[RGB] = RGB.fromRGBsList([[255, 0, 0], [0, 255, 0], [0, 0, 255]])
+DEFAULT_RGBs: list[RGB] = RGB.fromRGBsList([[255, 0, 0], [0, 255, 0], [0, 0, 255]])
 
 RAINBOW_KICK_COLORS = RGB.fromRGBsTupleList(
     [

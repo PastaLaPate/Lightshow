@@ -16,7 +16,7 @@ if importlib.util.find_spec("OpenGL", "GL"):
     _logger.debug("Using OpenGL")
 else:
     OPENGL_AVAILABLE = False
-    _logger.warn("Unable to use OpenGL. Expect poor performance")
+    _logger.warning("Unable to use OpenGL. Expect poor performance")
 
 
 def _hermite_interpolate(values: np.ndarray, upsample: int = 8) -> np.ndarray:

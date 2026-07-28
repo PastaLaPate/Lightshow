@@ -1,6 +1,5 @@
 import random
 from itertools import cycle
-from typing import List
 
 from lightshow.devices.animations.AAnimation import RGB
 from lightshow.devices.moving_head.moving_head_animations import (
@@ -17,8 +16,8 @@ class ListAnimation(AMHAnimation):
     def __init__(
         self,
         rgb: COLOR_MODE,
-        topServo: List[ServoCommand | int],
-        baseServo: List[ServoCommand | int],
+        topServo: list[ServoCommand | int],
+        baseServo: list[ServoCommand | int],
     ):
         super().__init__()
         self.cached_rgb = RGB(0, 0, 0)

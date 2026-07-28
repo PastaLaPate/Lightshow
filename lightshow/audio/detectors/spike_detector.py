@@ -26,7 +26,7 @@ class SpikeDetector:
         detection_type=DetectionType.UPPER,
         min_duration=50 / 1000,
         cooldown=300 / 1000,
-    ):  #
+    ):
         """
         :param sensitivity: Factor by which the current energy must exceed the average to trigger the smaller the more sensitive.
         :param window_size: Number of recent frames over which to average energy in seconds.

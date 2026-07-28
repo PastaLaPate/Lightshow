@@ -48,7 +48,7 @@ BOUNCE_ANIMATION = BounceAnimation(DEFAULT_RGBs)
 
 
 class MovingHeadController:
-    def __init__(self, device: "MovingHead"):
+    def __init__(self, device: MovingHead):
         self.device = device
         self.waiting_music = False
         self.logger = Logger(f"MovingHeadController{{{device.id}}}")
@@ -89,7 +89,7 @@ class MovingHeadController:
         self.init_state()
 
     def init_lists(self):
-        self.anim_list: typing.List[AMHAnimation] = [
+        self.anim_list: list[AMHAnimation] = [
             TRIANGLE_ANIMATION,
             CIRCLE_ANIMATION,
             LEMNISCATE_ANIMATION,

@@ -5,7 +5,8 @@ if not os.name == "posix":
 
 import asyncio
 import threading
-from typing import Callable, Final, Protocol, runtime_checkable
+from collections.abc import Callable
+from typing import Final, Protocol, runtime_checkable
 
 from dbus_next.aio.message_bus import MessageBus
 from dbus_next.constants import BusType
@@ -58,7 +59,7 @@ PLAYER_PRIORITY: Final[list[str]] = [
 _log = Logger("TracksInfoTracker")
 
 
-def _extract_title(meta: "dict[str, Variant]") -> str:
+def _extract_title(meta: dict[str, Variant]) -> str:
     title_var = meta.get("xesam:title")
     if title_var is None:
         return "Unknown Title"
@@ -66,7 +67,7 @@ def _extract_title(meta: "dict[str, Variant]") -> str:
     return value if isinstance(value, str) else "Unknown Title"
 
 
-def _extract_artist(meta: "dict[str, Variant]") -> str:
+def _extract_artist(meta: dict[str, Variant]) -> str:
     artist_var = meta.get("xesam:artist")
     if artist_var is None:
         return "Unknown Artist"
@@ -93,9 +94,9 @@ class LinuxTracksInfoTracker(ATrackTracker):
 
     def __init__(self) -> None:
         super().__init__()
-        self._bus: "MessageBus | None" = None
-        self._players: "dict[str, PlayerInterface]" = {}
-        self._props: "dict[str, PropertiesInterface]" = {}
+        self._bus: MessageBus | None = None
+        self._players: dict[str, PlayerInterface] = {}
+        self._props: dict[str, PropertiesInterface] = {}
         self._status: dict[str, str] = {}
         self._active_player: str | None = None
 
@@ -215,7 +216,7 @@ class LinuxTracksInfoTracker(ATrackTracker):
         self,
         name: str,
         iface: str,
-        changed: "dict[str, Variant]",
+        changed: dict[str, Variant],
     ) -> None:
         if iface != "org.mpris.MediaPlayer2.Player":
             return
@@ -242,11 +243,11 @@ class LinuxTracksInfoTracker(ATrackTracker):
     async def _emit_track_info_for(
         self,
         name: str,
-        metadata: "Variant | None",
+        metadata: Variant | None,
     ) -> None:
         try:
             if metadata is not None:
-                raw: "dict[str, Variant]" = (
+                raw: dict[str, Variant] = (
                     metadata.value if isinstance(metadata.value, dict) else {}
                 )
             else:

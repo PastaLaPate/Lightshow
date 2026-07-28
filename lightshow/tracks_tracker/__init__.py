@@ -3,7 +3,7 @@ from typing import Type
 
 from lightshow.tracks_tracker.abstract_tracker import ATrackTracker
 
-PlatformSpecificTracker: Type[ATrackTracker]
+PlatformSpecificTracker: type[ATrackTracker]
 if os.name == "nt":
     from lightshow.tracks_tracker.windows import WindowsTracksInfoTracker
 

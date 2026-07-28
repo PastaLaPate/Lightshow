@@ -15,10 +15,11 @@ import json
 import os
 import platform
 import sys
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from importlib.metadata import version
 from pathlib import Path
-from typing import Any, ClassVar, Dict, Generic, Iterator, TypeVar
+from typing import Any, ClassVar, Generic, TypeVar
 
 import distro
 
@@ -330,8 +331,8 @@ SETTINGS_CATEGORIES: list[SettingListItem] = [
 
 
 class DeviceConfigType(dict):  # keep TypedDict-style usage working
-    type: "DeviceTypeName"
-    props: Dict[str, Any]
+    type: DeviceTypeName
+    props: dict[str, Any]
 
 
 def resource_path(relative_path: str) -> str:
@@ -401,7 +402,7 @@ class Config:
                 AudioDevice(is_default=True, is_loopback=True).to_dict(),
             )
         )
-        self.devices: Dict[str, DeviceConfigType] = self._raw.get("devices", {})
+        self.devices: dict[str, DeviceConfigType] = self._raw.get("devices", {})
 
         # Managed settings
         self.settings: SettingsMap = SettingsMap(SETTINGS.all())
@@ -432,7 +433,7 @@ class Config:
                 self.settings.set_by_id(key, value)
                 self._raw[key] = self.settings.get_by_id(key)
             except KeyError:
-                self.logger.warn(f"apply(): unknown setting id {key!r} — ignored")
+                self.logger.warning(f"apply(): unknown setting id {key!r} — ignored")
 
     def save(self) -> None:
         # Persist managed settings
@@ -453,4 +454,4 @@ class Config:
 
 
 global_config = Config()
-live_devices: Dict[str, Device] = {}
+live_devices: dict[str, Device] = {}

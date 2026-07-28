@@ -1,7 +1,7 @@
 import socket
 import threading
 import traceback
-from typing import Any, List, Literal, Tuple
+from typing import Any, Literal
 
 import requests
 
@@ -150,7 +150,7 @@ class MovingHead(OutputDevice):
         # print(command.toMHCommand())
         self.send_message(command.toUDP_MH_Command())
 
-    def sendCommands(self, commands: List[Command]):
+    def sendCommands(self, commands: list[Command]):
         commands_dicts = [command.toUDP_MH_Command() for command in commands]
         self.send_message(";".join(commands_dicts))
 
@@ -171,7 +171,7 @@ class MovingHead(OutputDevice):
 
         return super().on(packet)
 
-    def save(self) -> Tuple[str, dict[str, Any]]:
+    def save(self) -> tuple[str, dict[str, Any]]:
         return self.DEVICE_TYPE_NAME, {
             "ip": self.ip,
             "device_name": self.device_name,
@@ -181,7 +181,7 @@ class MovingHead(OutputDevice):
             "top_range": self.top_range,
         }
 
-    def load(self, data: Tuple[str, dict[str, Any]]) -> bool:
+    def load(self, data: tuple[str, dict[str, Any]]) -> bool:
         name, config = data
         self.device_name = name
         self.ip = config.get("ip", self.ip)

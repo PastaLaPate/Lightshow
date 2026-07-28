@@ -5,8 +5,7 @@ from time import time_ns
 import pyqtgraph as pg
 from PyQt6.QtCore import QObject, pyqtSignal
 
-import lightshow.audio.detectors as detectors
-import lightshow.utils.config as config
+from lightshow.audio import detectors
 from lightshow.audio.audio_streams import (
     AAudioStreamHandler,
     AudioListener,
@@ -19,7 +18,7 @@ from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.gui.main_window import UIManager
 from lightshow.tracks_tracker import PlatformSpecificTracker
 from lightshow.tracks_tracker.types import PlaybackStatus, TrackInfo
-from lightshow.utils import Logger
+from lightshow.utils import Logger, config
 from lightshow.utils.config import ARCH, OS, PYTHON_VERSION, VERSION, resource_path
 from lightshow.utils.update_checker import is_update_available
 from lightshow.visualization.frequencies_visualizer import FrequenciesVisualizer

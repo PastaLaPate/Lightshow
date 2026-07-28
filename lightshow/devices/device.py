@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Tuple
+from typing import Any
 
 
 class PacketType(Enum):
@@ -76,7 +76,6 @@ class Device(ABC):
     @abstractmethod
     def disconnect(self):
         self.ready = False
-        return
 
     @abstractmethod
     def scan_for_device(self) -> bool:  # Returns if a device was found
@@ -88,12 +87,12 @@ class Device(ABC):
 
     # Name, data
     @abstractmethod
-    def save(self) -> Tuple[str, dict[str, Any]]:
+    def save(self) -> tuple[str, dict[str, Any]]:
         pass
 
     # Returns if correctly loaded
     @abstractmethod
-    def load(self, data: Tuple[str, dict[str, Any]]) -> bool:
+    def load(self, data: tuple[str, dict[str, Any]]) -> bool:
         pass
 
     @property

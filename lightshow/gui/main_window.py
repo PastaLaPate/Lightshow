@@ -1,6 +1,6 @@
 import threading
 import traceback
-from typing import Any, List, Type
+from typing import Any
 
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QAction
@@ -41,7 +41,7 @@ class UIManager(QMainWindow):
         self.logger = Logger("UIManager")
         self.listener = audio_listener
         self.audio_handler = audio_handler
-        self.device_types: List[Type[Device]] = [MovingHead, LaunchpadX]
+        self.device_types: list[type[Device]] = [MovingHead, LaunchpadX]
         self.ui_signals = ui_signals
 
         # Initialize panels

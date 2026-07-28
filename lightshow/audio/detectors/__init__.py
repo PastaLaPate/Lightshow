@@ -1,15 +1,15 @@
 from .break_detector import BreakDetector
+from .drop_detector import DropDetector
+from .kick_detector import KickDetector
 from .silent_detector import SilentDetector
 from .spike_detector import AudioData, DetectionType, SpikeDetector
-from .kick_detector import KickDetector
-from .drop_detector import DropDetector
 
 __all__ = [
-    "BreakDetector",
-    "SilentDetector",
     "AudioData",
+    "BreakDetector",
     "DetectionType",
-    "SpikeDetector",
-    "KickDetector",
     "DropDetector",
+    "KickDetector",
+    "SilentDetector",
+    "SpikeDetector",
 ]

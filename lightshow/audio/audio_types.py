@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import deque
-from typing import Any, Callable, Type, Union
+from collections.abc import Callable
+from typing import Any, Union
 
 import numpy as np
 import soundcard as sc
@@ -72,7 +73,7 @@ class AudioDevice:
         }
 
     @staticmethod
-    def from_dict(data) -> "AudioDevice":
+    def from_dict(data) -> AudioDevice:
         name = data.get("name")
         is_default = data.get("is_default", False)
         if not name and not is_default:
@@ -119,7 +120,7 @@ class AAudioCapture(ABC):
 
 
 class AAudioStreamHandler(ABC):
-    def __init__(self, processor: Type[Processor]):
+    def __init__(self, processor: type[Processor]):
         pass
 
     @abstractmethod
@@ -128,7 +129,7 @@ class AAudioStreamHandler(ABC):
 
     @abstractmethod
     def add_device_change_listener(
-        self, listener: Callable[["AAudioCapture"], None]
+        self, listener: Callable[[AAudioCapture], None]
     ) -> None:
         pass
 
@@ -166,7 +167,6 @@ class AudioListener(ABC):
     @abstractmethod
     def __call__(self, data: AudioData) -> bool:
         """Return False to unsubscribe this listener."""
-        pass
 
 
 AudioListenerType = Union[AudioListener, Callable[[AudioData], bool]]

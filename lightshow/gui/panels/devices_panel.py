@@ -1,5 +1,3 @@
-from typing import List, Type
-
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QKeyEvent
 from PyQt6.QtWidgets import (
@@ -39,7 +37,7 @@ class DeviceListWidget(QListWidget):
 class DevicesPanel(BasePanel):
     """Panel for managing device list and additions."""
 
-    def __init__(self, device_types: List[Type[Device]]):
+    def __init__(self, device_types: list[type[Device]]):
         super().__init__()
         self.device_types = device_types
         self.device_listbox: DeviceListWidget | None = None

@@ -1,9 +1,10 @@
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum, IntEnum
 from itertools import cycle
-from typing import Callable, Dict, List, Literal
+from typing import Literal
 
 import mido
 
@@ -88,8 +89,8 @@ class PanelSlot:
         self.index = index
         self.note_to_idx = {note: i for i, note in enumerate(PANELS_PIXELS[index])}
         self.idx_to_note = {v: k for k, v in self.note_to_idx.items()}
-        self.pressed_listeners: Dict[int, List[Callable[[int], None]]] = {}
-        self.released_listeners: Dict[int, List[Callable[[int], None]]] = {}
+        self.pressed_listeners: dict[int, list[Callable[[int], None]]] = {}
+        self.released_listeners: dict[int, list[Callable[[int], None]]] = {}
 
     def on_pressed(self, note: int):
         idx = self.note_to_idx[note]
@@ -405,13 +406,13 @@ class LaunchpadX(InputDevice):
             "connect_clicked", self._connect_device_callback
         )
         # State Management
-        self.used_panels: Dict[int, None | str] = {  # panel_id: device_id using it
+        self.used_panels: dict[int, None | str] = {  # panel_id: device_id using it
             0: None,
             1: None,
             2: None,
             3: None,
         }
-        self.panels_slots: Dict[int, PanelSlot | None] = {
+        self.panels_slots: dict[int, PanelSlot | None] = {
             0: None,
             1: None,
             2: None,
@@ -419,7 +420,7 @@ class LaunchpadX(InputDevice):
         }
 
         # Single Thread Effect Management
-        self.active_effects: Dict[int, str] = {}  # button_note: effect_type
+        self.active_effects: dict[int, str] = {}  # button_note: effect_type
         self.running = False
         self._effect_thread: threading.Thread | None = None
 

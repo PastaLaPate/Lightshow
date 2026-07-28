@@ -1,5 +1,4 @@
 import subprocess
-from typing import Tuple
 
 import semver
 
@@ -24,7 +23,7 @@ def fetch_last_tag(strip_v=True) -> str:
     return last_line_ref if not strip_v else last_line_ref.lstrip("v")
 
 
-def is_update_available() -> Tuple[bool, str]:
+def is_update_available() -> tuple[bool, str]:
     latest_version = fetch_last_tag()
     r = semver.compare(VERSION, latest_version)
     if r == -1:

@@ -4,7 +4,7 @@ import traceback
 from collections import deque
 from dataclasses import dataclass
 from queue import Empty, Queue
-from typing import Dict, List, Literal  # Import Empty for cleaner queue handling
+from typing import Literal  # Import Empty for cleaner queue handling
 
 import numpy as np
 import pyqtgraph as pg
@@ -22,17 +22,17 @@ if importlib.util.find_spec("OpenGL", "GL"):
     _logger.debug("Using OpenGL")
 else:
     OPENGL_AVAILABLE = False
-    _logger.warn("Unable to use OpenGL. Expect poor performance")
+    _logger.warning("Unable to use OpenGL. Expect poor performance")
 
 
 @dataclass
 class Markers:
-    x: List[int]
-    y: List[int]
+    x: list[int]
+    y: list[int]
     dirty: bool
 
 
-MarkerTypes = Literal["beat"] | Literal["break"] | Literal["drop"]
+MarkerTypes = Literal["beat", "break", "drop"]
 
 
 class SpikeDetectorVisualizer(QWidget):
@@ -65,7 +65,7 @@ class SpikeDetectorVisualizer(QWidget):
         self.limit_history = deque(maxlen=visualization_len)
         self.global_index = 0
 
-        self.marker_data: Dict[MarkerTypes, Markers] = {
+        self.marker_data: dict[MarkerTypes, Markers] = {
             "beat": Markers(x=[], y=[], dirty=False),
             "break": Markers(x=[], y=[], dirty=False),
             "drop": Markers(x=[], y=[], dirty=False),
@@ -105,7 +105,7 @@ class SpikeDetectorVisualizer(QWidget):
         self.diff_curve.setZValue(20)
         self.limit_curve.setZValue(10)
 
-        self.marker_items: Dict[MarkerTypes, pg.ScatterPlotItem] = {
+        self.marker_items: dict[MarkerTypes, pg.ScatterPlotItem] = {
             "beat": pg.ScatterPlotItem(
                 [], [], pen=pg.mkPen(None), brush=pg.mkBrush(0, 255, 0), size=6
             ),

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, List, Tuple
+from typing import Any
 
 from lightshow.audio.data import AudioData
 
@@ -62,19 +62,19 @@ class RGB(Command):  # out of 255
         return f"r={self.r};g={self.g};b={self.b}"
 
     @classmethod
-    def fromTuple(cls, tuple: Tuple[int, int, int]) -> RGB:
+    def fromTuple(cls, tuple: tuple[int, int, int]) -> RGB:
         return cls.fromList(list(tuple))
 
     @classmethod
-    def fromList(cls, list: List[int]) -> RGB:
+    def fromList(cls, list: list[int]) -> RGB:
         return cls(list[0], list[1], list[2])
 
     @classmethod
-    def fromRGBsList(cls, list: List[List[int]]) -> List[RGB]:
+    def fromRGBsList(cls, list: list[list[int]]) -> list[RGB]:
         return [cls.fromList(x) for x in list]
 
     @classmethod
-    def fromRGBsTupleList(cls, list: List[Tuple[int, int, int]]) -> List[RGB]:
+    def fromRGBsTupleList(cls, list: list[tuple[int, int, int]]) -> list[RGB]:
         return [cls.fromTuple(x) for x in list]
 
 

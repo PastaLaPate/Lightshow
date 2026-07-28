@@ -1,13 +1,13 @@
 from .AAnimation import (
-    AAnimation,
     RGB,
+    AAnimation,
     FadeCommand,
     FlickerCommand,
 )
 
 __all__ = [
-    "AAnimation",
     "RGB",
+    "AAnimation",
     "FadeCommand",
     "FlickerCommand",
 ]

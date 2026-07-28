@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Literal, TypedDict, Union
+from typing import Literal, TypedDict
 
 from lightshow.audio.data import AudioData
 from lightshow.devices.animations.AAnimation import (
@@ -50,7 +50,7 @@ class TopServoCommand(ServoCommand):
 
 class MHAnimationFrame(TypedDict):
     duration: int  # Used to determine cooldown to add after
-    rgb: Union[RGB, FlickerCommand, FadeCommand]
+    rgb: RGB | FlickerCommand | FadeCommand
     topServo: ServoCommand
     baseServo: ServoCommand
 

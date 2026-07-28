@@ -1,5 +1,5 @@
+from collections.abc import Callable
 from itertools import cycle
-from typing import Callable
 
 from lightshow.devices.animations.AAnimation import RGB, FadeCommand
 from lightshow.devices.moving_head.moving_head_animations import (
@@ -93,8 +93,7 @@ class BounceAnimation(AMHAnimation):
                 self.direction *= -1
             v = self._compute_required_velocity()
 
-            if v < 0.2:
-                v = 0.2
+            v = max(v, 0.2)
 
             self.velocity = v
 

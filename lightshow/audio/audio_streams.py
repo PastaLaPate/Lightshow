@@ -1,7 +1,7 @@
 import threading
 import traceback
+from collections.abc import Callable
 from queue import Queue
-from typing import Callable, List, Optional, Type
 
 import numpy as np
 import soundcard as sc
@@ -55,13 +55,13 @@ class LoopbackAudioCapture(AAudioCapture):
         self.stream_handler = stream_handler
         self.processor = processor
         self.loopback_mic = loopback_mic
-        self.listeners: List[AudioListenerType] = []
+        self.listeners: list[AudioListenerType] = []
 
         # Bounded queue: excess chunks are dropped to avoid growing backlog
         self.sample_queue: Queue = Queue(maxsize=50)
 
         self._stop_event = threading.Event()
-        self._capture_thread: Optional[threading.Thread] = None
+        self._capture_thread: threading.Thread | None = None
 
     # ------------------------------------------------------------------
     # AAudioCapture interface
@@ -160,7 +160,7 @@ class LoopbackAudioCapture(AAudioCapture):
                 samples = self.sample_queue.get_nowait()
                 treated = self.processor.process(samples)
 
-                dead: List[AudioListenerType] = []
+                dead: list[AudioListenerType] = []
                 for listener in list(self.listeners):
                     try:
                         keep = listener(treated)
@@ -188,7 +188,7 @@ class LoopbackAudioCapture(AAudioCapture):
     # Listener management (mirrors AudioCapture)
     # ------------------------------------------------------------------
 
-    def add_listener(self, listener: AudioListenerType) -> Optional[AudioListener]:
+    def add_listener(self, listener: AudioListenerType) -> AudioListener | None:
         if isinstance(listener, type) and issubclass(listener, AudioListener):
             listener = listener(self.stream_handler)
             self.listeners.append(listener)
@@ -205,7 +205,7 @@ class LoopbackAudioCapture(AAudioCapture):
         if listener in self.listeners:
             self.listeners.remove(listener)
 
-    def get_latest_data(self) -> Optional[np.ndarray]:
+    def get_latest_data(self) -> np.ndarray | None:
         return self.audio_buffer[-1] if self.audio_buffer else None
 
 
@@ -228,15 +228,15 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
     handler = LoopbackAudioStreamHandler(MyProcessor, config, speaker_id="Realtek")
     """
 
-    def __init__(self, processor: Type[Processor], config: Config):
+    def __init__(self, processor: type[Processor], config: Config):
         self.logger = Logger("LoopbackAudioStreamHandler")
         self.chunk_size: int = getattr(config, "chunk_size", 1024) or 1024
         self.processor_class = processor
 
-        self.device_change_listeners: List[Callable[[LoopbackAudioCapture], None]] = []
-        self.pending_listeners: List[AudioListenerType] = []
+        self.device_change_listeners: list[Callable[[LoopbackAudioCapture], None]] = []
+        self.pending_listeners: list[AudioListenerType] = []
 
-        self.audio_capture: Optional[LoopbackAudioCapture] = None
+        self.audio_capture: LoopbackAudioCapture | None = None
         self._loopback_mic = None  # soundcard mic object
 
     # ------------------------------------------------------------------
@@ -255,7 +255,7 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
             and self._reinit_thread
             and self._reinit_thread.is_alive()
         ):
-            self.logger.warn("reinit already in progress, skipping")
+            self.logger.warning("reinit already in progress, skipping")
             return
         self._reinit_thread = threading.Thread(
             target=self._reinit_stream_worker, daemon=True
@@ -351,6 +351,6 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
         self.pending_listeners.append(listener)
 
     @staticmethod
-    def list_speakers() -> List[str]:
+    def list_speakers() -> list[str]:
         """Helper to enumerate available speaker names for speaker_id."""
         return [s.name for s in sc.all_speakers()]

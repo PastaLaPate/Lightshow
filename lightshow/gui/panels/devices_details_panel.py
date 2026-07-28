@@ -1,5 +1,3 @@
-from typing import List, Type
-
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -19,7 +17,7 @@ from .base_panel import BasePanel
 class DeviceDetailsPanel(BasePanel):
     """Panel for displaying and managing device configuration details."""
 
-    def __init__(self, device_types: List[Type[Device]]):
+    def __init__(self, device_types: list[type[Device]]):
         super().__init__()
         self.device_types = device_types
         self.selected_device_id = None

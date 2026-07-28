@@ -1,7 +1,7 @@
 import random
 import time
+from collections.abc import Callable
 from itertools import cycle
-from typing import Callable, List, Tuple
 
 import numpy as np
 
@@ -16,7 +16,7 @@ from lightshow.devices.moving_head.moving_head_animations import (
 class CircleAnimation(AMHAnimation):
     def __init__(
         self,
-        rgb: List[RGB] | Callable[[], RGB],
+        rgb: list[RGB] | Callable[[], RGB],
         speed=0.5,
         base_angle_offset=0,
     ):
@@ -44,7 +44,7 @@ class CircleAnimation(AMHAnimation):
         self.circle_progress = 0
         self.color_cooldown = 0
 
-    def setRGB(self, color_mode: List[RGB] | Callable[[], RGB]):
+    def setRGB(self, color_mode: list[RGB] | Callable[[], RGB]):
         self.color_mode = color_mode
         self.rgb = cycle(color_mode) if isinstance(color_mode, list) else color_mode
 
@@ -72,8 +72,7 @@ class CircleAnimation(AMHAnimation):
         if self.boost_progress < 1:
             # how much of the boost we progress this frame
             self.boost_progress += dt / self.boost_time
-            if self.boost_progress > 1:
-                self.boost_progress = 1
+            self.boost_progress = min(self.boost_progress, 1)
 
             # apply easing * dt
             self.circle_progress += (
@@ -100,7 +99,7 @@ class CircleAnimation(AMHAnimation):
             ),
         )
 
-    def nextCurve(self, t: float) -> Tuple[int, int]:
+    def nextCurve(self, t: float) -> tuple[int, int]:
         base = (
             self.baseAngleRange[0]
             + self.baseAngleRange[1] / 2

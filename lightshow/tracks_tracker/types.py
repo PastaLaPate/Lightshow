@@ -1,5 +1,6 @@
+from collections.abc import Callable
 from enum import IntEnum
-from typing import Callable, Final
+from typing import Final
 
 
 class PlaybackStatus(IntEnum):
@@ -11,7 +12,7 @@ class PlaybackStatus(IntEnum):
 class TrackInfo:
     """Immutable, platform-agnostic track information."""
 
-    __slots__ = ("title", "artist")
+    __slots__ = ("artist", "title")
 
     def __init__(self, title: str = "", artist: str = "") -> None:
         self.title: Final[str] = title

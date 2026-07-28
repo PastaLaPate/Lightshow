@@ -31,4 +31,3 @@ class BasePanel(QWidget):
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create Qt UI elements. Override in subclasses."""
-        pass
