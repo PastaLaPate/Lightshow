@@ -1,4 +1,4 @@
-from .AAnimation import (
+from .aanimation import (
     RGB,
     AAnimation,
     FadeCommand,
@@ -7,7 +7,7 @@ from .AAnimation import (
 
 __all__ = [
     "RGB",
-    "AAnimation",
+    "aanimation",
     "FadeCommand",
     "FlickerCommand",
 ]

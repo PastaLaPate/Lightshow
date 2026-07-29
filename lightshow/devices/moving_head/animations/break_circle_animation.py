@@ -1,8 +1,8 @@
-from lightshow.devices.animations.AAnimation import RGB
+from lightshow.devices.animations.aanimation import RGB
 from lightshow.devices.moving_head.moving_head_animations import MHAnimationFrame
 from lightshow.utils.colors import hsv_to_rgb
 
-from .CircleAnimation import CircleAnimation
+from .circle_animation import CircleAnimation
 
 
 class BreakCircleAnimation(CircleAnimation):

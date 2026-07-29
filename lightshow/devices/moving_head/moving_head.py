@@ -1,11 +1,11 @@
 import socket
 import threading
 import traceback
-from typing import Any, Literal
+from typing import Any, Literal, ClassVar
 
 import requests
 
-from lightshow.devices.animations.AAnimation import RGB, Command
+from lightshow.devices.animations.aanimation import RGB, Command
 from lightshow.devices.device import OutputDevice, PacketStatus, PacketType
 from lightshow.devices.devices_types import DeviceTypeName
 from lightshow.devices.moving_head.moving_head_controller import MovingHeadController
@@ -16,7 +16,7 @@ from lightshow.utils.logger import Logger
 class MovingHead(OutputDevice):
     DEVICE_TYPE_NAME: Literal["LED Moving Head"] = DeviceTypeName.MOVING_HEAD.value
 
-    SHOWED_PROPS = [
+    SHOWED_PROPS: ClassVar = [
         "udp_address",
         "base_servo_range",
         "top_servo_range",
@@ -71,8 +71,8 @@ class MovingHead(OutputDevice):
                 self.showed_props_update()
                 self.logger.info(f"Successfully tested connection to {self.ip}")
             else:
-                raise Exception("Not received resetIndex, ip problem?")
-        except Exception as e:
+                raise ConnectionError("Not received resetIndex, ip problem?")
+        except ConnectionError as e:
             self.logger.error(f"Error connecting to {self.ip}: {e}")
             ui_signals.show_error.emit(
                 "Connection Error",
@@ -130,7 +130,7 @@ class MovingHead(OutputDevice):
         if not self.socket:
             try:
                 self.connect_socket()
-            except Exception:
+            except ConnectionError:
                 return
         try:
             if self.socket:
@@ -139,7 +139,7 @@ class MovingHead(OutputDevice):
                     (f"{self.packetIndex};{message}").encode(), self.addr
                 )
 
-        except Exception as e:
+        except ConnectionError as e:
             self.logger.error(f"Error sending message : {e}")
             ui_signals.show_error.emit(
                 "Connection Error",

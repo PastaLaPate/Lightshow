@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections import deque
 from collections.abc import Callable
-from typing import Any, Union
+from typing import Any
 
 import numpy as np
 import soundcard as sc
@@ -169,4 +169,4 @@ class AudioListener(ABC):
         """Return False to unsubscribe this listener."""
 
 
-AudioListenerType = Union[AudioListener, Callable[[AudioData], bool]]
+AudioListenerType = AudioListener | Callable[[AudioData], bool]

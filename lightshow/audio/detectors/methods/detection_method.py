@@ -11,9 +11,11 @@ class DetectionMethod(ABC):
         sample_rate: int = 44100,
         chunk_size: int = 1024,
         window_size: float = 1.0,  # Number of recent frames over which to average energy in seconds.
-        bin_range=[0, 2],
+        bin_range=None,
         cooldown_time: float = 0.25,  # Cooldown time in seconds after a detection during which no new detections can occur.
     ):
+        if bin_range is None:
+            bin_range = [0, 2]
 
         self.sample_rate = sample_rate
         self.chunk_size = chunk_size

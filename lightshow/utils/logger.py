@@ -1,6 +1,7 @@
+from typing import ClassVar
 import logging
 import threading
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from queue import Queue
 
@@ -10,7 +11,7 @@ from queue import Queue
 
 
 class _ColorFormatter(logging.Formatter):
-    _COLORS = {
+    _COLORS: ClassVar = {
         logging.DEBUG: "\x1b[90m",
         logging.INFO: "\x1b[37m",
         logging.WARNING: "\x1b[93m",
@@ -54,7 +55,7 @@ class _ContextFilter(logging.Filter):
 
 
 class _QtQueueHandler(logging.Handler):
-    _COLORS = {
+    _COLORS: ClassVar = {
         logging.DEBUG: "#9b9b9b",
         logging.INFO: "#ffffff",
         logging.WARNING: "#ffcc00",
@@ -72,7 +73,7 @@ class _QtQueueHandler(logging.Handler):
             color = self._COLORS.get(record.levelno, "#ffffff")
             html = f'<span style="color:{color}">{msg}</span>'
             self._queue.put_nowait((html, False))
-        except Exception:
+        except Exception as e:  # noqa
             self.handleError(record)
 
 
@@ -106,7 +107,7 @@ class _RootLoggerConfig:
             self.app_name = app_name
 
             log_dir.mkdir(parents=True, exist_ok=True)
-            timestamp = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
+            timestamp = datetime.now(UTC).strftime("%d-%m-%Y-%H-%M-%S")
             log_file = log_dir / f"{timestamp}-logs.log"
 
             context_filter = _ContextFilter(app_name)
@@ -156,8 +157,8 @@ class _RootLoggerConfig:
                 if is_fps:
                     self._last_fps_html = html
                 self._qt_widget.ensureCursorVisible()
-            except Exception:
-                pass
+            except Exception as exc:  # noqa
+                print(str(exc))
 
 
 # ---------------------------------------------------------------------------
@@ -205,6 +206,9 @@ class Logger:
         self._log.info(msg, *args)
 
     def warn(self, msg: str, *args) -> None:
+        self._log.warning(msg, *args)
+
+    def warning(self, msg: str, *args) -> None:
         self._log.warning(msg, *args)
 
     def error(self, msg: str, *args) -> None:

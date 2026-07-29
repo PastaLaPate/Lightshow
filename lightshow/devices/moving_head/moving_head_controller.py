@@ -7,7 +7,7 @@ from typing import TypeGuard
 import numpy as np
 
 from lightshow.audio.data import AudioData
-from lightshow.devices.animations.AAnimation import RGB, FlickerCommand
+from lightshow.devices.animations.aanimation import RGB, FlickerCommand
 from lightshow.devices.device import PacketData, PacketStatus, PacketType
 from lightshow.devices.moving_head.animations import (
     BernoulliLemniscateAnimation,

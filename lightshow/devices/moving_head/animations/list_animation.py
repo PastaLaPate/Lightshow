@@ -1,7 +1,7 @@
 import random
 from itertools import cycle
 
-from lightshow.devices.animations.AAnimation import RGB
+from lightshow.devices.animations.aanimation import RGB
 from lightshow.devices.moving_head.moving_head_animations import (
     AMHAnimation,
     BaseServoCommand,

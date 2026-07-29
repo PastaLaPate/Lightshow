@@ -22,7 +22,7 @@ class SpikeDetector:
         AudioHandler: AAudioStreamHandler,
         sensitivity=2.0,
         window_size=1,
-        freq_range=[0, 3],
+        freq_range=None,
         detection_type=DetectionType.UPPER,
         min_duration=50 / 1000,
         cooldown=300 / 1000,
@@ -31,6 +31,8 @@ class SpikeDetector:
         :param sensitivity: Factor by which the current energy must exceed the average to trigger the smaller the more sensitive.
         :param window_size: Number of recent frames over which to average energy in seconds.
         """
+        if freq_range is None:
+            freq_range = [0, 3]
         AudioHandler.add_device_change_listener(self.on_device_change)
         chunks_per_second = int(44100 / 1024)
         if not chunks_per_second or chunks_per_second <= 0:

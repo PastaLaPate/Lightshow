@@ -1,3 +1,4 @@
+from typing import ClassVar
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any
@@ -42,8 +43,8 @@ class PacketData:
 class Device(ABC):
     DEVICE_TYPE_NAME = "DUMMY DEVICE"
 
-    SHOWED_PROPS: list[str] = []
-    EDITABLE_PROPS: list[tuple[str, type]] = []
+    SHOWED_PROPS: ClassVar[list[str]] = []
+    EDITABLE_PROPS: ClassVar[list[tuple[str, type]]] = []
 
     def __init__(self):
         self.ready = False
@@ -54,20 +55,23 @@ class Device(ABC):
     def connect(self, fatal_non_discovery=True):
         success = self.scan_for_device()
         if not success and fatal_non_discovery:
-            raise Exception("No device was found")
+            raise ConnectionError("No device was found")
         elif not success:
             return
         success = self.init_device()
         if not success and fatal_non_discovery:
-            raise Exception("The device could not be found")
+            raise ConnectionRefusedError("The device could not be found")
         self.ready = success
         return
 
     def showed_props_update(self):
         for prop in self.SHOWED_PROPS:
-            if hasattr(self, "showed_props_listener") and self.showed_props_listener:
-                if hasattr(self, prop):
-                    self.showed_props_listener(prop, getattr(self, prop, None))
+            if (
+                hasattr(self, "showed_props_listener")
+                and self.showed_props_listener
+                and hasattr(self, prop)
+            ):
+                self.showed_props_listener(prop, getattr(self, prop, None))
 
     def set_showed_props_listener(self, listener):
         """Set a listener that will be called when the showed properties change."""

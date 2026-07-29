@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from itertools import cycle
 
-from lightshow.devices.animations.AAnimation import RGB, FadeCommand
+from lightshow.devices.animations.aanimation import RGB, FadeCommand
 from lightshow.devices.moving_head.moving_head_animations import (
     AMHAnimation,
     BaseServoCommand,

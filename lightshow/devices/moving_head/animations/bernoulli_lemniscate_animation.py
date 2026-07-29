@@ -1,6 +1,6 @@
 import numpy as np
 
-from lightshow.devices.moving_head.animations.CircleAnimation import CircleAnimation
+from lightshow.devices.moving_head.animations.circle_animation import CircleAnimation
 
 
 class BernoulliLemniscateAnimation(CircleAnimation):

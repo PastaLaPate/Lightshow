@@ -17,15 +17,13 @@ class BreakDetector(SpikeDetector):
             return False
         time_since_last_beat = time.time_ns() - self.beats[-1]
 
-        if (
+        return (
             time_since_last_beat
             > np.average(
                 [self.beats[i] - self.beats[i - 1] for i in range(1, len(self.beats))]
             )
             * 2.5
-        ):
-            return True
-        return False
+        )
 
     def clear(self):
         self.beats = []

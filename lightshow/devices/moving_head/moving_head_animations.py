@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Literal, TypedDict
 
 from lightshow.audio.data import AudioData
-from lightshow.devices.animations.AAnimation import (
+from lightshow.devices.animations.aanimation import (
     RGB,
     AAnimation,
     Command,

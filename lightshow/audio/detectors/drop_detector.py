@@ -17,12 +17,10 @@ class DropDetector(SpikeDetector):
         if len(self.beats) < self.comparing_window_size:
             return False
 
-        if (
+        return (
             self.average_time_between_beats(self.beats)
             < self.average_time_between_beats(self.beats[-self.window_size :]) * 0.85
-        ):
-            return True
-        return False
+        )
 
     def average_time_between_beats(self, beats):
         if len(beats) < 2:

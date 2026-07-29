@@ -94,21 +94,21 @@ class PanelSlot:
 
     def on_pressed(self, note: int):
         idx = self.note_to_idx[note]
-        if idx in self.pressed_listeners.keys():
+        if idx in self.pressed_listeners:
             [listener(idx) for listener in self.pressed_listeners[idx]]
 
     def on_released(self, note: int):
         idx = self.note_to_idx[note]
-        if idx in self.released_listeners.keys():
+        if idx in self.released_listeners:
             [listener(idx) for listener in self.released_listeners[idx]]
 
     def watchKey(self, key: int, on_pressed: Callable, on_released: Callable):
-        if key not in self.pressed_listeners.keys():
+        if key not in self.pressed_listeners:
             self.pressed_listeners[key] = [on_pressed]
         else:
             self.pressed_listeners[key].append(on_pressed)
 
-        if key not in self.released_listeners.keys():
+        if key not in self.released_listeners:
             self.released_listeners[key] = [on_released]
         else:
             self.released_listeners[key].append(on_released)
@@ -143,7 +143,7 @@ class MovingHeadPanelSlot(PanelSlot):
         super().__init__(launchpad, device_id, index)
         device = config.live_devices[device_id]
         if not isinstance(device, MovingHead):
-            raise Exception("Created with another device than MovingHead")
+            raise TypeError("Created with another device than MovingHead")
         self.moving_head: MovingHead = device
 
         # Internal States
@@ -157,7 +157,7 @@ class MovingHeadPanelSlot(PanelSlot):
         self.breaking = False
         self.random_anim = True
 
-        for local_idx in self.idx_to_note.keys():
+        for local_idx in self.idx_to_note:
             self.watchKey(local_idx, self._on_pressed, self._on_released)
 
     def set_current_anim(self, anim: AMHAnimation):
@@ -317,10 +317,9 @@ class MovingHeadPanelSlot(PanelSlot):
 
     def _on_released(self, key: int):
         midi_note = self.idx_to_note[key]
-        if key == Buttons.FLICKER:
-            if midi_note in self.launchpad.active_effects:
-                del self.launchpad.active_effects[midi_note]
-                self.moving_head.on(PacketData(PacketType.FLICKER, PacketStatus.OFF))
+        if key == Buttons.FLICKER and midi_note in self.launchpad.active_effects:
+            del self.launchpad.active_effects[midi_note]
+            self.moving_head.on(PacketData(PacketType.FLICKER, PacketStatus.OFF))
 
         # Reset button visual state if it was a momentary action
         self.update_state()
@@ -383,7 +382,7 @@ class MovingHeadPanelSlot(PanelSlot):
             ColorModes.RED: Colors.BRIGHT_RED,
             ColorModes.RAINBOW: Colors.WHITE,
         }
-        if not self.color_mode == ColorModes.RANDOM:
+        if self.color_mode != ColorModes.RANDOM:
             self.set_color(Buttons.COLORS_MODES, COLOR_MODES_COLORS[self.color_mode])
         else:
             self.set_color(Buttons.COLORS_MODES, Colors.WHITE, mode="pulse")
@@ -489,13 +488,13 @@ class LaunchpadX(InputDevice):
         self.set_color(button, color)
 
     def handle_press(self, note: int):
-        for idx, panel_slot in self.panels_slots.items():
+        for panel_slot in self.panels_slots.values():
             if panel_slot and panel_slot.contains(note):
                 panel_slot.on_pressed(note)
                 break
 
     def handle_release(self, note: int):
-        for idx, panel_slot in self.panels_slots.items():
+        for panel_slot in self.panels_slots.values():
             if panel_slot and panel_slot.contains(note):
                 panel_slot.on_released(note)
                 break
@@ -512,10 +511,10 @@ class LaunchpadX(InputDevice):
             self.out_port.send(mido.Message("sysex", data=[0, 32, 41, 2, 12, 14, 1]))  # pyright: ignore[reportOptionalMemberAccess]
 
             self.start_effect_engine()  # Start the single shared thread
-            for device_id in config.live_devices.keys():
+            for device_id in config.live_devices:
                 self._on_device_connected(device_id)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa
             print(f"Error: {e}")
             return False
 

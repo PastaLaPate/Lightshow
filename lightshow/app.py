@@ -111,8 +111,8 @@ class MainAudioListener(AudioListener):
                 if self.stream_handler.audio_capture:
                     self.stream_handler.audio_capture.audio_buffer.clear()
                     self.stream_handler.audio_capture.sample_queue.queue.clear()
-            except Exception:
-                pass
+            except AttributeError as e:
+                logger.error(str(e))
 
     def send_packet_to_devices(self, packet: PacketData, force=False) -> None:
         devices = config.live_devices.copy()
@@ -190,7 +190,7 @@ class MainAudioListener(AudioListener):
             try:
                 bass_energy = data.frequencies[0]
                 beat_intensity = min(bass_energy / 1e13, 1.0)
-            except Exception:
+            except IndexError:
                 beat_intensity = 1.0
 
             self.set_beat_power(beat_intensity)
@@ -239,7 +239,7 @@ def main() -> None:
     update_available, update_message = is_update_available()
     logger.info(
         "Version status: %s",
-        update_message if update_message else "Unable to fetch latest version info.",
+        update_message if update_available else "Unable to fetch latest version info.",
     )
     logger.debug("OS: %s | Python: %s | Architecture: %s", OS, PYTHON_VERSION, ARCH)
     global ui_manager
@@ -291,3 +291,4 @@ def terminate():
             ui_manager.stop()
     except Exception as e:
         logger.error(f"Error during shutdown: {e}")
+        raise

@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from lightshow.audio.data import AudioData
 from lightshow.devices.animations import AAnimation
-from lightshow.devices.animations.AAnimation import RGB, FadeCommand, FlickerCommand
+from lightshow.devices.animations.aanimation import RGB, FadeCommand, FlickerCommand
 from lightshow.utils.colors import hsv_to_rgb
 
 COLOR_MODE = list[RGB] | Callable[[], RGB]

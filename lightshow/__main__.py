@@ -13,7 +13,6 @@ logger = None
 
 
 def terminate(sig: int, frame: object) -> None:
-    global logger
     # Type ignore as signal is registered after the logger is initialized, so it will always be set when this function is called
     logger.info("Interrupt signal caught! Stopping gracefully...")  # type: ignore
     from .app import terminate
@@ -24,6 +23,7 @@ def terminate(sig: int, frame: object) -> None:
         logger.error(  # type: ignore
             f"Damn, that's some very bad luck: double termination error bruh. \n {traceback.format_exc()}"
         )
+        raise
     sys.exit(0)
 
 
