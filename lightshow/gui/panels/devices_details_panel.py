@@ -181,23 +181,20 @@ class DeviceDetailsPanel(BasePanel):
                 self._current_live_device, "set_showed_props_listener"
             ):
                 self._current_live_device.set_showed_props_listener(None)
-        except Exception:
-            pass
+        except Exception as e: # noqa
+            print(str(e)) # todo: add logger
         self._current_live_device = None
 
         # If device class defines SHOWED_PROPS, create labels for them
         if device_type_cls and hasattr(device_type_cls, "SHOWED_PROPS"):
             for pname in getattr(device_type_cls, "SHOWED_PROPS", []):
-                pname: str = pname
+                assert isinstance(pname, str)
                 formatted = pname.replace("_", " ").title()
                 row = QHBoxLayout()
                 row.addWidget(QLabel(f"{formatted}:"))
                 value_label = QLabel("")
                 # initialize from saved props when available
-                try:
-                    initial = props.get(pname, "")
-                except Exception:
-                    initial = ""
+                initial = props.get(pname, "")
                 value_label.setText(str(initial))
                 row.addWidget(value_label)
                 if not self.showed_props_layout:
@@ -207,11 +204,8 @@ class DeviceDetailsPanel(BasePanel):
 
         # Attach live device listener if available
         live_dev = None
-        try:
-            if device_id in live_devices:
-                live_dev = live_devices[device_id]
-        except Exception:
-            live_dev = None
+        if device_id in live_devices:
+            live_dev = live_devices[device_id]
 
         if live_dev:
             # initialize/override labels from current live device attributes

@@ -6,10 +6,10 @@ from .list_animation import ListAnimation
 from .regular_polygon_animation import RegularPolygonAnimation
 
 __all__ = [
-    "bernoulli_lemniscate_animation",
-    "bounce_animation",
-    "break_circle_animation",
-    "circle_animation",
-    "list_animation",
-    "regular_polygon_animation",
+    "BernoulliLemniscateAnimation",
+    "BounceAnimation",
+    "BreakCircleAnimation",
+    "CircleAnimation",
+    "ListAnimation",
+    "RegularPolygonAnimation"
 ]

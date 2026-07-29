@@ -50,8 +50,7 @@ class ListAnimation(AMHAnimation):
         self.cycle_progress += 1
         if self.cycle_progress == min(
             len(self.topServoPositions), len(self.baseServoPositions)
-        ):
-            if random.uniform(0, 1) < 1 / 2:
+        ) and random.uniform(0, 1) < 1 / 2:
                 self.reverse()
                 self.cycle_progress = 0
         color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-assignment]

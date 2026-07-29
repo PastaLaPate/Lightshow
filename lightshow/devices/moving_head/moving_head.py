@@ -22,7 +22,7 @@ class MovingHead(OutputDevice):
         "top_servo_range",
         "current_anim",
     ]
-    EDITABLE_PROPS = [("ip", str)]
+    EDITABLE_PROPS: ClassVar = [("ip", str)]
 
     def __init__(self):
         self.id = id(self)

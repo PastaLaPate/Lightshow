@@ -6,8 +6,8 @@ if importlib.util.resolve_name("soundcard", ""):
 else:
     try:
         import soundcard as sc
-    except Exception:
-        raise Exception("Install soundcard!")
+    except ImportError:
+        raise ImportError("Install soundcard!")
 
 if __name__ == "__main__":
     def_mic_id = sc.default_microphone().id

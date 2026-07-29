@@ -23,7 +23,7 @@ class BasePanel(QWidget):
         for cb in self._callbacks.get(event, []):
             try:
                 cb(*args, **kwargs)
-            except Exception:
+            except Exception as e: # noqa
                 ui_signals.show_error.emit(
                     "UI Error",
                     f"Error in callback for event '{event}': \n {traceback.format_exc()}",
