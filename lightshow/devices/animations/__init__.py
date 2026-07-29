@@ -7,7 +7,7 @@ from .aanimation import (
 
 __all__ = [
     "RGB",
-    "aanimation",
     "FadeCommand",
     "FlickerCommand",
+    "aanimation",
 ]

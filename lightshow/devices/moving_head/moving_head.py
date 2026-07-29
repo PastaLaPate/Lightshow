@@ -1,7 +1,7 @@
 import socket
 import threading
 import traceback
-from typing import Any, Literal, ClassVar
+from typing import Any, ClassVar, Literal
 
 import requests
 

@@ -1,9 +1,9 @@
-from typing import ClassVar
 import logging
 import threading
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from queue import Queue
+from typing import ClassVar
 
 # ---------------------------------------------------------------------------
 # Formatters & Filters

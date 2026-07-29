@@ -1,7 +1,7 @@
 import threading
 import traceback
 from collections.abc import Callable
-from queue import Queue, Full
+from queue import Full, Queue
 
 import numpy as np
 import soundcard as sc
