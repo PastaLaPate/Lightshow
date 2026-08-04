@@ -182,7 +182,7 @@ class SpikeDetectorVisualizer(QWidget):
                 has_new_data = True
             except Empty:
                 break
-            except Exception: # noqa
+            except Exception:  # noqa
                 ui_signals.show_error.emit(
                     "UI Error",
                     f"Error when updating spike detector visualizer: \n {traceback.format_exc()}",
@@ -243,7 +243,7 @@ class SpikeDetectorVisualizer(QWidget):
             self._add_marker("drop", drop_detected, current_energy)
 
             self.global_index += 1
-        except Exception: # noqa
+        except Exception:  # noqa
             ui_signals.show_error.emit(
                 "UI Error",
                 f"Error when updating spike detector visualizer: \n {traceback.format_exc()}",
