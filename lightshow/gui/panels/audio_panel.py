@@ -91,7 +91,7 @@ class AudioPanel(BasePanel):
             selected_device = keys[values.index(global_config.audio_device.to_dict())]
             if selected_device:
                 self.device_combo.setCurrentText(selected_device)
-        except Exception as e: # noqa
+        except Exception as e:  # noqa
             logger.warning(
                 "Failed to set audio device combo to saved config value, defaulting to first option."
             )
@@ -160,7 +160,7 @@ class AudioPanel(BasePanel):
                     "device_changed",
                     AudioDevice.from_dict(self.audio_devices[app_data]),
                 )
-        except Exception as e: #noqa
+        except Exception as e:  # noqa
             logger.error(str(e))
 
     def on_track_changed(

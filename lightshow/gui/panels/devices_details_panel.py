@@ -181,8 +181,8 @@ class DeviceDetailsPanel(BasePanel):
                 self._current_live_device, "set_showed_props_listener"
             ):
                 self._current_live_device.set_showed_props_listener(None)
-        except Exception as e: # noqa
-            print(str(e)) # todo: add logger
+        except Exception as e:  # noqa
+            print(str(e))  # todo: add logger
         self._current_live_device = None
 
         # If device class defines SHOWED_PROPS, create labels for them

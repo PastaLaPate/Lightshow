@@ -292,7 +292,7 @@ class UIManager(QMainWindow):
             try:
                 live_devices[device_id].connect(fatal_non_discovery=True)
                 self.ui_signals.finish_connection.emit(device_id)
-            except Exception: # noqa
+            except Exception:  # noqa
                 self.device_details.set_connecting(False)
                 if self.device_details.connect_button:
                     self.device_details.connect_button.setText("Connect")
@@ -349,7 +349,7 @@ class UIManager(QMainWindow):
             self.listener.clear_state()
             # As the stream is started in a separate thread, if it fails the exception won't be caught here. Instead, we rely on error handling in the audio stream thread to emit an error signal that we can show in the UI.
             # self.audio_panel.set_streaming(True)
-        except Exception as e: #noqa
+        except Exception as e:  # noqa
             self.ui_signals.show_error.emit(
                 "Streaming Error",
                 f"Failed to start audio stream:\n\n{traceback.format_exc()}",
@@ -383,14 +383,14 @@ class UIManager(QMainWindow):
         ):
             try:
                 self.audio_handler.audio_capture.process_queued_samples()
-            except Exception as e: # noqa
+            except Exception as e:  # noqa
                 self.logger.error(f"Error processing queued audio: {e}")
 
         if self.audio_panel.is_streaming and self.audio_panel.kick_visualizer:
             try:
                 # Update spike detector visualizer
                 self.audio_panel.kick_visualizer.qt_update()
-            except Exception as e: #noqa
+            except Exception as e:  # noqa
                 self.logger.error(f"Visualization update error: {e}")
 
     def _show_error_dialog(self, title, message):

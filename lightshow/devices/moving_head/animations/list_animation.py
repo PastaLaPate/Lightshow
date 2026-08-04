@@ -48,11 +48,13 @@ class ListAnimation(AMHAnimation):
                 baseServo=self.cached_poses[1],
             )
         self.cycle_progress += 1
-        if self.cycle_progress == min(
-            len(self.topServoPositions), len(self.baseServoPositions)
-        ) and random.uniform(0, 1) < 1 / 2:
-                self.reverse()
-                self.cycle_progress = 0
+        if (
+            self.cycle_progress
+            == min(len(self.topServoPositions), len(self.baseServoPositions))
+            and random.uniform(0, 1) < 1 / 2
+        ):
+            self.reverse()
+            self.cycle_progress = 0
         color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-assignment]
         self.cached_rgb = color
         self.cached_poses = (next(self.topServo), next(self.baseServo))

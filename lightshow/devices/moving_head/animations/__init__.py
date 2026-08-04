@@ -11,5 +11,5 @@ __all__ = [
     "BreakCircleAnimation",
     "CircleAnimation",
     "ListAnimation",
-    "RegularPolygonAnimation"
+    "RegularPolygonAnimation",
 ]
