@@ -3,7 +3,7 @@ import importlib.util
 import traceback
 from collections import deque
 from dataclasses import dataclass
-from queue import Empty, Queue, Full
+from queue import Empty, Full, Queue
 from typing import Literal  # Import Empty for cleaner queue handling
 
 import numpy as np

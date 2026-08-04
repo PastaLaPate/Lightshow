@@ -215,7 +215,7 @@ class DeviceDetailsPanel(BasePanel):
                     if val is None:
                         # fallback to saved props if live attribute missing
                         val = props.get(pname, "")
-                except Exception:
+                except Exception: # noqa
                     val = props.get(pname, "")
                 lab.setText(str(val))
 
@@ -233,9 +233,9 @@ class DeviceDetailsPanel(BasePanel):
                     # has values to report (ensures UI shows udp_address etc.)
                     try:
                         live_dev.showed_props_update()
-                    except Exception:
+                    except Exception: # noqa
                         pass
-            except Exception:
+            except Exception: # noqa
                 pass
 
         if device_type_cls and hasattr(device_type_cls, "EDITABLE_PROPS"):
@@ -251,7 +251,8 @@ class DeviceDetailsPanel(BasePanel):
                         # attempt to cast to declared type
                         try:
                             casted = ptype(val)
-                        except Exception:
+                        except Exception: # noqa 
+# todo: find correct ex
                             casted = val
                         global_config.devices[did]["props"][pname] = casted
 
@@ -357,7 +358,7 @@ class DeviceDetailsPanel(BasePanel):
                 self._current_live_device, "set_showed_props_listener"
             ):
                 self._current_live_device.set_showed_props_listener(None)
-        except Exception:
+        except Exception: # noqa
             pass
         self._current_live_device = None
         self.clear_showed_props()

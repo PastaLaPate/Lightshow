@@ -47,7 +47,7 @@ class DevicesPanel(BasePanel):
         """Refresh the device listbox with current devices."""
         if self.device_listbox is not None:
             self.device_listbox.clear()
-            for device_name in global_config.devices.keys():
+            for device_name in global_config.devices:
                 self.device_listbox.addItem(device_name)
 
     def create_qt_ui(self, layout: QVBoxLayout):
@@ -60,7 +60,7 @@ class DevicesPanel(BasePanel):
         # Device listbox
         self.device_listbox = DeviceListWidget(self._delete_selected_device)
         self.device_listbox.setMaximumHeight(200)
-        for device_name in global_config.devices.keys():
+        for device_name in global_config.devices:
             self.device_listbox.addItem(device_name)
         self.device_listbox.itemSelectionChanged.connect(self._on_device_select)
         self.device_listbox.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
