@@ -1,5 +1,4 @@
 import os
-from typing import Type
 
 from lightshow.tracks_tracker.abstract_tracker import ATrackTracker
 

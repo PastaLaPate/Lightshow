@@ -116,7 +116,7 @@ class LinuxTracksInfoTracker(ATrackTracker):
         )
         dbus_iface = obj.get_interface("org.freedesktop.DBus")
         if not isinstance(dbus_iface, DBusInterface):
-            raise RuntimeError("org.freedesktop.DBus interface not available.")
+            raise TypeError("org.freedesktop.DBus interface not available.")
 
         dbus_iface.on_name_owner_changed(self._on_name_owner_changed)
         await self._scan_existing_players()
@@ -154,9 +154,9 @@ class LinuxTracksInfoTracker(ATrackTracker):
             props = obj.get_interface("org.freedesktop.DBus.Properties")
 
             if not isinstance(player, PlayerInterface):
-                raise RuntimeError(f"{name}: Player interface not available.")
+                raise TypeError(f"{name}: Player interface not available.")
             if not isinstance(props, PropertiesInterface):
-                raise RuntimeError(f"{name}: Properties interface not available.")
+                raise TypeError(f"{name}: Properties interface not available.")
 
             props.on_properties_changed(
                 lambda iface, changed, _invalid: self._on_properties_changed(
@@ -171,7 +171,7 @@ class LinuxTracksInfoTracker(ATrackTracker):
             self._reevaluate_active_player()
             await self._emit_track_info_for(name, metadata=None)
 
-        except Exception:
+        except TypeError:
             _log.error("Failed to attach player %r", name)
 
     def _detach_player(self, name: str) -> None:
@@ -265,7 +265,7 @@ class LinuxTracksInfoTracker(ATrackTracker):
             )
             self._notify_track_changed(name, info)
 
-        except Exception:
+        except Exception as e:  # noqa
             _log.error("Error emitting track info for %r", name)
 
     def _emit_playback_status(self, name: str) -> None:

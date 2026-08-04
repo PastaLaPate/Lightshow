@@ -3,7 +3,7 @@ import importlib.util
 import traceback
 from collections import deque
 from dataclasses import dataclass
-from queue import Empty, Queue
+from queue import Empty, Queue, Full
 from typing import Literal  # Import Empty for cleaner queue handling
 
 import numpy as np
@@ -116,7 +116,7 @@ class SpikeDetectorVisualizer(QWidget):
                 [], [], pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 255), size=6
             ),
         }
-        for name, item in self.marker_items.items():
+        for item in self.marker_items.values():
             item.setZValue(40)
             # Optimization: Scatter plots are heavy.
             # pxMode=True means size is in pixels, not data coordinates (faster)
@@ -160,7 +160,7 @@ class SpikeDetectorVisualizer(QWidget):
             self.update_queue.put_nowait(
                 (data, beat_detected, break_detected, drop_detected)
             )
-        except Exception:
+        except Full:
             pass
 
     def _sync_views(self) -> None:
@@ -182,7 +182,7 @@ class SpikeDetectorVisualizer(QWidget):
                 has_new_data = True
             except Empty:
                 break
-            except Exception:
+            except Exception: # noqa
                 ui_signals.show_error.emit(
                     "UI Error",
                     f"Error when updating spike detector visualizer: \n {traceback.format_exc()}",
@@ -243,7 +243,7 @@ class SpikeDetectorVisualizer(QWidget):
             self._add_marker("drop", drop_detected, current_energy)
 
             self.global_index += 1
-        except Exception:
+        except Exception: # noqa
             ui_signals.show_error.emit(
                 "UI Error",
                 f"Error when updating spike detector visualizer: \n {traceback.format_exc()}",

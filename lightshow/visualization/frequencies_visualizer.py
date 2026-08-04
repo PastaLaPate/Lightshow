@@ -204,7 +204,7 @@ class FrequenciesVisualizer(QWidget):
             )
 
             self.energy_curve.setData(x_up, smoothed)
-        except Exception:
+        except Exception: # noqa
             ui_signals.show_error.emit(
                 "UI Error",
                 f"Error when updating frequencies visualizer: \n {traceback.format_exc()}",

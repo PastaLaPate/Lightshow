@@ -19,7 +19,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from importlib.metadata import version
 from pathlib import Path
-from typing import Any, ClassVar, Generic, TypeVar
+from typing import Any, ClassVar, TypeVar
 
 import distro
 
@@ -37,7 +37,7 @@ T_co = TypeVar("T_co", covariant=True)
 
 
 @dataclass
-class Setting(Generic[T]):
+class Setting[T]:
     """
     A single configurable value, typed by T.
 
