@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TypeVar
+
+from pydantic import BaseModel
 
 
 class PacketType(Enum):
@@ -38,17 +40,16 @@ class PacketData:
             audio_data  # Optional AudioData object for audio-reactive effects
         )
 
-
-class Device(ABC):
+class Device[T: BaseModel](ABC):
     DEVICE_TYPE_NAME = "DUMMY DEVICE"
 
-    SHOWED_PROPS: ClassVar[list[str]] = []
-    EDITABLE_PROPS: ClassVar[list[tuple[str, type]]] = []
+    CONFIG_SCHEMA: type[T]
 
-    def __init__(self):
+    def __init__(self, config: T):
         self.ready = False
         self.device_name = ""
-        self.showed_props_listener = None
+        self.config = config
+        
         super().__init__()
 
     def connect(self, fatal_non_discovery=True):
@@ -62,19 +63,6 @@ class Device(ABC):
             raise ConnectionRefusedError("The device could not be found")
         self.ready = success
         return
-
-    def showed_props_update(self):
-        for prop in self.SHOWED_PROPS:
-            if (
-                hasattr(self, "showed_props_listener")
-                and self.showed_props_listener
-                and hasattr(self, prop)
-            ):
-                self.showed_props_listener(prop, getattr(self, prop, None))
-
-    def set_showed_props_listener(self, listener):
-        """Set a listener that will be called when the showed properties change."""
-        self.showed_props_listener = listener
 
     @abstractmethod
     def disconnect(self):
