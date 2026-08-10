@@ -37,7 +37,9 @@ class ListAnimation(AMHAnimation):
 
     def setRGB(self, color_mode: COLOR_MODE):
         self.color_mode = color_mode
-        self.rgb = cycle(color_mode) if isinstance(color_mode, list) else color_mode
+        self.rgb = (
+            cycle(color_mode) if isinstance(color_mode, list) else color_mode
+        )
 
     def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
         if isTick:
@@ -55,7 +57,9 @@ class ListAnimation(AMHAnimation):
         ):
             self.reverse()
             self.cycle_progress = 0
-        color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-assignment]
+        color: RGB = (
+            next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
+        )
         self.cached_rgb = color
         self.cached_poses = (next(self.topServo), next(self.baseServo))
         tcolor = self.apply_transformer(color, audio_data)

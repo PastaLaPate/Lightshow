@@ -95,7 +95,7 @@ class SettingsMap:
     def __contains__(self, key: Setting[Any]) -> bool:
         return key.id in self._store
 
-    def __iter__(self) -> Iterator[str]:p
+    def __iter__(self) -> Iterator[str]:
         return iter(self._store)
 
     # ── raw id-based access (for serialisation / dialog) ─────────────────────
@@ -377,11 +377,15 @@ class Config:
     def __init__(self, config_file: str = "config.json") -> None:
         if os.name == "nt":
             base_dir = Path(
-                os.getenv("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
+                os.getenv(
+                    "LOCALAPPDATA", str(Path.home() / "AppData" / "Local")
+                )
             )
         else:
             base_dir = Path(
-                os.getenv("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))
+                os.getenv(
+                    "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
+                )
             )
 
         base_dir = base_dir.expanduser().resolve()
@@ -402,7 +406,9 @@ class Config:
                 AudioDevice(is_default=True, is_loopback=True).to_dict(),
             )
         )
-        self.devices: dict[str, DeviceConfigType] = self._raw.get("devices", {})
+        self.devices: dict[str, DeviceConfigType] = self._raw.get(
+            "devices", {}
+        )
 
         # Managed settings
         self.settings: SettingsMap = SettingsMap(SETTINGS.all())
@@ -418,7 +424,9 @@ class Config:
             self.logger.info(f"{self.config_file} not found — using defaults.")
             return {}
         except json.JSONDecodeError:
-            self.logger.error(f"{self.config_file} is invalid JSON — using defaults.")
+            self.logger.error(
+                f"{self.config_file} is invalid JSON — using defaults."
+            )
             return {}
 
     # ── public ────────────────────────────────────────────────────────────────
@@ -433,7 +441,9 @@ class Config:
                 self.settings.set_by_id(key, value)
                 self._raw[key] = self.settings.get_by_id(key)
             except KeyError:
-                self.logger.warning(f"apply(): unknown setting id {key!r} — ignored")
+                self.logger.warning(
+                    f"apply(): unknown setting id {key!r} — ignored"
+                )
 
     def save(self) -> None:
         # Persist managed settings

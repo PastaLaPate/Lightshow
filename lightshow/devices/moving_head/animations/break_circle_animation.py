@@ -1,5 +1,7 @@
 from lightshow.devices.animations.aanimation import RGB
-from lightshow.devices.moving_head.moving_head_animations import MHAnimationFrame
+from lightshow.devices.moving_head.moving_head_animations import (
+    MHAnimationFrame,
+)
 from lightshow.utils.colors import hsv_to_rgb
 
 from .circle_animation import CircleAnimation
@@ -17,4 +19,6 @@ class BreakCircleAnimation(CircleAnimation):
         return super().next(audio_data, True, dt)
 
     def nextRGB(self):
-        return RGB.fromList([x * 255 for x in hsv_to_rgb(self.hue, 1, 1, 1)[:3]])
+        return RGB.fromList(
+            [x * 255 for x in hsv_to_rgb(self.hue, 1, 1, 1)[:3]]
+        )
