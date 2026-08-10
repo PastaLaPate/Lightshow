@@ -19,14 +19,14 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from importlib.metadata import version
 from pathlib import Path
-from typing import Any, ClassVar, TypeVar
+from typing import Any, ClassVar, TypedDict, TypeVar
 
 import distro
 
 from lightshow.audio.audio_types import AudioDevice
 from lightshow.devices.device import Device
 from lightshow.devices.devices_types import DeviceTypeName
-from lightshow.utils.logger import Logger
+from lightshow.logger import Logger
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Generic Setting[T]
@@ -330,7 +330,7 @@ SETTINGS_CATEGORIES: list[SettingListItem] = [
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-class DeviceConfigType(dict):  # keep TypedDict-style usage working
+class DeviceConfigType(TypedDict):  # keep TypedDict-style usage working
     type: DeviceTypeName
     props: dict[str, Any]
 
@@ -377,15 +377,11 @@ class Config:
     def __init__(self, config_file: str = "config.json") -> None:
         if os.name == "nt":
             base_dir = Path(
-                os.getenv(
-                    "LOCALAPPDATA", str(Path.home() / "AppData" / "Local")
-                )
+                os.getenv("LOCALAPPDATA", str(Path.home() / "AppData" / "Local"))
             )
         else:
             base_dir = Path(
-                os.getenv(
-                    "XDG_DATA_HOME", str(Path.home() / ".local" / "share")
-                )
+                os.getenv("XDG_DATA_HOME", str(Path.home() / ".local" / "share"))
             )
 
         base_dir = base_dir.expanduser().resolve()
@@ -406,9 +402,7 @@ class Config:
                 AudioDevice(is_default=True, is_loopback=True).to_dict(),
             )
         )
-        self.devices: dict[str, DeviceConfigType] = self._raw.get(
-            "devices", {}
-        )
+        self.devices: dict[str, DeviceConfigType] = self._raw.get("devices", {})
 
         # Managed settings
         self.settings: SettingsMap = SettingsMap(SETTINGS.all())
@@ -418,15 +412,14 @@ class Config:
 
     def _load_file(self) -> dict[str, Any]:
         try:
+            self.logger.info(f"Using {self.config_file} as config file")
             with open(self.config_file) as f:
                 return json.load(f)
         except FileNotFoundError:
             self.logger.info(f"{self.config_file} not found — using defaults.")
             return {}
         except json.JSONDecodeError:
-            self.logger.error(
-                f"{self.config_file} is invalid JSON — using defaults."
-            )
+            self.logger.error(f"{self.config_file} is invalid JSON — using defaults.")
             return {}
 
     # ── public ────────────────────────────────────────────────────────────────
@@ -441,9 +434,7 @@ class Config:
                 self.settings.set_by_id(key, value)
                 self._raw[key] = self.settings.get_by_id(key)
             except KeyError:
-                self.logger.warning(
-                    f"apply(): unknown setting id {key!r} — ignored"
-                )
+                self.logger.warning(f"apply(): unknown setting id {key!r} — ignored")
 
     def save(self) -> None:
         # Persist managed settings

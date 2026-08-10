@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QFrame, QPushButton, QTextEdit, QVBoxLayout
 
 from lightshow.gui.panels.base_panel import BasePanel
-from lightshow.utils.logger import attach_log_widget
+from lightshow.logger import attach_log_widget
 
 
 class Logs(BasePanel):

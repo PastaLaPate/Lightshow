@@ -13,16 +13,32 @@ from lightshow.audio.audio_streams import (
 )
 from lightshow.audio.detectors.methods.percentil import Percentile
 from lightshow.audio.processors import SpectrumProcessor
-from lightshow.devices.device import OutputDevice, PacketData, PacketStatus, PacketType
+from lightshow.devices.device import (
+    OutputDevice,
+    PacketData,
+    PacketStatus,
+    PacketType,
+)
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.gui.main_window import UIManager
+from lightshow.logger import Logger
 from lightshow.tracks_tracker import PlatformSpecificTracker
 from lightshow.tracks_tracker.types import PlaybackStatus, TrackInfo
-from lightshow.utils import Logger, config
-from lightshow.utils.config import ARCH, OS, PYTHON_VERSION, VERSION, resource_path
+from lightshow.utils import config
+from lightshow.utils.config import (
+    ARCH,
+    OS,
+    PYTHON_VERSION,
+    VERSION,
+    resource_path,
+)
 from lightshow.utils.update_checker import is_update_available
-from lightshow.visualization.frequencies_visualizer import FrequenciesVisualizer
-from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
+from lightshow.visualization.frequencies_visualizer import (
+    FrequenciesVisualizer,
+)
+from lightshow.visualization.spike_detector_visualizer import (
+    SpikeDetectorVisualizer,
+)
 
 pg.setConfigOptions(useOpenGL=True, enableExperimental=True)
 
@@ -98,7 +114,7 @@ class MainAudioListener(AudioListener):
         self.music_paused = False
         self.paused_since = 0
         self.current_power = 0
-        self.power_since = 0
+        self.power_since = 0.0
         self.power_decay_time = 0.5  # Decay power over 0.5 seconds
         if hasattr(self, "kick_detector"):
             self.kick_detector.clear()
@@ -229,7 +245,10 @@ class MainAudioListener(AudioListener):
 
         if self.kick_visualizer:
             self.kick_visualizer(
-                data, beat_detected=beat, break_detected=mbreak, drop_detected=drop
+                data,
+                beat_detected=beat,
+                break_detected=mbreak,
+                drop_detected=drop,
             )
         return True
 

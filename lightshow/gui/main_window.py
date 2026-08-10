@@ -1,5 +1,4 @@
 import threading
-import traceback
 from typing import Any
 
 from PyQt6.QtCore import Qt, QTimer
@@ -15,19 +14,19 @@ from PyQt6.QtWidgets import (
 )
 
 from lightshow.audio.audio_streams import LoopbackAudioStreamHandler
-from lightshow.audio.audio_types import AudioDevice
 from lightshow.devices.device import Device
 from lightshow.devices.launchpad.launchpad import LaunchpadX
 from lightshow.devices.moving_head.moving_head import MovingHead
+from lightshow.gui.controllers.device_controller import DeviceController
 from lightshow.gui.dialogs.about_dialog import AboutDialog
 from lightshow.gui.dialogs.settings_dialog import SettingsDialog
-from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
+from lightshow.gui.panels import AudioPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.gui.panels.stats import StatsPanel
 from lightshow.gui.utils.ui_signals import ui_signals
+from lightshow.logger import Logger
 from lightshow.utils import global_config
-from lightshow.utils.config import SETTINGS_CATEGORIES, _Settings, live_devices
-from lightshow.utils.logger import Logger
+from lightshow.utils.config import SETTINGS_CATEGORIES, _Settings
 
 
 class UIManager(QMainWindow):
@@ -47,33 +46,45 @@ class UIManager(QMainWindow):
         # Initialize panels
         self.audio_panel = AudioPanel(audio_listener, audio_handler)
         self.devices_panel = DevicesPanel(self.device_types)
-        self.device_details = DeviceDetailsPanel(self.device_types)
+        # self.device_details = DeviceDetailsPanel(self.device_types)
         self.manual_packets = ManualPacketsSenderPanel()
         self.stats_panel = StatsPanel()
 
+        self.device_controller = DeviceController()
+
         # Register internal handlers
+        """
         self.audio_panel.register("start_stream", self._start_stream_callback)
         self.audio_panel.register("stop_stream", self._stop_stream_callback)
-        self.audio_panel.register("device_changed", self._audio_device_changed_callback)
+        self.audio_panel.register(
+            "device_changed", self._audio_device_changed_callback
+        )
 
         self.devices_panel.register("device_selected", self._on_device_select)
         self.devices_panel.register("device_added", lambda name: None)
         self.devices_panel.register("device_deleted", self._delete_device)
 
-        self.device_details.register("connect_clicked", self._connect_device_callback)
+        self.device_details.register(
+            "connect_clicked", self._connect_device_callback
+        )
         self.device_details.register("device_renamed", self._on_device_renamed)
         self.device_details.register("delete_clicked", self._delete_device)
 
-        self.manual_packets.register("send_manual_packet", self._send_packet_callback)
+        self.manual_packets.register(
+            "send_manual_packet", self._send_packet_callback
+        )
+        """
 
         # Connect signals
-        self.ui_signals.finish_connection.connect(self._on_connection_finished)
+        # self.ui_signals.finish_connection.connect(self._on_connection_finished)
         self.ui_signals.show_error.connect(self._show_error_dialog)
         self.ui_signals.show_info.connect(self._show_info_dialog)
-        self.ui_signals.connection_status_changed.connect(
-            self._on_connection_status_changed
-        )
-        self.ui_signals.streaming_status_changed.connect(self._stream_status_changed)
+        # self.ui_signals.connection_status_changed.connect(
+        #    self._on_connection_status_changed
+        # )
+        # self.ui_signals.streaming_status_changed.connect(
+        #    self._stream_status_changed
+        # )
         self.about_dialog = AboutDialog(self)
         self.settings_dialog = SettingsDialog(self)
         self.settings_dialog.register("apply", self._apply_settings)
@@ -106,7 +117,7 @@ class UIManager(QMainWindow):
         mapping = {
             "audio": self.audio_panel,
             "devices": self.devices_panel,
-            "details": self.device_details,
+            # "details": self.device_details,
         }
         target = mapping.get(panel)
         if not target:
@@ -145,7 +156,7 @@ class UIManager(QMainWindow):
 
         device_details_w = QWidget()
         device_details = QVBoxLayout(device_details_w)
-        self.device_details.create_qt_ui(device_details)
+        # self.device_details.create_qt_ui(device_details)
 
         manual_packets_w = QWidget()
         manual_packets = QVBoxLayout(manual_packets_w)
@@ -249,17 +260,18 @@ class UIManager(QMainWindow):
         global_config.apply(settings)
         global_config.save()
 
+    """
     def _on_device_select(self, device_name):
-        """Handle device selection."""
+        \"""Handle device selection.\"""
         self.device_details.show_for(device_name)
 
     def _on_device_renamed(self, old_id, new_id):
-        """Handle device rename."""
+        \"""Handle device rename.\"""
         self.devices_panel.refresh_list()
         self.device_details.show_for(new_id)
 
     def _connect_device_callback(self, device_id):
-        """Handle connect/disconnect button click."""
+        \"""Handle connect/disconnect button click.\"""
         if not device_id:
             return
         self.logger.info(f"Connecting to device {device_id}")
@@ -310,7 +322,7 @@ class UIManager(QMainWindow):
         ).start()
 
     def _on_connection_finished(self, device_id):
-        """Handle successful connection."""
+        \"""Handle successful connection.\"""
         if self.device_details.selected_device_id != device_id:
             return
         self.device_details.set_connecting(False)
@@ -319,15 +331,15 @@ class UIManager(QMainWindow):
         self.ui_signals.connection_status_changed.emit("Connected")
 
     def _on_connection_status_changed(self, status):
-        """Update connection status display."""
+        \"""Update connection status display.\"""
         self.device_details.set_status(f"Status: {status}")
 
     def _stream_status_changed(self, is_streaming):
-        """Handle streaming status change."""
+        \"""Handle streaming status change.\"""
         self.audio_panel.set_streaming(is_streaming)
 
     def _delete_device(self, device_id):
-        """Handle device deletion."""
+        \"""Handle device deletion.\"""
         if not device_id:
             return
         if device_id in live_devices:
@@ -343,7 +355,7 @@ class UIManager(QMainWindow):
         global_config.audio_device = new_device
 
     def _start_stream_callback(self):
-        """Start audio stream."""
+        \"""Start audio stream.\"""
         try:
             self.audio_handler.reinit_stream()
             self.listener.clear_state()
@@ -357,7 +369,7 @@ class UIManager(QMainWindow):
             self.audio_panel.set_streaming(False)
 
     def _stop_stream_callback(self):
-        """Stop audio stream."""
+        \"""Stop audio stream.\"""
         self.audio_handler.stop_stream()
         # Same, we rely on the audio stream thread to emit a signal if stopping fails, so we don't wrap this in a try-except.
         # self.audio_panel.set_streaming(False)
@@ -367,11 +379,12 @@ class UIManager(QMainWindow):
             f"Sending manual packet: {packet_data.packet_type}, {packet_data.packet_status}"
         )
         self.listener.send_packet_to_devices(packet_data, True)
+"""
 
     def _update_visualizations(self):
         """Update visualizations in real-time."""
         # Process queued log messages from background threads
-        from lightshow.utils.logger import process_log_queue
+        from lightshow.logger import process_log_queue
 
         process_log_queue()
 
@@ -405,7 +418,8 @@ class UIManager(QMainWindow):
         """Gracefully stop the application and clean up resources."""
         self.update_timer.stop()
         if self.audio_panel.is_streaming:
-            self._stop_stream_callback()
+            # self._stop_stream_callback()
+            pass
         self.audio_handler.close()
         global_config.save()
 

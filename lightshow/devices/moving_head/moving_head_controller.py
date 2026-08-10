@@ -29,8 +29,8 @@ from lightshow.devices.moving_head.moving_head_colors import (
     RedLowsModulator,
     random_rainbow_color,
 )
+from lightshow.logger import Logger
 from lightshow.utils.config import _Settings, global_config
-from lightshow.utils.logger import Logger
 
 if typing.TYPE_CHECKING:
     from lightshow.devices.moving_head.moving_head import MovingHead
@@ -121,7 +121,12 @@ class MovingHeadController:
     def update_anim_color_mode(self):
         if isinstance(
             self.current_anim,
-            (ListAnimation, CircleAnimation, RegularPolygonAnimation, BounceAnimation),
+            (
+                ListAnimation,
+                CircleAnimation,
+                RegularPolygonAnimation,
+                BounceAnimation,
+            ),
         ):
             self.current_anim.setRGB(self.color_mode)
         available_transformers = [
@@ -156,7 +161,9 @@ class MovingHeadController:
         self.device.current_anim = self.current_anim.__class__.__name__
         self.device.showed_props_update()
         frm = self.current_anim.next(
-            self.latest_audio_data, False, time.time_ns() / 1e9 - self.last_tick
+            self.latest_audio_data,
+            False,
+            time.time_ns() / 1e9 - self.last_tick,
         )
         self.last_tick = time.time_ns() / 1e9
         self.updateFromFrame(frm)
@@ -219,7 +226,9 @@ class MovingHeadController:
     def tickFillingAnim(self):
         self.updateFromFrame(
             CIRCLE_BREAK_ANIMATION.next(
-                self.latest_audio_data, True, time.time_ns() / 1e9 - self.last_tick
+                self.latest_audio_data,
+                True,
+                time.time_ns() / 1e9 - self.last_tick,
             )
         )
         self.last_tick = time.time_ns() / 1e9
@@ -230,7 +239,9 @@ class MovingHeadController:
             return False
         self.updateFromFrame(
             self.current_anim.next(
-                self.latest_audio_data, True, time.time_ns() / 1e9 - self.last_tick
+                self.latest_audio_data,
+                True,
+                time.time_ns() / 1e9 - self.last_tick,
             )
         )
         self.last_tick = time.time_ns() / 1e9
@@ -290,7 +301,9 @@ class MovingHeadController:
             self.beats_since_anim_change += 1
             self.next_beat_cool += self.cooldown_time
             frame = self.current_anim.next(
-                self.latest_audio_data, False, time.time_ns() / 1e9 - self.last_tick
+                self.latest_audio_data,
+                False,
+                time.time_ns() / 1e9 - self.last_tick,
             )
             self.last_tick = time.time_ns() / 1e9
             self.updateFromFrame(frame)

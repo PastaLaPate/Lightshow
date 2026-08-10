@@ -2,7 +2,9 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
+
+from lightshow.logger import Logger
 
 
 class PacketType(Enum):
@@ -41,7 +43,20 @@ class PacketData:
         )
 
 
-class Device[T: BaseModel, R: BaseModel](ABC):
+class BaseDeviceSettings(BaseModel):
+    id: str
+    name: str = "Device X"
+
+
+logger = Logger("BaseDevice")
+
+"""
+Settings may be noted with `requires_reconnect` to make them uneditable when connected
+ex: ip: str = Field(json_schema_extra={"requires_reconnect": True})
+"""
+
+
+class Device[T: BaseDeviceSettings, R: BaseModel](ABC):
     DEVICE_TYPE_NAME = "DUMMY DEVICE"
 
     CONFIG_SCHEMA: type[T]
@@ -49,7 +64,6 @@ class Device[T: BaseModel, R: BaseModel](ABC):
 
     def __init__(self, config: T):
         self.ready = False
-        self.device_name = ""
         self.config = config
         self.runtime = self.RUNTIME_SCHEMA() if self.RUNTIME_SCHEMA else None
 
@@ -76,23 +90,41 @@ class Device[T: BaseModel, R: BaseModel](ABC):
         pass
 
     @abstractmethod
-    def init_device(self) -> bool:  # Returns if the device was successfully initialized
+    def init_device(
+        self,
+    ) -> bool:  # Returns if the device was successfully initialized
         pass
 
     # Name, data
     @abstractmethod
-    def save(self) -> tuple[str, dict[str, Any]]:
-        return self.DEVICE_TYPE_NAME, self.config.model_dump()
+    def save(self) -> dict[str, Any]:
+        return self.config.model_dump()
 
     # Returns if correctly loaded
     @abstractmethod
-    def load(self, data: tuple[str, dict[str, Any]]) -> bool:
-        pass
+    def load(self, data: dict[str, Any]) -> bool:
+        try:
+            self.config = self.CONFIG_SCHEMA.model_validate(data)
+            return True
+        except ValidationError:
+            return False
 
     @property
-    @abstractmethod
+    def id(self) -> str:
+        return self.config.id
+
+    @property
     def name(self) -> str:
-        pass
+        return self.config.name
+
+    @id.setter
+    def id(self, id: str) -> None:
+        logger.warning("Editing a device's id. [%s]", id)
+        self.config.id = id
+
+    @name.setter
+    def name(self, name: str) -> None:
+        self.config.name = name
 
     def hsv_to_rgb(self, h: float, s: float, v: float, a: float) -> tuple:
         if s:
@@ -132,5 +164,4 @@ class OutputDevice(Device):
 
 
 class InputDevice(Device):
-    def __init__(self):
-        super().__init__()
+    pass

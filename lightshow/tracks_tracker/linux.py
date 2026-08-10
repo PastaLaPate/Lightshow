@@ -12,9 +12,9 @@ from dbus_next.aio.message_bus import MessageBus
 from dbus_next.constants import BusType
 from dbus_next.signature import Variant
 
+from lightshow.logger import Logger
 from lightshow.tracks_tracker.abstract_tracker import ATrackTracker
 from lightshow.tracks_tracker.types import PlaybackStatus, TrackInfo
-from lightshow.utils import Logger
 
 
 @runtime_checkable

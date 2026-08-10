@@ -5,15 +5,17 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,
+    QListWidgetItem,
     QMenu,
     QPushButton,
     QVBoxLayout,
 )
 
-from lightshow.devices import is_device_type
 from lightshow.devices.device import Device
-from lightshow.utils import Logger, global_config
-from lightshow.utils.config import DeviceConfigType
+from lightshow.devices.devices_types import DeviceTypeName
+from lightshow.gui.utils import ui_signals
+from lightshow.logger import Logger
+from lightshow.utils import global_config
 
 from .base_panel import BasePanel
 
@@ -43,12 +45,18 @@ class DevicesPanel(BasePanel):
         self.device_listbox: DeviceListWidget | None = None
         self.device_type_combo: QComboBox | None = None
 
-    def refresh_list(self):
+        ui_signals.new_device.connect(self.refresh_list)
+        ui_signals.rename_device.connect(self.refresh_list)
+        ui_signals.device_deleted.connect(self.refresh_list)
+
+    def refresh_list(self, *args):
         """Refresh the device listbox with current devices."""
         if self.device_listbox is not None:
             self.device_listbox.clear()
-            for device_name in global_config.devices:
-                self.device_listbox.addItem(device_name)
+            for id, config in global_config.devices.items():
+                item = QListWidgetItem(config["props"]["name"])
+                item.setData(Qt.ItemDataRole.UserRole, id)
+                self.device_listbox.addItem(item)
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the devices panel UI elements."""
@@ -60,8 +68,7 @@ class DevicesPanel(BasePanel):
         # Device listbox
         self.device_listbox = DeviceListWidget(self._delete_selected_device)
         self.device_listbox.setMaximumHeight(200)
-        for device_name in global_config.devices:
-            self.device_listbox.addItem(device_name)
+        self.refresh_list()
         self.device_listbox.itemSelectionChanged.connect(self._on_device_select)
         self.device_listbox.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.device_listbox.customContextMenuRequested.connect(self._show_context_menu)
@@ -102,7 +109,9 @@ class DevicesPanel(BasePanel):
         menu = QMenu(self.device_listbox)
 
         duplicate_action = QAction("Duplicate", self.device_listbox)
-        duplicate_action.triggered.connect(lambda: self._duplicate_device(item.text()))
+        duplicate_action.triggered.connect(
+            lambda: self._duplicate_device(item.data(Qt.ItemDataRole.UserRole))
+        )
         menu.addAction(duplicate_action)
 
         delete_action = QAction("Delete", self.device_listbox)
@@ -118,12 +127,9 @@ class DevicesPanel(BasePanel):
         current_item = self.device_listbox.currentItem()
         if not current_item:
             return
-        device_id = current_item.text()
+        device_id = current_item.data(Qt.ItemDataRole.UserRole)
         if device_id in global_config.devices:
-            del global_config.devices[device_id]
-            logger.info(f"Deleted device: {device_id}")
-            self.refresh_list()
-            self.trigger("device_deleted", device_id)
+            ui_signals.delete_device.emit(device_id)
 
     def _duplicate_device(self, device_id: str):
         """Duplicate an existing device with a new unique ID."""
@@ -132,49 +138,16 @@ class DevicesPanel(BasePanel):
 
         source_config = global_config.devices[device_id]
 
-        # Find a unique ID for the duplicate
-        base_id = f"{device_id}_copy"
-        new_id = base_id
-        counter = 1
-        while new_id in global_config.devices:
-            new_id = f"{base_id}_{counter}"
-            counter += 1
-
-        # Deep-copy the config
-        global_config.devices[new_id] = DeviceConfigType(
-            {
-                "type": source_config["type"],
-                "props": source_config.get("props", {}).copy(),
-            }
-        )
-
-        logger.info(f"Duplicated device '{device_id}' as '{new_id}'")
-        self.refresh_list()
-        self._select_device_by_id(new_id)
-        self.trigger("device_added", new_id)
-
     def _add_device_callback(self):
         """Handle adding a new device."""
         if not self.device_type_combo:
             return
         device_type_name = self.device_type_combo.currentText()
-        device_type = next(
-            (t for t in self.device_types if t.DEVICE_TYPE_NAME == device_type_name),
-            None,
+        device_type: DeviceTypeName = next(
+            (t for t in list(DeviceTypeName) if t.value == device_type_name),
+            DeviceTypeName.MOVING_HEAD,
         )
-        if device_type:
-            device_count = len(global_config.devices)
-            device_id = f"{device_type_name}_{device_count}"
-            if is_device_type(device_type_name):
-                global_config.devices[device_id] = DeviceConfigType(
-                    {
-                        "type": device_type_name,
-                        "props": getattr(device_type, "DEFAULT_CONFIG", {}).copy(),
-                    }
-                )
-            self.refresh_list()
-            self._select_device_by_id(device_id)
-            self.trigger("device_added", device_id)
+        ui_signals.create_device.emit(device_type, "")
 
     def _select_device_by_id(self, device_id: str):
         """Select a device in the listbox by its ID."""

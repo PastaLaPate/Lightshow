@@ -8,9 +8,11 @@ import requests
 from lightshow.devices.animations.aanimation import RGB, Command
 from lightshow.devices.device import OutputDevice, PacketStatus, PacketType
 from lightshow.devices.devices_types import DeviceTypeName
-from lightshow.devices.moving_head.moving_head_controller import MovingHeadController
+from lightshow.devices.moving_head.moving_head_controller import (
+    MovingHeadController,
+)
 from lightshow.gui.utils import ui_signals
-from lightshow.utils.logger import Logger
+from lightshow.logger import Logger
 
 
 class MovingHead(OutputDevice):

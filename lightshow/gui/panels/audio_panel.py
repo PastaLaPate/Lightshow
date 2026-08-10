@@ -15,7 +15,8 @@ from PyQt6.QtWidgets import (
 from lightshow.audio.audio_streams import AAudioStreamHandler
 from lightshow.audio.audio_types import AudioDevice
 from lightshow.gui.components.logs import Logs
-from lightshow.utils import Logger, global_config
+from lightshow.logger import Logger
+from lightshow.utils import global_config
 
 from .base_panel import BasePanel
 

@@ -6,8 +6,7 @@ import sys
 import traceback
 from pathlib import Path
 
-from lightshow.utils import Logger
-from lightshow.utils.logger import configure_logging
+from lightshow.logger import Logger, configure_logging
 
 logger = None
 

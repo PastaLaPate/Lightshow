@@ -4,7 +4,7 @@ import numpy as np
 
 from lightshow.audio.data import AudioData
 from lightshow.audio.detectors.methods.detection_method import DetectionMethod
-from lightshow.utils import Logger
+from lightshow.logger import Logger
 
 logger = Logger.for_class("PercentileDetection")
 

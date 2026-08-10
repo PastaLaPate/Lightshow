@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.audio.audio_types import AudioData
 from lightshow.gui.utils import ui_signals
-from lightshow.utils.logger import Logger
+from lightshow.logger import Logger
 
 _logger = Logger.for_class("Audio Visualization")
 
