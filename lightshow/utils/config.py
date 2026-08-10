@@ -95,7 +95,7 @@ class SettingsMap:
     def __contains__(self, key: Setting[Any]) -> bool:
         return key.id in self._store
 
-    def __iter__(self) -> Iterator[str]:
+    def __iter__(self) -> Iterator[str]:p
         return iter(self._store)
 
     # ── raw id-based access (for serialisation / dialog) ─────────────────────

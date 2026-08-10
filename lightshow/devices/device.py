@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, ClassVar, TypeVar
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -40,16 +40,19 @@ class PacketData:
             audio_data  # Optional AudioData object for audio-reactive effects
         )
 
-class Device[T: BaseModel](ABC):
+
+class Device[T: BaseModel, R: BaseModel](ABC):
     DEVICE_TYPE_NAME = "DUMMY DEVICE"
 
     CONFIG_SCHEMA: type[T]
+    RUNTIME_SCHEMA: type[R] | None
 
     def __init__(self, config: T):
         self.ready = False
         self.device_name = ""
         self.config = config
-        
+        self.runtime = self.RUNTIME_SCHEMA() if self.RUNTIME_SCHEMA else None
+
         super().__init__()
 
     def connect(self, fatal_non_discovery=True):
@@ -79,7 +82,7 @@ class Device[T: BaseModel](ABC):
     # Name, data
     @abstractmethod
     def save(self) -> tuple[str, dict[str, Any]]:
-        pass
+        return self.DEVICE_TYPE_NAME, self.config.model_dump()
 
     # Returns if correctly loaded
     @abstractmethod
