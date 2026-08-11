@@ -72,11 +72,15 @@ class MainAudioListener(AudioListener):
 
     def changed_visualizer_settings(self) -> None:
         if hasattr(self, "kick_visualizer") and self.kick_visualizer:
-            self.gui_bridge.clear_visualizer_signal.connect(self.kick_visualizer.clear)
+            self.gui_bridge.clear_visualizer_signal.connect(
+                self.kick_visualizer.clear
+            )
 
     def on_track_changed(self, player_name: str, infos: TrackInfo) -> None:
         if infos.title:
-            self.logger.info(f"Now playing {infos.title} ! (By {infos.artist})")
+            self.logger.info(
+                f"Now playing {infos.title} ! (By {infos.artist})"
+            )
             self.send_packet_to_devices(
                 PacketData(PacketType.NEW_MUSIC, PacketStatus.ON)
             )
@@ -93,13 +97,17 @@ class MainAudioListener(AudioListener):
         if status == PlaybackStatus.PAUSED:
             self.music_paused = True
             self.paused_since = time_ns()
-            self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.ON))
+            self.send_packet_to_devices(
+                PacketData(PacketType.BREAK, PacketStatus.ON)
+            )
 
         elif status == PlaybackStatus.PLAYING:
             self.music_paused = False
             self.break_detector.clear_old_beats()
             self.break_detector.clean_beats(time_ns() - self.paused_since)
-            self.send_packet_to_devices(PacketData(PacketType.BREAK, PacketStatus.OFF))
+            self.send_packet_to_devices(
+                PacketData(PacketType.BREAK, PacketStatus.OFF)
+            )
             self.paused_since = 0
 
         # "stopped" requires no action beyond the log above
@@ -144,7 +152,8 @@ class MainAudioListener(AudioListener):
             if device.ready and isinstance(device, OutputDevice):
                 if isinstance(device, MovingHead):
                     if not device.manual or (
-                        device.auto_tick and packet.packet_type == PacketType.TICK
+                        device.auto_tick
+                        and packet.packet_type == PacketType.TICK
                     ):
                         device.on(packet)
                 else:
@@ -179,7 +188,9 @@ class MainAudioListener(AudioListener):
         self.break_detected = False
         self.kick_detector.reset_state()
         self.break_detector.clear_old_beats()
-        self.break_detector.clean_beats(time_ns() - self.break_detector.beats[-1])
+        self.break_detector.clean_beats(
+            time_ns() - self.break_detector.beats[-1]
+        )
         self.send_packet_to_devices(
             PacketData(PacketType.BREAK, PacketStatus.OFF, audio_data=data)
         )
@@ -258,15 +269,21 @@ def main() -> None:
     update_available, update_message = is_update_available()
     logger.info(
         "Version status: %s",
-        update_message if update_available else "Unable to fetch latest version info.",
+        update_message
+        if update_available != ""
+        else "Unable to fetch latest version info.",
     )
-    logger.debug("OS: %s | Python: %s | Architecture: %s", OS, PYTHON_VERSION, ARCH)
+    logger.debug(
+        "OS: %s | Python: %s | Architecture: %s", OS, PYTHON_VERSION, ARCH
+    )
     global ui_manager
     from PyQt6.QtCore import QTimer
     from PyQt6.QtGui import QIcon
     from PyQt6.QtWidgets import QApplication
 
-    audio_handler = LoopbackAudioStreamHandler(SpectrumProcessor, config.global_config)
+    audio_handler = LoopbackAudioStreamHandler(
+        SpectrumProcessor, config.global_config
+    )
     listener = MainAudioListener(audio_handler)
     audio_handler.add_listener_on_init(listener)
 

@@ -16,7 +16,9 @@ class DeviceController(QObject):
         ui_signals.rename_device.connect(self.handle_rename_device)
         ui_signals.delete_device.connect(self.handle_delete_device)
 
-    def handle_create_device(self, device_type: DeviceTypeName, name: str | None):
+    def handle_create_device(
+        self, device_type: DeviceTypeName, name: str | None
+    ):
         id = str(uuid4())
         global_config.devices[id] = DeviceConfigType(
             type=device_type,
@@ -37,7 +39,6 @@ class DeviceController(QObject):
         ui_signals.device_renamed.emit(id, new_name)
 
     def handle_delete_device(self, id: str):
-        print("uhh")
         if not self.id_exists(id):
             return
 

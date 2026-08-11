@@ -1,3 +1,5 @@
+from functools import partial
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QAction, QKeyEvent
 from PyQt6.QtWidgets import (
@@ -45,36 +47,31 @@ class DevicesPanel(BasePanel):
         self.device_listbox: DeviceListWidget | None = None
         self.device_type_combo: QComboBox | None = None
 
-        ui_signals.new_device.connect(self.refresh_list)
-        ui_signals.rename_device.connect(self.refresh_list)
+        ui_signals.new_device.connect(self._device_created)
+        ui_signals.device_renamed.connect(self.refresh_list)
         ui_signals.device_deleted.connect(self.refresh_list)
-
-    def refresh_list(self, *args):
-        """Refresh the device listbox with current devices."""
-        if self.device_listbox is not None:
-            self.device_listbox.clear()
-            for id, config in global_config.devices.items():
-                item = QListWidgetItem(config["props"]["name"])
-                item.setData(Qt.ItemDataRole.UserRole, id)
-                self.device_listbox.addItem(item)
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the devices panel UI elements."""
-        # Title
         title_label = QLabel("Devices")
         title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
         layout.addWidget(title_label)
 
-        # Device listbox
         self.device_listbox = DeviceListWidget(self._delete_selected_device)
         self.device_listbox.setMaximumHeight(200)
         self.refresh_list()
-        self.device_listbox.itemSelectionChanged.connect(self._on_device_select)
-        self.device_listbox.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.device_listbox.customContextMenuRequested.connect(self._show_context_menu)
+        self.device_listbox.itemSelectionChanged.connect(
+            self._on_device_select
+        )
+        self.device_listbox.itemChanged.connect(self._on_item_renamed)
+        self.device_listbox.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.device_listbox.customContextMenuRequested.connect(
+            self._show_selected_context_menu
+        )
         layout.addWidget(self.device_listbox)
 
-        # Add device controls
         add_layout = QHBoxLayout()
         self.device_type_combo = QComboBox()
         self.device_type_combo.addItems(
@@ -89,6 +86,22 @@ class DevicesPanel(BasePanel):
         layout.addLayout(add_layout)
         layout.addStretch()
 
+    def refresh_list(self, *args):
+        """Refresh the device listbox with current devices."""
+        if self.device_listbox is not None:
+            self.device_listbox.clear()
+            for id, config in global_config.devices.items():
+                item = QListWidgetItem(config["props"]["name"])
+                item.setData(Qt.ItemDataRole.UserRole, id)
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
+                self.device_listbox.addItem(item)
+
+    def _device_created(self, id: str):
+        self.refresh_list()
+        item = self._select_device_by_id(id)
+        if item and self.device_listbox is not None:
+            self.device_listbox.editItem(item)
+
     def _on_device_select(self):
         """Handle device selection from listbox."""
         if not self.device_listbox:
@@ -98,27 +111,29 @@ class DevicesPanel(BasePanel):
             device_name = current_item.text()
             self.trigger("device_selected", device_name)
 
-    def _show_context_menu(self, pos):
-        """Show right-click context menu on a list item."""
-        if not self.device_listbox:
-            return
-        item = self.device_listbox.itemAt(pos)
-        if not item:
+    def _on_item_renamed(self, item: QListWidgetItem):
+        device_id = item.data(Qt.ItemDataRole.UserRole)
+        new_name = item.text().strip()
+
+        if (
+            not device_id
+            or not new_name
+            or device_id not in global_config.devices
+        ):
             return
 
-        menu = QMenu(self.device_listbox)
+        ui_signals.rename_device.emit(device_id, new_name)
 
-        duplicate_action = QAction("Duplicate", self.device_listbox)
-        duplicate_action.triggered.connect(
-            lambda: self._duplicate_device(item.data(Qt.ItemDataRole.UserRole))
+    def _add_device_callback(self):
+        """Handle adding a new device."""
+        if not self.device_type_combo:
+            return
+        device_type_name = self.device_type_combo.currentText()
+        device_type: DeviceTypeName = next(
+            (t for t in list(DeviceTypeName) if t.value == device_type_name),
+            DeviceTypeName.MOVING_HEAD,
         )
-        menu.addAction(duplicate_action)
-
-        delete_action = QAction("Delete", self.device_listbox)
-        delete_action.triggered.connect(self._delete_selected_device)
-        menu.addAction(delete_action)
-
-        menu.exec(self.device_listbox.mapToGlobal(pos))
+        ui_signals.create_device.emit(device_type, "")
 
     def _delete_selected_device(self):
         """Delete the currently selected device."""
@@ -138,23 +153,55 @@ class DevicesPanel(BasePanel):
 
         source_config = global_config.devices[device_id]
 
-    def _add_device_callback(self):
-        """Handle adding a new device."""
-        if not self.device_type_combo:
+    def _show_selected_context_menu(self, pos):
+        """Show right-click context menu on a list item."""
+        if self.device_listbox is None:
             return
-        device_type_name = self.device_type_combo.currentText()
-        device_type: DeviceTypeName = next(
-            (t for t in list(DeviceTypeName) if t.value == device_type_name),
-            DeviceTypeName.MOVING_HEAD,
-        )
-        ui_signals.create_device.emit(device_type, "")
+        item = self.device_listbox.itemAt(pos)
+        if not item:
+            self._show_context_menu(pos)
+            return
 
-    def _select_device_by_id(self, device_id: str):
+        menu = QMenu(self.device_listbox)
+
+        duplicate_action = QAction("Duplicate", self.device_listbox)
+        duplicate_action.triggered.connect(
+            lambda: self._duplicate_device(item.data(Qt.ItemDataRole.UserRole))
+        )
+        # menu.addAction(duplicate_action)
+
+        delete_action = QAction("Delete", self.device_listbox)
+        delete_action.triggered.connect(self._delete_selected_device)
+        menu.addAction(delete_action)
+
+        menu.exec(self.device_listbox.mapToGlobal(pos))
+
+    def _show_context_menu(self, pos):
+        """Show right-click context menu on device list."""
+        if self.device_listbox is None:
+            return
+
+        menu = QMenu(self.device_listbox)
+
+        new_action = QMenu("New", self.device_listbox)
+        for device in list(DeviceTypeName):
+            new_device_action = QAction(
+                device.value, parent=self.device_listbox
+            )
+            new_device_action.triggered.connect(
+                partial(ui_signals.create_device.emit, device, "")
+            )
+            new_action.addAction(new_device_action)
+        menu.addMenu(new_action)
+
+        menu.exec(self.device_listbox.mapToGlobal(pos))
+
+    def _select_device_by_id(self, device_id: str) -> QListWidgetItem | None:
         """Select a device in the listbox by its ID."""
         if not self.device_listbox:
             return
         for i in range(self.device_listbox.count()):
             item = self.device_listbox.item(i)
-            if item and item.text() == device_id:
-                self.device_listbox.setCurrentRow(i)
-                return
+            if item and item.data(Qt.ItemDataRole.UserRole) == device_id:
+                self.device_listbox.setCurrentItem(item)
+                return item

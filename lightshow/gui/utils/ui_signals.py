@@ -12,6 +12,8 @@ class UISignals(QObject):
     connection_status_changed = pyqtSignal(str)
     streaming_status_changed = pyqtSignal(bool)
 
+    device_selected = pyqtSignal(object)  # id | None
+
     create_device = pyqtSignal(
         DeviceTypeName, object
     )  # When new is clicked, DeviceType, name (optional)
