@@ -55,7 +55,7 @@ class ListAnimation(AMHAnimation):
         ):
             self.reverse()
             self.cycle_progress = 0
-        color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-assignment]
+        color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
         self.cached_rgb = color
         self.cached_poses = (next(self.topServo), next(self.baseServo))
         tcolor = self.apply_transformer(color, audio_data)

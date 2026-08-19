@@ -68,7 +68,7 @@ class RegularPolygonAnimation(AMHAnimation):
                 self.reverse()
                 self.cycle_progress = 0
             self.calculateServoPoses(self.angle_offset)
-        color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-assignment]
+        color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
         tcolor = self.apply_transformer(color, audio_data)
         self.cached_rgb = color
         self.cached_poses = (next(self.topServo), next(self.baseServo))

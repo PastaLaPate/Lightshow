@@ -113,7 +113,7 @@ class CircleAnimation(AMHAnimation):
         return (base, top)
 
     def nextRGB(self) -> RGB:
-        return next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-return-type]
+        return next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
 
     def reverse(self):
         super().reverse()

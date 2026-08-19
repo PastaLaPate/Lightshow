@@ -36,7 +36,7 @@ class BounceAnimation(AMHAnimation):
     def setRGB(self, color_mode: COLOR_MODE):
         self.color_mode = color_mode
         self.rgb: cycle[RGB] | Callable[[], RGB] = (
-            cycle(color_mode) if isinstance(color_mode, list) else color_mode  # ty:ignore[invalid-assignment]
+            cycle(color_mode) if isinstance(color_mode, list) else color_mode
         )
 
     def _compute_required_velocity(self, dt_est=1 / 60):
@@ -98,7 +98,7 @@ class BounceAnimation(AMHAnimation):
             self.velocity = v
 
             # Update color
-            color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()  # ty:ignore[invalid-assignment]
+            color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
             self.color = self.apply_transformer(color, audio_data)
 
         # Servo interpolation
