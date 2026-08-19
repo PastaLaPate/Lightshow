@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "astral-sh.ty",
+    "charliermarsh.ruff",
+    "njpwerner.autodocstring",
+    "christian-kohler.path-intellisense",
+    "elagil.pre-commit-helper",
+    "ms-python.vscode-pylance",
+    "ms-python.python",
+    "njqdev.vscode-python-typehint"
+  ]
+}
