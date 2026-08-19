@@ -22,3 +22,11 @@ updates:
       all-dependencies:
         patterns:
           - "*"
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      all-dependencies:
+        patterns:
+          - "*"
