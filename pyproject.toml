@@ -8,8 +8,8 @@ dependencies = [
     "PyQt6>=6.7.0",
     "PyQt6-Charts>=6.7.0",
     "numpy>=2.5.2",
-    "ty>=0.0.75",
-    "websocket-client>=1.8.0",
+    "ty>=0.0.78",
+    "websocket-client>=1.9.2",
     "winrt-runtime>=3.2.1 ; platform_system == \"Windows\"",
     "winrt-windows-media>=3.2.1 ; platform_system == \"Windows\"",
     "winrt-windows-media-control>=3.2.1 ; platform_system == \"Windows\"",
@@ -49,8 +49,8 @@ lightshow = { workspace = true }
 dev = [
     "isort>=9.0.1",
     "pre-commit>=4.6.2",
-    "ruff>=0.16.5",
-    "ty>=0.0.75",
+    "ruff>=0.16.6",
+    "ty>=0.0.78",
 ]
 
 [project.scripts]
