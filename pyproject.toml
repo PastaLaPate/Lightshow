@@ -8,22 +8,22 @@ dependencies = [
     "PyQt6>=6.7.0",
     "PyQt6-Charts>=6.7.0",
     "numpy>=2.5.3",
-    "ty>=0.0.80",
+    "ty>=0.0.82",
     "websocket-client>=1.9.2",
     "winrt-runtime>=3.2.1 ; platform_system == \"Windows\"",
     "winrt-windows-media>=3.2.1 ; platform_system == \"Windows\"",
     "winrt-windows-media-control>=3.2.1 ; platform_system == \"Windows\"",
     "winrt-windows-foundation>=3.2.1 ; platform_system == \"Windows\"",
     "winrt-windows-foundation-collections>=3.2.1 ; platform_system == \"Windows\"",
-    "pyinstaller>=6.22.2",
-    "matplotlib>=3.11.0",
+    "pyinstaller>=6.22.3",
+    "matplotlib>=3.11.2",
     "pyqtgraph>=0.14.0",
     "dbus-next>=0.2.3",
     "pyopengl>=3.1.10",
     "pyopengl-accelerate>=3.1.10",
     "soundcard>=0.4.6",
     "distro>=1.9.0",
-    "semver>=3.0.4",
+    "semver>=3.1.0",
     "mido[ports-rtmidi]>=1.3.3",
     "requests>=2.34.2",
 ]
@@ -49,8 +49,8 @@ lightshow = { workspace = true }
 dev = [
     "isort>=9.0.1",
     "pre-commit>=4.6.2",
-    "ruff>=0.16.7",
-    "ty>=0.0.80",
+    "ruff>=0.16.8",
+    "ty>=0.0.82",
 ]
 
 [project.scripts]
