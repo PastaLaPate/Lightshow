@@ -98,9 +98,7 @@ class BounceAnimation(AMHAnimation):
             self.velocity = v
 
             # Update color
-            color: RGB = (
-                next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
-            )
+            color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
             self.color = self.apply_transformer(color, audio_data)
 
         # Servo interpolation
@@ -110,8 +108,7 @@ class BounceAnimation(AMHAnimation):
         )
 
         top_angle = int(
-            (self.top_range[1] - self.top_range[0])
-            * self.y_f(self.cycle_progress)
+            (self.top_range[1] - self.top_range[0]) * self.y_f(self.cycle_progress)
             + self.top_range[0]
         )
 

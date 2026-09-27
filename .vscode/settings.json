@@ -1,13 +1,32 @@
 {
+  // Editor
   "editor.tabSize": 4,
   "editor.insertSpaces": true,
   "editor.formatOnSave": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+
+  // Makefile: tabs recommended
+  "[makefile]": {
+    "editor.insertSpaces": false,
+    "editor.tabSize": 4
+  },
+
+  // Ruff
+
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true
+  },
   "editor.codeActionsOnSave": {
     "source.fixAll.ruff": "always",
-    "source.organizeImports.ruff": "always",
-    "source.organizeImports": "always"
+    "source.organizeImports.ruff": "always"
   },
+
+  // Python
+
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "python.analysis.typeCheckingMode": "standard",
   "python.analysis.indexing": true,
-  "python.analysis.autoImportCompletions": true,
-  "makefile.configureOnOpen": false
+  "python.analysis.autoImportCompletions": true
 }
