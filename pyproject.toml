@@ -8,7 +8,7 @@ dependencies = [
     "PyQt6>=6.7.0",
     "PyQt6-Charts>=6.7.0",
     "numpy>=2.5.3",
-    "ty>=0.0.82",
+    "ty>=0.0.84",
     "websocket-client>=1.9.2",
     "winrt-runtime>=3.2.1 ; platform_system == \"Windows\"",
     "winrt-windows-media>=3.2.1 ; platform_system == \"Windows\"",
@@ -29,7 +29,7 @@ dependencies = [
 ]
 
 [build-system]
-requires = ["pdm-backend>=2.4.9"]
+requires = ["pdm-backend>=2.4.10"]
 build-backend = "pdm.backend"
 
 [tool.setuptools]
@@ -49,8 +49,8 @@ lightshow = { workspace = true }
 dev = [
     "isort>=9.0.1",
     "pre-commit>=4.6.2",
-    "ruff>=0.16.8",
-    "ty>=0.0.82",
+    "ruff>=0.16.9",
+    "ty>=0.0.84",
 ]
 
 [project.scripts]
