@@ -20,7 +20,7 @@ from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.gui.controllers.device_controller import DeviceController
 from lightshow.gui.dialogs.about_dialog import AboutDialog
 from lightshow.gui.dialogs.settings_dialog import SettingsDialog
-from lightshow.gui.panels import AudioPanel, DevicesPanel
+from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.gui.panels.stats import StatsPanel
 from lightshow.gui.utils.ui_signals import ui_signals
@@ -46,7 +46,7 @@ class UIManager(QMainWindow):
         # Initialize panels
         self.audio_panel = AudioPanel(audio_listener, audio_handler)
         self.devices_panel = DevicesPanel(self.device_types)
-        # self.device_details = DeviceDetailsPanel(self.device_types)
+        self.device_details = DeviceDetailsPanel(self.device_types)
         self.manual_packets = ManualPacketsSenderPanel()
         self.stats_panel = StatsPanel()
 
@@ -156,7 +156,7 @@ class UIManager(QMainWindow):
 
         device_details_w = QWidget()
         device_details = QVBoxLayout(device_details_w)
-        # self.device_details.create_qt_ui(device_details)
+        self.device_details.create_qt_ui(device_details)
 
         manual_packets_w = QWidget()
         manual_packets = QVBoxLayout(manual_packets_w)
@@ -174,7 +174,7 @@ class UIManager(QMainWindow):
             """
             QSplitter::handle {
                 background-color: #333;
-            }                       
+            }
         """
         )
 
@@ -189,7 +189,7 @@ class UIManager(QMainWindow):
             """
             QSplitter::handle {
                 background-color: #333;
-            }                       
+            }
         """
         )
 

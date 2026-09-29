@@ -10,6 +10,7 @@ from PyQt6.QtWidgets import (
     QListWidgetItem,
     QMenu,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
 )
 
@@ -58,17 +59,15 @@ class DevicesPanel(BasePanel):
         layout.addWidget(title_label)
 
         self.device_listbox = DeviceListWidget(self._delete_selected_device)
-        self.device_listbox.setMaximumHeight(200)
         self.refresh_list()
-        self.device_listbox.itemSelectionChanged.connect(
-            self._on_device_select
-        )
+        self.device_listbox.itemSelectionChanged.connect(self._on_device_select)
         self.device_listbox.itemChanged.connect(self._on_item_renamed)
-        self.device_listbox.setContextMenuPolicy(
-            Qt.ContextMenuPolicy.CustomContextMenu
-        )
+        self.device_listbox.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.device_listbox.customContextMenuRequested.connect(
             self._show_selected_context_menu
+        )
+        self.device_listbox.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
         layout.addWidget(self.device_listbox)
 
@@ -84,7 +83,6 @@ class DevicesPanel(BasePanel):
         add_layout.addWidget(add_button)
 
         layout.addLayout(add_layout)
-        layout.addStretch()
 
     def refresh_list(self, *args):
         """Refresh the device listbox with current devices."""
@@ -109,17 +107,13 @@ class DevicesPanel(BasePanel):
         current_item = self.device_listbox.currentItem()
         if current_item:
             device_name = current_item.text()
-            self.trigger("device_selected", device_name)
+            ui_signals.device_selected.emit(device_name)
 
     def _on_item_renamed(self, item: QListWidgetItem):
         device_id = item.data(Qt.ItemDataRole.UserRole)
         new_name = item.text().strip()
 
-        if (
-            not device_id
-            or not new_name
-            or device_id not in global_config.devices
-        ):
+        if not device_id or not new_name or device_id not in global_config.devices:
             return
 
         ui_signals.rename_device.emit(device_id, new_name)
@@ -185,9 +179,7 @@ class DevicesPanel(BasePanel):
 
         new_action = QMenu("New", self.device_listbox)
         for device in list(DeviceTypeName):
-            new_device_action = QAction(
-                device.value, parent=self.device_listbox
-            )
+            new_device_action = QAction(device.value, parent=self.device_listbox)
             new_device_action.triggered.connect(
                 partial(ui_signals.create_device.emit, device, "")
             )
