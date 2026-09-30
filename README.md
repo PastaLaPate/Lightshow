@@ -14,6 +14,7 @@ It detects beats from the output stream of your speakers and then use them to cr
 ## Installation
 
 ### Multi-platform
+
 Wheel file is available, download in releases, run `pip install lightshow-X.XX.X.py3-none-any.whl`.
 
 ### Windows
@@ -31,14 +32,17 @@ Run lightshow.exe
 ### Linux
 
 #### AppImage
+
 Download the AppImage.
 Make it executable: `chmod +x downloaded_file.AppImage`
 
 #### Portable
+
 Download the .tar.gz archive.
 Make the `lightshow` file executable: `cd extracted_folder && chmod +x lightshow`
 
 ### MacOS
+
 Im not even sure it works.
 
 ### Run from source
@@ -52,8 +56,9 @@ Im not even sure it works.
    `cd Lightshow`
 3. Install dependencies
    `uv sync`
-3.1. Linux dev dependencies
-   `sudo apt install libsdl-image1.2-dev libsdl-mixer1.2-dev libsdl-ttf2.0-dev libsdl1.2-dev libsmpeg-dev`
+   3.1. Linux dev dependencies
+   `sudo apt install libsdl-image1.2-dev libsdl-mixer1.2-dev libsdl-ttf2.0-dev libsdl1.2-dev libsmpeg-dev librtmidi-dev`
+   `sudo dnf install rtmidi-devel`
 4. Start
    `uv run lightshow`
 5. (Optional) Create executable for windows
