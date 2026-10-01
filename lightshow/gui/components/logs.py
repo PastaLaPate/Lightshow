@@ -1,3 +1,4 @@
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QFrame, QPushButton, QTextEdit, QVBoxLayout
 
 from lightshow.gui.panels.base_panel import BasePanel
@@ -22,13 +23,13 @@ class Logs(BasePanel):
 
         self.textBox = QTextEdit()
         self.textBox.setReadOnly(True)
+        self.textBox.setFont(QFont("Jetbrains Mono"))
         self.textBox.setStyleSheet(
-            """                  
+            """
             QTextEdit {
                 background: #111;
                 color: #eee;
-                font-family: Consolas;
-                font-size: 12px;
+                font-size: 14px;
             }
         """
         )
