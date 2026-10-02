@@ -83,12 +83,13 @@ class FrequenciesVisualizer(QWidget):
         self.plot = pg.PlotWidget(useOpenGL=OPENGL_AVAILABLE)
         self.plot.setBackground("#1e1e1e")
 
-        plot_item = self.plot.getPlotItem()
-        if plot_item:
+        plot_item: pg.PlotItem | None = self.plot.getPlotItem()
+        if plot_item is not None:
             plot_item.setClipToView(True)
             plot_item.setDownsampling(mode="peak")
             plot_item.setLabel("bottom", "Frequency", units="Hz")
             plot_item.setLabel("left", "Power", units="dB")
+            plot_item.getViewBox().setMouseEnabled(False, False)
 
         self.plot.showGrid(x=True, y=True, alpha=0.2)
 

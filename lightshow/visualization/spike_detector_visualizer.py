@@ -81,10 +81,11 @@ class SpikeDetectorVisualizer(QWidget):
 
         self.plot.setBackground("#1e1e1e")
         self.plot.setAntialiasing(True)
-        plot_item = self.plot.getPlotItem()
-        if plot_item:
+        plot_item: pg.PlotItem | None = self.plot.getPlotItem()
+        if plot_item is not None:
             plot_item.setClipToView(True)
             plot_item.setDownsampling(mode="peak")
+            plot_item.getViewBox().setMouseEnabled(False, False)
 
         self.plot.showGrid(x=False, y=False)
 
