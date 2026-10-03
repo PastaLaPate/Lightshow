@@ -44,7 +44,7 @@ dev = [
 ]
 
 [build-system]
-requires = ["pdm-backend>=2.4.9"]
+requires = ["pdm-backend>=2.4.10"]
 build-backend = "pdm.backend"
 
 [tool.commitizen]
