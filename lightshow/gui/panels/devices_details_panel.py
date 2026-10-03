@@ -1,121 +1,82 @@
-from PyQt6.QtCore import QEasingCurve, QRectF, QSize, Qt, QVariantAnimation
-from PyQt6.QtGui import QColor, QPainter
+from enum import IntEnum, auto
+
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
-    QSizePolicy,
     QStackedLayout,
     QVBoxLayout,
     QWidget,
 )
 
 from lightshow.devices.device import Device
-from lightshow.gui.utils import lerp_color, ui_signals
+from lightshow.gui.components.editable_label import EditableLabel
+from lightshow.gui.components.status_circle import StatusCircle
+from lightshow.gui.utils import ui_signals
 
 from .base_panel import BasePanel
 
 
-class StatusCircle(QWidget):
-    def __init__(self, color=Qt.GlobalColor.green, pulsing=False, parent=None):
-        super().__init__(parent)
-        self._color = QColor(color)
-        self._pulse_color = QColor(Qt.GlobalColor.transparent)
-        self._t = 0.0
-
-        policy = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
-        policy.setHeightForWidth(True)
-        self.setSizePolicy(policy)
-
-        self._anim = QVariantAnimation(self)
-        self._anim.setDuration(1200)
-        self._anim.setLoopCount(-1)
-        self._anim.setEasingCurve(QEasingCurve.Type.Linear)
-        self._anim.setKeyValueAt(0.0, 0.0)
-        self._anim.setKeyValueAt(0.5, 1.0)
-        self._anim.setKeyValueAt(1.0, 0.0)
-        self._anim.valueChanged.connect(self._on_anim)
-
-        self.set_pulsing(pulsing)
-
-    def _on_anim(self, v):
-        self._t = float(v)
-        self.update()
-
-    @property
-    def color(self):
-        return self._color
-
-    @color.setter
-    def color(self, color: Qt.GlobalColor):
-        if self._color != color:
-            self._color = QColor(color)
-            self.update()
-
-    def set_pulsing(self, on: bool):
-        if on:
-            if self._anim.state() != QVariantAnimation.State.Running:
-                self._anim.start()
-        else:
-            self._anim.stop()
-            self._t = 0.0
-            self.update()
-
-    def hideEvent(self, a0):
-        if self._anim.state() == QVariantAnimation.State.Running:
-            self._anim.pause()
-        super().hideEvent(a0)
-
-    def showEvent(self, a0):
-        if self._anim.state() == QVariantAnimation.State.Paused:
-            self._anim.resume()
-        super().showEvent(a0)
-
-    def sizeHint(self):
-        return QSize(16, 16)
-
-    def minimumSizeHint(self):
-        return QSize(8, 8)
-
-    def hasHeightForWidth(self):
-        return True
-
-    def heightForWidth(self, a0):
-        return a0
-
-    def paintEvent(self, a0):
-        p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        size = min(self.width(), self.height())
-        rect = QRectF(
-            (self.width() - size) / 2,
-            (self.height() - size) / 2,
-            size,
-            size,
-        )
-
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(lerp_color(self._color, self._pulse_color, self._t))
-        p.drawEllipse(rect)
+class DeviceStatus(IntEnum):
+    DISCONNECTED = auto()
+    CONNECTING = auto()
+    CONNECTED = auto()
 
 
 class DeviceHeader(QWidget):
+    device_renamed = pyqtSignal(str)
+
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
 
+        self._status = DeviceStatus.DISCONNECTED
+
         layout = QHBoxLayout()
 
-        status = StatusCircle()
-        status.setFixedHeight(16)
+        self.status_circle = StatusCircle()
+        self.status_circle.setFixedHeight(16)
 
-        device_name = QLabel()
-        device_name.setStyleSheet("font-size: 16px; font-weight: bold;")
-        device_name.setText("Test")
+        self.device_name = EditableLabel("Test")
+        self.device_name.setStyleSheet("font-size: 16px; font-weight: bold;")
+        self.device_name.text_changed.connect(self.device_renamed)
 
-        layout.addWidget(status)
-        layout.addWidget(device_name)
+        self.device_type = QLabel("Moving Head")
+
+        layout.addWidget(self.status_circle)
+        layout.addWidget(self.device_name)
         layout.addStretch()
+        layout.addWidget(self.device_type)
         self.setLayout(layout)
+
+    def get_status(self) -> DeviceStatus:
+        return self._status
+
+    def set_status(self, status: DeviceStatus):
+        self._status = status
+        match status:
+            case DeviceStatus.DISCONNECTED:
+                self.status_circle.color = Qt.GlobalColor.red
+                self.status_circle.set_pulsing(False)
+            case DeviceStatus.CONNECTING:
+                self.status_circle.color = Qt.GlobalColor.blue
+                self.status_circle.set_pulsing(True)
+            case DeviceStatus.CONNECTED:
+                self.status_circle.color = Qt.GlobalColor.green
+                self.status_circle.set_pulsing(False)
+
+    def get_device_name(self) -> str:
+        return self.device_name.text()
+
+    def set_device_name(self, device_name: str):
+        self.device_name.setText(device_name)
+
+    def get_device_type(self) -> str:
+        return self.device_type.text()
+
+    def set_device_type(self, device_type: str):
+        self.device_type.setText(device_type)
+
+    device_name = pyqtProperty
 
 
 class DeviceDetailsPanel(BasePanel):
