@@ -1,6 +1,7 @@
 from PyQt6.QtCore import QEasingCurve, QRectF, QSize, Qt, QVariantAnimation
 from PyQt6.QtGui import QColor, QPainter
 from PyQt6.QtWidgets import (
+    QHBoxLayout,
     QLabel,
     QSizePolicy,
     QStackedLayout,
@@ -102,11 +103,18 @@ class DeviceHeader(QWidget):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
 
-        layout = QVBoxLayout()
+        layout = QHBoxLayout()
 
         status = StatusCircle()
-        layout.addWidget(status)
+        status.setFixedHeight(16)
 
+        device_name = QLabel()
+        device_name.setStyleSheet("font-size: 16px; font-weight: bold;")
+        device_name.setText("Test")
+
+        layout.addWidget(status)
+        layout.addWidget(device_name)
+        layout.addStretch()
         self.setLayout(layout)
 
 
@@ -137,7 +145,7 @@ class DeviceDetailsPanel(BasePanel):
 
         layout.addWidget(title_label)
         layout.addLayout(self.stacked_layout)
-        layout.addWidget(StatusCircle(color=Qt.GlobalColor.blue, pulsing=True))
+        layout.addWidget(DeviceHeader())
 
     def device_selected(self, device_id: str | None):
         assert self.stacked_layout is not None
