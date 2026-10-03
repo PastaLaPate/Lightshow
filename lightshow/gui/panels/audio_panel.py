@@ -1,8 +1,8 @@
 import threading
 
 import soundcard
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -85,7 +85,7 @@ class AudioPanel(BasePanel):
         controls_layout.addWidget(device_label)
 
         self.device_combo = QComboBox()
-        self.device_combo.addItems(self.audio_devices.keys())
+        self.device_combo.addItems(list(self.audio_devices.keys()))
         try:
             keys = list(self.audio_devices.keys())
             values = list(self.audio_devices.values())
@@ -131,7 +131,7 @@ class AudioPanel(BasePanel):
             """
             QSplitter::handle {
                 background-color: #333;
-            }                       
+            }
         """
         )
 

@@ -1,4 +1,4 @@
-from PyQt6.QtGui import QColor
+from PySide6.QtGui import QColor
 
 from .ui_signals import ui_signals
 

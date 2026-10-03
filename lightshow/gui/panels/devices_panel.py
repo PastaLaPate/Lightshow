@@ -1,8 +1,8 @@
 from functools import partial
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QKeyEvent
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction, QKeyEvent
+from PySide6.QtWidgets import (
     QComboBox,
     QHBoxLayout,
     QLabel,
@@ -32,7 +32,7 @@ class DeviceListWidget(QListWidget):
         super().__init__()
         self._on_delete = on_delete_callback
 
-    def keyPressEvent(self, e: QKeyEvent | None) -> None:
+    def keyPressEvent(self, e: QKeyEvent) -> None:
         if e and e.key() == Qt.Key.Key_Delete:
             self._on_delete()
         else:
@@ -145,7 +145,7 @@ class DevicesPanel(BasePanel):
         if device_id not in global_config.devices:
             return
 
-        source_config = global_config.devices[device_id]
+        # source_config = global_config.devices[device_id]
 
     def _show_selected_context_menu(self, pos):
         """Show right-click context menu on a list item."""

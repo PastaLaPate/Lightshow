@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from PyQt6.QtCore import QObject
+from PySide6.QtCore import QObject
 
 from lightshow.devices.device import BaseDeviceSettings
 from lightshow.devices.devices_types import DeviceTypeName

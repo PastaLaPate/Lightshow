@@ -8,8 +8,8 @@ from typing import Literal  # Import Empty for cleaner queue handling
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.audio.data import AudioData
 from lightshow.gui.utils import ui_signals

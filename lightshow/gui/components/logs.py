@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QFrame, QPushButton, QTextEdit, QVBoxLayout
+from PySide6.QtWidgets import QFrame, QPushButton, QTextEdit, QVBoxLayout
 
 from lightshow.gui.panels.base_panel import BasePanel
 from lightshow.logger import attach_log_widget
@@ -23,7 +23,7 @@ class Logs(BasePanel):
         self.textBox = QTextEdit()
         self.textBox.setReadOnly(True)
         self.textBox.setStyleSheet(
-            """                  
+            """
             QTextEdit {
                 background: #111;
                 color: #eee;

@@ -1,23 +1,20 @@
-# -*- mode: python ; coding: utf-8 -*-
-
-
 a = Analysis(
     ["lightshow\\__main__.py"],
     pathex=[],
     binaries=[],
     datas=[("lightshow\\gui\\assets", ".\\lightshow\\gui\\assets")],
     hiddenimports=[
-        "PyQt6.QtCore",
-        "PyQt6.QtGui",
-        "PyQt6.QtWidgets",
-        "PyQt6.QtOpenGL",
-        "PyQt6.QtOpenGLWidgets",
+        "PySide6.QtCore",
+        "PySide6.QtGui",
+        "PySide6.QtWidgets",
+        "PySide6.QtOpenGL",
+        "PySide6.QtOpenGLWidgets",
         "pyqtgraph",
     ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=["PyQt6"],
     noarchive=False,
     optimize=0,
 )

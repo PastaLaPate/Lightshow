@@ -125,7 +125,6 @@ Feel free to open prs to fix code or add new devices.
 ## Stack
 
 PyQT6 for ui.
-PyQt6-Charts.
 PyQTGraph for visualization.
 DBUS/winrt for tracks tracking.
 

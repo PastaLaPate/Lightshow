@@ -393,10 +393,10 @@ class MovingHeadPanelSlot(PanelSlot):
 class LaunchpadX(InputDevice):
     DEVICE_TYPE_NAME: Literal["Novation Launchpad X"] = DeviceTypeName.LAUNCHPAD_X.value
 
-    def __init__(self):
+    def __init__(self, config):
         from lightshow.gui.main_window import UIManager
 
-        super().__init__()
+        super().__init__(config)
         self.in_port: mido.ports.BaseInput | None = None
         self.out_port: mido.ports.BaseOutput | None = None
         self.device_name = "Not Connected"

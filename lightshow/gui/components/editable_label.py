@@ -1,12 +1,11 @@
-import PyQt6.QtCore
-from PyQt6 import QtGui
-from PyQt6.QtCore import QEvent, Qt, pyqtSignal
-from PyQt6.QtGui import QKeyEvent
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
+from PySide6 import QtGui
+from PySide6.QtCore import QEvent, QObject, Qt, Signal
+from PySide6.QtGui import QKeyEvent
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QLineEdit, QWidget
 
 
 class EditableLabel(QWidget):
-    text_changed = pyqtSignal(str)
+    text_changed = Signal(str)
 
     def __init__(self, text="", parent=None):
         super().__init__(parent)
@@ -36,7 +35,7 @@ class EditableLabel(QWidget):
         if a0 is not None and a0.button() == Qt.MouseButton.LeftButton:
             self._to_line_edit()
 
-    def eventFilter(self, a0: PyQt6.QtCore.QObject | None, a1: QEvent | None) -> bool:
+    def eventFilter(self, a0: QObject | None, a1: QEvent | None) -> bool:
         if a1 is not None and a0 == self.line_edit:
             if a1.type() == QEvent.Type.FocusOut:
                 self._to_label()

@@ -1,5 +1,7 @@
-from PyQt6.QtCore import PYQT_VERSION_STR, QT_VERSION_STR, Qt
-from PyQt6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
+import PySide6
+from PySide6 import __version__ as QT_VERSION_STR
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QDialog, QHBoxLayout, QLabel, QPushButton, QVBoxLayout
 
 from lightshow.utils.config import ARCH, OS, PYTHON_VERSION, VERSION
 
@@ -30,7 +32,7 @@ class AboutDialog(QDialog):
         disclaimer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         debug_label = QLabel(
-            f"<code> OS : {OS}, Python {PYTHON_VERSION}, Architecture: {ARCH}, QT {QT_VERSION_STR}, PyQt {PYQT_VERSION_STR}, Lightshow {VERSION}</code>"
+            f"<code> OS : {OS}, Python {PYTHON_VERSION}, Architecture: {ARCH}, QT {QT_VERSION_STR}, PySide6 {PySide6.__version__}, Lightshow {VERSION}</code>"
         )
         debug_label.setWordWrap(True)
 

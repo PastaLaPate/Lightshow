@@ -106,7 +106,7 @@ class MovingHeadController:
         self.color_mode = self._select_color_mode_for_anim(self.current_anim)
         self.update_anim_color_mode()
         self.device.current_anim = self.current_anim.__class__.__name__
-        self.device.showed_props_update()
+        # self.device.showed_props_update()
 
     def _is_circle_animation(
         self, anim
@@ -159,7 +159,7 @@ class MovingHeadController:
         self.beats_since_anim_change = 0
         self.update_anim_color_mode()
         self.device.current_anim = self.current_anim.__class__.__name__
-        self.device.showed_props_update()
+        # self.device.showed_props_update()
         frm = self.current_anim.next(
             self.latest_audio_data,
             False,

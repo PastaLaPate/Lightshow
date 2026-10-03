@@ -63,11 +63,10 @@ class Device[T: BaseDeviceSettings, R: BaseModel](ABC):
     RUNTIME_SCHEMA: type[R] | None
 
     def __init__(self, config: T):
+        super().__init__()
         self.ready = False
         self.config = config
         self.runtime = self.RUNTIME_SCHEMA() if self.RUNTIME_SCHEMA else None
-
-        super().__init__()
 
     def connect(self, fatal_non_discovery=True):
         success = self.scan_for_device()

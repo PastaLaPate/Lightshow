@@ -26,8 +26,9 @@ class MovingHead(OutputDevice):
     ]
     EDITABLE_PROPS: ClassVar = [("ip", str)]
 
-    def __init__(self):
-        self.id = id(self)
+    def __init__(self, config):
+        super().__init__(config)
+        self.id = str(id(self))
         self.logger = Logger(f"MovingHead{{{self.id}}}")
 
         self.socket = None
@@ -55,8 +56,6 @@ class MovingHead(OutputDevice):
         self._packet_thread = None
         self._packet_thread_running = False
 
-        super().__init__()
-
     def test_connection(self):
         result = requests.post(f"http://{self.ip}:81/resetIndexCounter")
         return result.status_code == 200
@@ -70,7 +69,7 @@ class MovingHead(OutputDevice):
                 self.addr = (self.ip, 1234)
                 self.packetIndex = 0
                 self.udp_address = f"{self.ip}:1234"
-                self.showed_props_update()
+                # self.showed_props_update()
                 self.logger.info(f"Successfully tested connection to {self.ip}")
             else:
                 raise ConnectionError("Not received resetIndex, ip problem?")
@@ -173,8 +172,8 @@ class MovingHead(OutputDevice):
 
         return super().on(packet)
 
-    def save(self) -> tuple[str, dict[str, Any]]:
-        return self.DEVICE_TYPE_NAME, {
+    def save(self) -> dict[str, Any]:
+        return {
             "ip": self.ip,
             "device_name": self.device_name,
             "base_offset": self.base_offset,
@@ -183,9 +182,10 @@ class MovingHead(OutputDevice):
             "top_range": self.top_range,
         }
 
-    def load(self, data: tuple[str, dict[str, Any]]) -> bool:
-        name, config = data
-        self.device_name = name
+    def load(self, data: dict[str, Any]) -> bool:
+        config = data
+        # TODO: FIX THIS
+        self.device_name = "huh"
         self.ip = config.get("ip", self.ip)
         self.base_offset = config.get("base_offset", self.base_offset)
         self.base_range = tuple(config.get("base_range", self.base_range))

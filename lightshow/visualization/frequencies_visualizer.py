@@ -3,7 +3,7 @@ import traceback
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.audio.audio_types import AudioData
 from lightshow.gui.utils import ui_signals

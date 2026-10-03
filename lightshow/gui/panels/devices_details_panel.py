@@ -1,7 +1,7 @@
 from enum import IntEnum, auto
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QStackedLayout,
@@ -24,7 +24,7 @@ class DeviceStatus(IntEnum):
 
 
 class DeviceHeader(QWidget):
-    device_renamed = pyqtSignal(str)
+    device_renamed = Signal(str)
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -75,8 +75,6 @@ class DeviceHeader(QWidget):
 
     def set_device_type(self, device_type: str):
         self.device_type.setText(device_type)
-
-    device_name = pyqtProperty
 
 
 class DeviceDetailsPanel(BasePanel):
