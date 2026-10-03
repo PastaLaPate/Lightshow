@@ -236,10 +236,10 @@ class MainAudioListener(AudioListener):
 
 def main() -> None:
     logger.info("Running on Lightshow version %s", VERSION)
-    update_available, update_message = is_update_available()
+    _update_available, update_message = is_update_available()
     logger.info(
         "Version status: %s",
-        update_message if update_available else "Unable to fetch latest version info.",
+        update_message,
     )
     logger.debug("OS: %s | Python: %s | Architecture: %s", OS, PYTHON_VERSION, ARCH)
     global ui_manager

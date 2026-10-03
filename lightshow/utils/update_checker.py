@@ -1,5 +1,4 @@
-import subprocess
-
+import requests
 import semver
 
 from lightshow.utils.config import VERSION
@@ -7,24 +6,24 @@ from lightshow.utils.config import VERSION
 REPO = "https://github.com/PastaLaPate/Lightshow.git"
 
 
-def fetch_last_tag(strip_v=True) -> str:
-    output_lines = subprocess.check_output(
-        [
-            "git",
-            "ls-remote",
-            "--tags",
-            "--refs",
-            "--sort=version:refname",
-            REPO,
-        ],
-        encoding="utf-8",
-    ).splitlines()
-    last_line_ref = output_lines[-1].rpartition("/")[-1]
-    return last_line_ref if not strip_v else last_line_ref.lstrip("v")
+def fetch_last_tag():
+    url = "https://api.github.com/repos/PastaLaPate/Lightshow/releases/latest"
+
+    # Optional: Add a user-agent to comply with GitHub API guidelines
+    headers = {"Accept": "application/vnd.github+json"}
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        data = response.json()
+        return data.get("tag_name")[1:]  # remove v prefix
+    else:
+        return f"Error: {response.status_code} - {response.text}"
 
 
 def is_update_available() -> tuple[bool, str]:
     latest_version = fetch_last_tag()
+    print(latest_version)
     r = semver.compare(VERSION, latest_version)
     if r == -1:
         return (True, f"New version available: {latest_version}")
