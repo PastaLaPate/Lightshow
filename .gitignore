@@ -12,4 +12,5 @@ config.json
 !/installer/lightshow.nsi
 !/installer/icons/*
 !/installer/lightshow.desktop
+!/installer/lightshow.appdata.xml
 !/installer/AppRun
