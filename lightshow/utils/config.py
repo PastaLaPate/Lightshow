@@ -330,7 +330,7 @@ SETTINGS_CATEGORIES: list[SettingListItem] = [
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-class DeviceConfigType(TypedDict):  # keep TypedDict-style usage working
+class DeviceConfigType(TypedDict):
     type: DeviceTypeName
     props: dict[str, Any]
 
