@@ -1,11 +1,28 @@
-# -*- mode: python ; coding: utf-8 -*-
+import sys
+from pathlib import Path
 
+from PyInstaller.utils.hooks import collect_data_files
+
+IS_WINDOWS = sys.platform.startswith("win")
+IS_LINUX = sys.platform.startswith("linux")
+
+BASE_DIR = Path(".")
+ASSETS_DIR = BASE_DIR / "lightshow" / "gui" / "assets"
+
+ICON_FILE = str(
+    ASSETS_DIR / ("lightshow_icon.ico" if IS_WINDOWS else "lightshow_icon.png")
+)
+
+datas = [
+    (str(ASSETS_DIR), "lightshow/gui/assets"),
+    *collect_data_files("soundcard"),
+]
 
 a = Analysis(
-    ["lightshow\\__main__.py"],
+    ["lightshow/__main__.py"],
     pathex=[],
     binaries=[],
-    datas=[("lightshow\\gui\\assets", ".\\lightshow\\gui\\assets")],
+    datas=datas,
     hiddenimports=[
         "PyQt6.QtCore",
         "PyQt6.QtGui",
@@ -17,10 +34,16 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        "PyQt6.QtNetwork",
+        "PyQt6.QtQml",
+        "PyQt6.QtQuick",
+        "PyQt6.QtSql",
+    ],
     noarchive=False,
-    optimize=0,
+    optimize=2,
 )
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
@@ -30,26 +53,26 @@ exe = EXE(
     [],
     [],
     debug=False,
-    runtime_tmpdir=None,
-    name="lightshow",
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=IS_WINDOWS,
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon="lightshow/gui/assets/lightshow_icon.ico",
+    icon=ICON_FILE,
+    name="lightshow",
 )
+
 coll = COLLECT(
     exe,
     a.binaries,
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
+    upx=IS_WINDOWS,
     upx_exclude=[],
-    name="lightshow",
+    name="lightshow-windows" if IS_WINDOWS else "lightshow-linux",
 )

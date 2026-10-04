@@ -81,7 +81,7 @@ jobs:
       - name: Zip portable
         shell: pwsh
         run: |
-          Compress-Archive -Path dist/lightshow/* `
+          Compress-Archive -Path dist/lightshow-linux/* `
             -DestinationPath dist/lightshow-portable-win-${{ needs.check-version.outputs.version }}.zip
 
       - name: Upload portable
@@ -131,7 +131,7 @@ jobs:
         run: uv sync --locked --all-extras
 
       - name: Build AppImage
-        run: uv run pyinstaller lightshow.linux.spec
+        run: uv run pyinstaller lightshow.spec
 
       - name: Download appimagetool
         run: |
@@ -142,7 +142,7 @@ jobs:
       - name: Assemble AppDir
         run: |
           mkdir -p AppDir/usr/bin
-          cp -r dist/lightshow-linux AppDir/usr/bin/lightshow 
+          cp -r dist/lightshow-linux AppDir/usr/bin/lightshow
           cp lightshow/gui/assets/lightshow_icon.png AppDir/lightshow.png
           cp installer/lightshow.desktop AppDir/lightshow.desktop
           cp installer/AppRun AppDir/AppRun
