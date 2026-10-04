@@ -81,7 +81,7 @@ jobs:
       - name: Zip portable
         shell: pwsh
         run: |
-          Compress-Archive -Path dist/lightshow-linux/* `
+          Compress-Archive -Path dist/lightshow-windows/* `
             -DestinationPath dist/lightshow-portable-win-${{ needs.check-version.outputs.version }}.zip
 
       - name: Upload portable
@@ -142,11 +142,20 @@ jobs:
       - name: Assemble AppDir
         run: |
           mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/metainfo
+          mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+
           cp -r dist/lightshow-linux AppDir/usr/bin/lightshow
+
           cp lightshow/gui/assets/lightshow_icon.png AppDir/lightshow.png
+          cp lightshow/gui/assets/lightshow_icon.png AppDir/usr/share/icons/hicolor/256x256/apps/lightshow.png
           cp installer/lightshow.desktop AppDir/lightshow.desktop
           cp installer/AppRun AppDir/AppRun
+
+          cp installer/lightshow.appdata.xml AppDir/usr/share/metainfo/com.github.pastalapate.lightshow.appdata.xml
+
           chmod +x AppDir/AppRun
+          chmod +x AppDir/usr/bin/lightshow/lightshow
 
       - name: Build AppImage
         run: |

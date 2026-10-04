@@ -3,4 +3,5 @@ Name=Lightshow
 Exec=lightshow
 Icon=lightshow
 Type=Application
-Categories=AudioVideo;
+Categories=AudioVideo;Audio;
+Terminal=false
