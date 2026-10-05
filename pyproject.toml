@@ -33,14 +33,14 @@ lightshow = "lightshow.__main__:main"
 
 [dependency-groups]
 dev = [
-  "isort>=9.0.1",
+  "isort>=9.0.2",
   "pre-commit>=4.6.2",
-  "ruff>=0.16.9",
+  "ruff>=0.16.10",
   "ty>=0.0.84",
 ]
 
 [build-system]
-requires = ["pdm-backend>=2.4.10"]
+requires = ["pdm-backend>=2.5.0"]
 build-backend = "pdm.backend"
 
 [tool.setuptools]
