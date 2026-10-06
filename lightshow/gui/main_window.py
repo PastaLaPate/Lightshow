@@ -163,7 +163,7 @@ class UIManager(QMainWindow):
             """
             QSplitter::handle {
                 background-color: #333;
-            }                       
+            }
         """
         )
 
@@ -178,7 +178,7 @@ class UIManager(QMainWindow):
             """
             QSplitter::handle {
                 background-color: #333;
-            }                       
+            }
         """
         )
 
