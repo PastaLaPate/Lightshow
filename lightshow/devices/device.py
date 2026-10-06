@@ -44,16 +44,19 @@ class PacketData:
 
 
 class BaseDeviceSettings(BaseModel):
+    """
+    Settings may be noted with `requires_reconnect` to make them uneditable when connected
+    ex:
+    ```python
+    ip: str = Field(json_schema_extra={"requires_reconnect": True})
+    ```
+    """
+
     id: str
     name: str = "Device X"
 
 
 logger = Logger("BaseDevice")
-
-"""
-Settings may be noted with `requires_reconnect` to make them uneditable when connected
-ex: ip: str = Field(json_schema_extra={"requires_reconnect": True})
-"""
 
 
 class Device[T: BaseDeviceSettings, R: BaseModel](ABC):

@@ -1,6 +1,6 @@
 from enum import IntEnum, auto
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Property, Qt, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -33,19 +33,19 @@ class DeviceHeader(QWidget):
 
         layout = QHBoxLayout()
 
-        self.status_circle = StatusCircle()
-        self.status_circle.setFixedHeight(16)
+        self._status_circle = StatusCircle()
+        self._status_circle.setFixedHeight(16)
 
-        self.device_name = EditableLabel("Test")
-        self.device_name.setStyleSheet("font-size: 16px; font-weight: bold;")
-        self.device_name.text_changed.connect(self.device_renamed)
+        self._name_label = EditableLabel("Test")
+        self._name_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        self._name_label.text_changed.connect(self.device_renamed)
 
-        self.device_type = QLabel("Moving Head")
+        self._type_label = QLabel("Moving Head")
 
-        layout.addWidget(self.status_circle)
-        layout.addWidget(self.device_name)
+        layout.addWidget(self._status_circle)
+        layout.addWidget(self._name_label)
         layout.addStretch()
-        layout.addWidget(self.device_type)
+        layout.addWidget(self._type_label)
         self.setLayout(layout)
 
     def get_status(self) -> DeviceStatus:
@@ -55,26 +55,30 @@ class DeviceHeader(QWidget):
         self._status = status
         match status:
             case DeviceStatus.DISCONNECTED:
-                self.status_circle.color = Qt.GlobalColor.red
-                self.status_circle.set_pulsing(False)
+                self._status_circle.color = Qt.GlobalColor.red
+                self._status_circle.set_pulsing(False)
             case DeviceStatus.CONNECTING:
-                self.status_circle.color = Qt.GlobalColor.blue
-                self.status_circle.set_pulsing(True)
+                self._status_circle.color = Qt.GlobalColor.blue
+                self._status_circle.set_pulsing(True)
             case DeviceStatus.CONNECTED:
-                self.status_circle.color = Qt.GlobalColor.green
-                self.status_circle.set_pulsing(False)
+                self._status_circle.color = Qt.GlobalColor.green
+                self._status_circle.set_pulsing(False)
 
     def get_device_name(self) -> str:
-        return self.device_name.text()
+        return self._name_label.text()
 
     def set_device_name(self, device_name: str):
-        self.device_name.setText(device_name)
+        self._name_label.setText(device_name)
 
     def get_device_type(self) -> str:
-        return self.device_type.text()
+        return self._type_label.text()
 
     def set_device_type(self, device_type: str):
-        self.device_type.setText(device_type)
+        self._type_label.setText(device_type)
+
+    device_name = Property(
+        str, fget=get_device_name, fset=set_device_name, notify=device_renamed
+    )
 
 
 class DeviceDetailsPanel(BasePanel):
