@@ -25,9 +25,7 @@ class CircleAnimation(AMHAnimation):
         self.setRGB(rgb)
 
         self.change_color_on_tick = False
-        self.cached_color = RGB(
-            0, 0, 0
-        )  # In case if we move but dont change color
+        self.cached_color = RGB(0, 0, 0)  # In case if we move but dont change color
 
         self.progress_speed = speed
 
@@ -48,9 +46,7 @@ class CircleAnimation(AMHAnimation):
 
     def setRGB(self, color_mode: list[RGB] | Callable[[], RGB]):
         self.color_mode = color_mode
-        self.rgb = (
-            cycle(color_mode) if isinstance(color_mode, list) else color_mode
-        )
+        self.rgb = cycle(color_mode) if isinstance(color_mode, list) else color_mode
 
     # dt in seconds
     def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
@@ -67,10 +63,7 @@ class CircleAnimation(AMHAnimation):
                 self.color_cooldown = time.time_ns() + 0.2 * 1e9
 
         else:
-            if (
-                self.change_color_on_tick
-                and time.time_ns() >= self.color_cooldown
-            ):
+            if self.change_color_on_tick and time.time_ns() >= self.color_cooldown:
                 rgb = self.nextRGB()
                 rgb = self.apply_transformer(rgb, audio_data)
                 self.cached_color = rgb
