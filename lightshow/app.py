@@ -259,7 +259,7 @@ def main() -> None:
     logger.info(
         "Version status: %s",
         update_message
-        if update_available != ""
+        if _update_available != ""
         else "Unable to fetch latest version info.",
     )
     logger.debug("OS: %s | Python: %s | Architecture: %s", OS, PYTHON_VERSION, ARCH)
