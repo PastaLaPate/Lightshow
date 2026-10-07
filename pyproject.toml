@@ -58,6 +58,9 @@ major_version_zero = true
 [tool.setuptools]
 py-modules = []
 
+[tool.ty.src]
+exclude = ["cz_conventional_chore.py"]
+
 [tool.uv]
 link-mode = "copy"
 default-groups = []
