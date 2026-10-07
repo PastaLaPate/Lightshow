@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
@@ -118,7 +118,7 @@ class SettingsDialog(QDialog, BasePanel):
             list_entry = QListWidgetItem(item.name)
             list_entry.setData(Qt.ItemDataRole.UserRole, item.id)
             if item.icon:
-                from PyQt6.QtGui import QIcon
+                from PySide6.QtGui import QIcon
 
                 list_entry.setIcon(QIcon(item.icon))
             self.settings_list.addItem(list_entry)
@@ -320,6 +320,8 @@ class SettingsDialog(QDialog, BasePanel):
     def _clear(self) -> None:
         self.settings_list.clear()
         while self.settings_stack.count():
-            self.settings_stack.removeWidget(self.settings_stack.widget(0))
+            w = self.settings_stack.widget(0)
+            if w is not None:
+                self.settings_stack.removeWidget(w)
         self._setting_widgets.clear()
         self._pending_changes.clear()

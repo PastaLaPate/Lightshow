@@ -8,12 +8,12 @@ from typing import Literal  # Import Empty for cleaner queue handling
 
 import numpy as np
 import pyqtgraph as pg
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.audio.data import AudioData
 from lightshow.gui.utils import ui_signals
-from lightshow.utils.logger import Logger
+from lightshow.logger import Logger
 
 _logger = Logger.for_class("Audio Visualization")
 
@@ -111,10 +111,18 @@ class SpikeDetectorVisualizer(QWidget):
                 [], [], pen=pg.mkPen(None), brush=pg.mkBrush(0, 255, 0), size=6
             ),
             "break": pg.ScatterPlotItem(
-                [], [], pen=pg.mkPen(None), brush=pg.mkBrush(255, 165, 0), size=6
+                [],
+                [],
+                pen=pg.mkPen(None),
+                brush=pg.mkBrush(255, 165, 0),
+                size=6,
             ),
             "drop": pg.ScatterPlotItem(
-                [], [], pen=pg.mkPen(None), brush=pg.mkBrush(255, 0, 255), size=6
+                [],
+                [],
+                pen=pg.mkPen(None),
+                brush=pg.mkBrush(255, 0, 255),
+                size=6,
             ),
         }
         for item in self.marker_items.values():
@@ -155,7 +163,11 @@ class SpikeDetectorVisualizer(QWidget):
         self.setLayout(layout)
 
     def __call__(
-        self, data, beat_detected=False, break_detected=False, drop_detected=False
+        self,
+        data,
+        beat_detected=False,
+        break_detected=False,
+        drop_detected=False,
     ):
         try:
             self.update_queue.put_nowait(

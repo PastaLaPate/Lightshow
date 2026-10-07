@@ -19,14 +19,14 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from importlib.metadata import version
 from pathlib import Path
-from typing import Any, ClassVar, TypeVar
+from typing import Any, ClassVar, TypedDict, TypeVar
 
 import distro
 
 from lightshow.audio.audio_types import AudioDevice
 from lightshow.devices.device import Device
 from lightshow.devices.devices_types import DeviceTypeName
-from lightshow.utils.logger import Logger
+from lightshow.logger import Logger
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Generic Setting[T]
@@ -330,7 +330,7 @@ SETTINGS_CATEGORIES: list[SettingListItem] = [
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-class DeviceConfigType(dict):  # keep TypedDict-style usage working
+class DeviceConfigType(TypedDict):
     type: DeviceTypeName
     props: dict[str, Any]
 
@@ -412,6 +412,7 @@ class Config:
 
     def _load_file(self) -> dict[str, Any]:
         try:
+            self.logger.info(f"Using {self.config_file} as config file")
             with open(self.config_file) as f:
                 return json.load(f)
         except FileNotFoundError:

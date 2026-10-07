@@ -14,9 +14,9 @@ from lightshow.audio.audio_types import (
     Processor,
 )
 from lightshow.gui.utils.ui_signals import ui_signals
+from lightshow.logger import Logger
 from lightshow.utils import global_config
 from lightshow.utils.config import Config
-from lightshow.utils.logger import Logger
 
 # ---------------------------------------------------------------------------
 # LoopbackAudioCapture

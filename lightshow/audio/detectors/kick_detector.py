@@ -1,6 +1,6 @@
 from lightshow.audio.data import AudioData
 from lightshow.audio.detectors.methods.detection_method import DetectionMethod
-from lightshow.utils.logger import Logger
+from lightshow.logger import Logger
 
 from .spike_detector import DetectionType, SpikeDetector
 

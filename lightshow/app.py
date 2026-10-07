@@ -3,7 +3,7 @@ import sys
 from time import time_ns
 
 import pyqtgraph as pg
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 from lightshow.audio import detectors
 from lightshow.audio.audio_streams import (
@@ -13,16 +13,32 @@ from lightshow.audio.audio_streams import (
 )
 from lightshow.audio.detectors.methods.percentil import Percentile
 from lightshow.audio.processors import SpectrumProcessor
-from lightshow.devices.device import OutputDevice, PacketData, PacketStatus, PacketType
+from lightshow.devices.device import (
+    OutputDevice,
+    PacketData,
+    PacketStatus,
+    PacketType,
+)
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.gui.main_window import UIManager
+from lightshow.logger import Logger
 from lightshow.tracks_tracker import PlatformSpecificTracker
 from lightshow.tracks_tracker.types import PlaybackStatus, TrackInfo
-from lightshow.utils import Logger, config
-from lightshow.utils.config import ARCH, OS, PYTHON_VERSION, VERSION, resource_path
+from lightshow.utils import config
+from lightshow.utils.config import (
+    ARCH,
+    OS,
+    PYTHON_VERSION,
+    VERSION,
+    resource_path,
+)
 from lightshow.utils.update_checker import is_update_available
-from lightshow.visualization.frequencies_visualizer import FrequenciesVisualizer
-from lightshow.visualization.spike_detector_visualizer import SpikeDetectorVisualizer
+from lightshow.visualization.frequencies_visualizer import (
+    FrequenciesVisualizer,
+)
+from lightshow.visualization.spike_detector_visualizer import (
+    SpikeDetectorVisualizer,
+)
 
 pg.setConfigOptions(useOpenGL=True, enableExperimental=True)
 
@@ -32,7 +48,7 @@ logger = Logger("Main")
 
 
 class GuiBridge(QObject):
-    clear_visualizer_signal = pyqtSignal()
+    clear_visualizer_signal = Signal()
 
 
 class MainAudioListener(AudioListener):
@@ -98,7 +114,7 @@ class MainAudioListener(AudioListener):
         self.music_paused = False
         self.paused_since = 0
         self.current_power = 0
-        self.power_since = 0
+        self.power_since = 0.0
         self.power_decay_time = 0.5  # Decay power over 0.5 seconds
         if hasattr(self, "kick_detector"):
             self.kick_detector.clear()
@@ -229,7 +245,10 @@ class MainAudioListener(AudioListener):
 
         if self.kick_visualizer:
             self.kick_visualizer(
-                data, beat_detected=beat, break_detected=mbreak, drop_detected=drop
+                data,
+                beat_detected=beat,
+                break_detected=mbreak,
+                drop_detected=drop,
             )
         return True
 
@@ -239,13 +258,15 @@ def main() -> None:
     _update_available, update_message = is_update_available()
     logger.info(
         "Version status: %s",
-        update_message,
+        update_message
+        if update_available != ""
+        else "Unable to fetch latest version info.",
     )
     logger.debug("OS: %s | Python: %s | Architecture: %s", OS, PYTHON_VERSION, ARCH)
     global ui_manager
-    from PyQt6.QtCore import QTimer
-    from PyQt6.QtGui import QIcon
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtCore import QTimer
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import QApplication
 
     audio_handler = LoopbackAudioStreamHandler(SpectrumProcessor, config.global_config)
     listener = MainAudioListener(audio_handler)

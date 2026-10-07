@@ -1,6 +1,6 @@
 import traceback
 
-from PyQt6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.gui.utils import ui_signals
 
@@ -9,7 +9,6 @@ class BasePanel(QWidget):
     """Base class for all UI panels with callback support."""
 
     def __init__(self, parent=None):
-        super().__init__(parent)
         self._callbacks = {}
 
     def register(self, event: str, callback):
