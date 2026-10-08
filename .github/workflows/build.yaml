@@ -152,7 +152,7 @@ jobs:
           cp installer/lightshow.desktop AppDir/lightshow.desktop
           cp installer/AppRun AppDir/AppRun
 
-          cp installer/lightshow.appdata.xml AppDir/usr/share/metainfo/com.github.pastalapate.lightshow.appdata.xml
+          cp installer/lightshow.appdata.xml AppDir/usr/share/metainfo/lightshow.appdata.xml
 
           chmod +x AppDir/AppRun
           chmod +x AppDir/usr/bin/lightshow/lightshow
