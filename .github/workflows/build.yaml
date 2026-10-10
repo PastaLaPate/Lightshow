@@ -142,6 +142,7 @@ jobs:
       - name: Assemble AppDir
         run: |
           mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/share/applications
           mkdir -p AppDir/usr/share/metainfo
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
 
@@ -149,10 +150,14 @@ jobs:
 
           cp src/lightshow/gui/assets/lightshow_icon.png AppDir/lightshow.png
           cp src/lightshow/gui/assets/lightshow_icon.png AppDir/usr/share/icons/hicolor/256x256/apps/lightshow.png
+
           cp packaging/installer/lightshow.desktop AppDir/lightshow.desktop
+          cp packaging/installer/lightshow.desktop AppDir/usr/share/applications/lightshow.desktop
+
           cp packaging/installer/AppRun AppDir/AppRun
 
-          cp packaging/installer/lightshow.appdata.xml AppDir/usr/share/metainfo/lightshow.appdata.xml
+          cp packaging/installer/lightshow.appdata.xml \
+            AppDir/usr/share/metainfo/com.github.pastalapate.lightshow.appdata.xml
 
           chmod +x AppDir/AppRun
           chmod +x AppDir/usr/bin/lightshow/lightshow

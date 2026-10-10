@@ -3,6 +3,7 @@
   <id>com.github.pastalapate.lightshow</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
+  <content_rating type="oars-1.1"/>
   <name>Lightshow</name>
   <summary>Audio Visualizer Application</summary>
   <description>
@@ -14,4 +15,7 @@
   <provides>
     <binary>lightshow</binary>
   </provides>
+  <developer id="com.github.pastalapate">
+    <name>pastalapate</name>
+  </developer>
 </component>
