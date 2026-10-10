@@ -26,14 +26,18 @@ update: ## Fetches update from github
 dev: ## Run the software
 	uv run lightshow
 
-.PHONY: build-windows
-build-windows: ## Build app using pyinstaller
-	uv run pyinstaller lightshow.spec
+.PHONY: build
+build: ## Build app using pyinstaller
+	uv run pyinstaller packaging/lightshow.spec
 
 .PHONY: installer-windows
 installer-windows: ## Make windows installer using NSIS
-	cd installer && makensis /DPRODUCT_VERSION=$(version) lightshow.nsi
+	cd packaging/installer && makensis /DPRODUCT_VERSION=$(version) lightshow.nsi
 
 .PHONY: hooks
 hooks: ## Install hooks
 	uv run pre-commit install
+
+.PHONY: commit
+commit: ## CZ commit
+	PYTHONPATH=. uv run cz commit

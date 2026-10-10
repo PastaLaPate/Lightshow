@@ -73,10 +73,10 @@ jobs:
         run: git config --system core.longpaths true
 
       - name: Install dependencies
-        run: uv sync --locked --all-extras
+        run: make install
 
       - name: Build with PyInstaller
-        run: uv run pyinstaller lightshow.spec
+        run: make build
 
       - name: Zip portable
         shell: pwsh
@@ -93,7 +93,7 @@ jobs:
       - name: Create installer
         if: needs.check-version.outputs.should_release == 'true'
         run: |
-          cd installer && makensis /DPRODUCT_VERSION=${{ needs.check-version.outputs.version }} lightshow.nsi
+          make installer-windows
 
       - name: Upload installer # Build and upload the installer only if we are going to release, otherwise it would just be a waste of time and resources
         if: needs.check-version.outputs.should_release == 'true'
@@ -125,13 +125,13 @@ jobs:
             libgl1 libglib2.0-0 libdbus-1-3 \
             libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 \
             libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1 \
-            libxkbcommon-x11-0 upx-ucl fuse
+            libxkbcommon-x11-0 upx-ucl fuse libasound2-dev libjack-jackd2-dev
 
       - name: Install dependencies
-        run: uv sync --locked --all-extras
+        run: make install
 
       - name: Build AppImage
-        run: uv run pyinstaller lightshow.spec
+        run: make build
 
       - name: Download appimagetool
         run: |
@@ -185,7 +185,7 @@ jobs:
           enable-cache: true
 
       - name: Install build dependencies
-        run: uv sync --locked --all-extras
+        run: make install
 
       - name: Build wheel
         run: uv build

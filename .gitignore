@@ -8,9 +8,9 @@ config.json
 /visualization
 /lightshow.egg-info
 .pdm-build
-/installer/*
-!/installer/lightshow.nsi
-!/installer/icons/*
-!/installer/lightshow.desktop
-!/installer/lightshow.appdata.xml
-!/installer/AppRun
+packaging/installer/*
+!packaging/installer/lightshow.nsi
+!packaging/installer/icons/*
+!packaging/installer/lightshow.desktop
+!packaging/installer/lightshow.appdata.xml
+!packaging/installer/AppRun

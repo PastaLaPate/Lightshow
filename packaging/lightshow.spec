@@ -6,9 +6,10 @@ from PyInstaller.utils.hooks import collect_data_files
 IS_WINDOWS = sys.platform.startswith("win")
 IS_LINUX = sys.platform.startswith("linux")
 
-BASE_DIR = Path(".")
-ASSETS_DIR = BASE_DIR / "lightshow" / "gui" / "assets"
-
+SPEC_DIR = Path(SPECPATH)
+ROOT = SPEC_DIR.parent  # repo root
+SRC = ROOT / "src"  # drop this if you don't use a src/ layout
+ASSETS_DIR = SRC / "lightshow" / "gui" / "assets"
 ICON_FILE = str(
     ASSETS_DIR / ("lightshow_icon.ico" if IS_WINDOWS else "lightshow_icon.png")
 )
@@ -19,8 +20,8 @@ datas = [
 ]
 
 a = Analysis(
-    ["lightshow/__main__.py"],
-    pathex=[],
+    [str(SRC / "lightshow" / "__main__.py")],
+    pathex=[str(SRC)],
     binaries=[],
     datas=datas,
     hiddenimports=[
