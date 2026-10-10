@@ -147,12 +147,12 @@ jobs:
 
           cp -r dist/lightshow-linux AppDir/usr/bin/lightshow
 
-          cp lightshow/gui/assets/lightshow_icon.png AppDir/lightshow.png
-          cp lightshow/gui/assets/lightshow_icon.png AppDir/usr/share/icons/hicolor/256x256/apps/lightshow.png
-          cp installer/lightshow.desktop AppDir/lightshow.desktop
-          cp installer/AppRun AppDir/AppRun
+          cp src/lightshow/gui/assets/lightshow_icon.png AppDir/lightshow.png
+          cp src/lightshow/gui/assets/lightshow_icon.png AppDir/usr/share/icons/hicolor/256x256/apps/lightshow.png
+          cp packaging/installer/lightshow.desktop AppDir/lightshow.desktop
+          cp packaging/installer/AppRun AppDir/AppRun
 
-          cp installer/lightshow.appdata.xml AppDir/usr/share/metainfo/lightshow.appdata.xml
+          cp packaging/installer/lightshow.appdata.xml AppDir/usr/share/metainfo/lightshow.appdata.xml
 
           chmod +x AppDir/AppRun
           chmod +x AppDir/usr/bin/lightshow/lightshow
