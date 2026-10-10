@@ -1,0 +1,22 @@
+from lightshow.core.colors import hsv_to_rgb
+from lightshow.devices.animations.aanimation import RGB
+from lightshow.devices.moving_head.moving_head_animations import (
+    MHAnimationFrame,
+)
+
+from .circle_animation import CircleAnimation
+
+
+class BreakCircleAnimation(CircleAnimation):
+    def __init__(self, base_angle_offset=0):
+        super().__init__([RGB(255, 255, 255)], 0.35, base_angle_offset)
+        self.change_color_on_tick = True
+        self.hue = 0.0
+
+    def next(self, audio_data, isTick=True, dt=0.0) -> MHAnimationFrame:
+        self.hue += 2 / 255
+        self.hue %= 1
+        return super().next(audio_data, True, dt)
+
+    def nextRGB(self):
+        return RGB.fromList([x * 255 for x in hsv_to_rgb(self.hue, 1, 1, 1)[:3]])

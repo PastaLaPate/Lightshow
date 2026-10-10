@@ -32,7 +32,7 @@ dependencies = [
 lightshow = "lightshow.__main__:main"
 
 [project.entry-points."commitizen.plugin"]
-cz_conventional_chore = "cz_conventional_chore:ConventionalChoreCz"
+cz_conventional_chore = "scripts.cz_conventional_chore:ConventionalChoreCz"
 
 [dependency-groups]
 dev = [

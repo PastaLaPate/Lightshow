@@ -1,0 +1,311 @@
+import random
+import time
+import typing
+from collections import deque
+from typing import TypeGuard
+
+import numpy as np
+
+from lightshow.audio.data import AudioData
+from lightshow.core.config import _Settings, global_config
+from lightshow.core.logger import Logger
+from lightshow.devices.animations.aanimation import RGB, FlickerCommand
+from lightshow.devices.device import PacketData, PacketStatus, PacketType
+from lightshow.devices.moving_head.animations import (
+    BernoulliLemniscateAnimation,
+    BounceAnimation,
+    BreakCircleAnimation,
+    CircleAnimation,
+    ListAnimation,
+    RegularPolygonAnimation,
+)
+from lightshow.devices.moving_head.moving_head_animations import (
+    QUART_OUT,
+    AMHAnimation,
+    MHAnimationFrame,
+)
+from lightshow.devices.moving_head.moving_head_colors import (
+    RAINBOW_KICK_COLORS,
+    TRANSFORMERS,
+    DEFAULT_RGBs,
+    RedLowsModulator,
+    random_rainbow_color,
+)
+
+if typing.TYPE_CHECKING:
+    from lightshow.devices.moving_head.moving_head import MovingHead
+
+TRIANGLE_ANIMATION = RegularPolygonAnimation(DEFAULT_RGBs, 3, (0, 60), (45, 135))
+# TRIANGLE_ANIMATION = ListAnimation(
+#    DEFAULT_RGBs, [0, 60, 0], [45, 90, 135]
+# )  # {"base": [45, 90, 135], "top": [0, 60, 0]}
+# SQUARE_ANIMATION = ListAnimation(DEFAULT_RGBs, [0, 0, 60, 60], [45, 135, 135, 45])
+SQUARE_ANIMATION = RegularPolygonAnimation(DEFAULT_RGBs, 4, (0, 60), (45, 135))
+CIRCLE_ANIMATION = CircleAnimation(DEFAULT_RGBs, 0.3, 45)
+LEMNISCATE_ANIMATION = BernoulliLemniscateAnimation(DEFAULT_RGBs, 0.3, 45)
+CIRCLE_BREAK_ANIMATION = BreakCircleAnimation(45)
+BOUNCE_ANIMATION = BounceAnimation(DEFAULT_RGBs)
+
+
+class MovingHeadController:
+    def __init__(self, device: MovingHead):
+        self.device = device
+        self.waiting_music = False
+        self.logger = Logger(f"MovingHeadController{{{device.id}}}")
+
+        # =====================
+        #      Cooldowns
+        # =====================
+        self.next_beat_cool = 0  # In ns Time before a new beat can be processed
+        self.cooldown_time = 0.1 * 1e9  # Cooldown time in nanoseconds (0.3 seconds)
+
+        # In seconds
+        self.last_tick = time.time_ns() / 1e9
+
+        # =====================
+        #     Break related
+        # =====================
+        self.BREAK_ADDED_TIME_MAX = 3
+        self.BREAK_ADDED_TIME_CURVE = QUART_OUT
+        self.breaking = False
+        self.breaking_since = 0
+
+        self.beats_since_anim_change = 0
+        self.disable_anim_change = False
+        self.beats_time = deque(maxlen=30)  # last 30 beats to calculate average for BPM
+        self.last_fps_log_time = 0  # Throttle FPS logging
+        self.current_fps = 0  # Store current FPS for display
+
+        self.max_fps = global_config.settings[_Settings.MAX_FPS] or 60
+        self.frame_time = 1 / self.max_fps * 1e9  # For nanoseconds
+        self.next_frame_time = 0
+        self.avg_fps = deque(maxlen=self.max_fps * 2)
+
+        self.blackout = False
+
+        self.latest_audio_data = AudioData(np.zeros(20000))
+
+        self.init_lists()
+        self.init_state()
+
+    def init_lists(self):
+        self.anim_list: list[AMHAnimation] = [
+            TRIANGLE_ANIMATION,
+            CIRCLE_ANIMATION,
+            LEMNISCATE_ANIMATION,
+            SQUARE_ANIMATION,
+            BOUNCE_ANIMATION,
+        ]
+        self.color_mode_list = [
+            RAINBOW_KICK_COLORS,
+            random_rainbow_color,
+        ]
+
+    def init_state(self):
+        self.current_anim = random.choice(self.anim_list)
+        self.color_mode = self._select_color_mode_for_anim(self.current_anim)
+        self.update_anim_color_mode()
+        self.device.current_anim = self.current_anim.__class__.__name__
+        # self.device.showed_props_update()
+
+    def _is_circle_animation(
+        self, anim
+    ) -> TypeGuard[CircleAnimation | BernoulliLemniscateAnimation]:
+        """Check if animation is a circle-like animation."""
+        return isinstance(anim, (CircleAnimation, BernoulliLemniscateAnimation))
+
+    def _select_color_mode_for_anim(self, anim):
+        """Select appropriate color mode for the given animation."""
+        return random.choice(self.color_mode_list)
+
+    def update_anim_color_mode(self):
+        if isinstance(
+            self.current_anim,
+            (
+                ListAnimation,
+                CircleAnimation,
+                RegularPolygonAnimation,
+                BounceAnimation,
+            ),
+        ):
+            self.current_anim.setRGB(self.color_mode)
+        available_transformers = [
+            trans for trans in TRANSFORMERS if trans.filter()(self.current_anim)
+        ]
+        self.current_anim.setTransformer(random.choice(available_transformers)())
+        if self._is_circle_animation(self.current_anim):
+            self.current_anim.change_color_on_tick = isinstance(
+                self.current_anim.transformer, RedLowsModulator
+            )
+        """
+        if len(self.beats_time) > 1:
+            bpm = self.calcBPM()
+            if bpm < 100:
+                self.current_anim.setTransformer(toFadeBlack)"""
+
+    def calcBPM(self):
+        # Convert nanoseconds to seconds by dividing by 1e9
+        time_diffs = np.diff(self.beats_time) / 1e9
+        if len(time_diffs) == 0:
+            return 0  # Avoid division by zero if there are no differences
+        return 60 / np.mean(time_diffs)  # Convert to BPM
+
+    def randomAnimation(self):
+        self.current_anim = random.choice(
+            [x for x in self.anim_list if x != self.current_anim] or self.anim_list
+        )
+        # Select a different color mode appropriate for the new animation
+        self.color_mode = self._select_color_mode_for_anim(self.current_anim)
+        self.beats_since_anim_change = 0
+        self.update_anim_color_mode()
+        self.device.current_anim = self.current_anim.__class__.__name__
+        # self.device.showed_props_update()
+        frm = self.current_anim.next(
+            self.latest_audio_data,
+            False,
+            time.time_ns() / 1e9 - self.last_tick,
+        )
+        self.last_tick = time.time_ns() / 1e9
+        self.updateFromFrame(frm)
+
+    def handlePacket(self, packet: PacketData):
+
+        if packet.packet_type == PacketType.FLICKER:
+            if packet.packet_status == PacketStatus.ON:
+                # Trigger a strobe/flicker effect.
+                # Duration is set high (e.g., 60s) because we stop it manually on OFF
+                self.device.sendCommand(FlickerCommand(RGB(255, 255, 255), 60000))
+                return
+            else:
+                self.device.sendCommands([RGB(0, 0, 0)])
+
+        if self.blackout:
+            self.device.sendCommand(RGB(0, 0, 0))
+            return
+
+        if packet.audio_data:
+            self.latest_audio_data = packet.audio_data
+        if self.beats_since_anim_change > 20 and not self.disable_anim_change:
+            self.randomAnimation()
+
+        match packet.packet_type:
+            case PacketType.NEW_MUSIC:
+                self.handleNewMusic(packet)
+            case PacketType.BREAK:
+                self.handleBreak(packet)
+        if self.breaking or self.waiting_music:
+            self.tickFillingAnim()
+            return
+        self.tickCurrentAnim()
+
+        if packet.packet_type == PacketType.BEAT:
+            self.handleBeat(packet)
+        # Change animation after 14 beats
+
+    def updateFromFrame(self, frame: MHAnimationFrame):
+        if self.next_frame_time > time.time_ns() or frame["duration"] == -1:
+            return
+        self.next_frame_time = time.time_ns() + self.frame_time
+        self.avg_fps.append(time.time_ns())
+        color = frame["rgb"]
+        """
+        self.device.sendCommand(color)
+        self.device.sendCommand(frame["baseServo"])
+        self.device.sendCommand(frame["topServo"])
+        """
+        self.device.sendCommands([color, frame["baseServo"], frame["topServo"]])
+
+    def calcAverageFPS(self):
+        if len(self.avg_fps) < 2:
+            return 0.0  # Not enough data to calculate FPS
+        # Calculate time differences between consecutive frames (in seconds)
+        time_diffs = np.diff(self.avg_fps) / 1e9
+        # Calculate average FPS
+        return float(1 / np.mean(time_diffs))
+
+    def tickFillingAnim(self):
+        self.updateFromFrame(
+            CIRCLE_BREAK_ANIMATION.next(
+                self.latest_audio_data,
+                True,
+                time.time_ns() / 1e9 - self.last_tick,
+            )
+        )
+        self.last_tick = time.time_ns() / 1e9
+
+    def tickCurrentAnim(self):
+        if time.time_ns() < self.next_beat_cool:
+            # Skip tick
+            return False
+        self.updateFromFrame(
+            self.current_anim.next(
+                self.latest_audio_data,
+                True,
+                time.time_ns() / 1e9 - self.last_tick,
+            )
+        )
+        self.last_tick = time.time_ns() / 1e9
+
+    def handleNewMusic(self, packet: PacketData):
+        if packet.packet_status == PacketStatus.ON:
+            self.waiting_music = True
+            self.breaking = False
+            self.cooldown_time = 0
+            self.beats_time.clear()
+        else:
+            self.waiting_music = False
+
+    def handleBreak(self, packet: PacketData):
+        current_time = time.time_ns()
+        if packet.packet_type == PacketType.BREAK:
+            if packet.packet_status == PacketStatus.OFF:
+                self.breaking = False
+                self.beats_time.extend(
+                    [x + current_time - self.breaking_since for x in self.beats_time]
+                )
+                added_time_t = min((current_time - self.breaking_since) / 1e9 / 15, 1.0)
+                added_time = (
+                    self.BREAK_ADDED_TIME_CURVE(added_time_t)
+                    * self.BREAK_ADDED_TIME_MAX
+                )
+                self.randomAnimation()
+                # Block tick and flicker only if the break was long enough
+                if self.breaking_since > 1e9:
+                    self.next_beat_cool = (
+                        current_time + added_time * 1e9
+                    )  # Set next cooldown to 2 seconds
+                    self.device.sendCommand(
+                        FlickerCommand(RGB(255, 255, 255), (2 + added_time) * 1000)
+                    )
+            else:
+                self.breaking_since = current_time
+                self.breaking = True
+
+    def handleBeat(self, packet: PacketData):
+        # Throttle FPS logging to every 2 seconds
+        current_time = time.time_ns()
+        if current_time - self.last_fps_log_time > 2 * 1e9:
+            from lightshow.gui.main_window import UIManager
+
+            # Store FPS in a way that can be accessed for display
+            fps_value = self.calcAverageFPS()
+            self.current_fps = fps_value
+            self.last_fps_log_time = current_time
+            UIManager.get().stats_panel.update_fps(fps_value)
+
+        if packet.packet_status == PacketStatus.ON:
+            self.beats_time.append(time.time_ns())
+            if time.time_ns() < self.next_beat_cool:
+                # Skip beat
+                return False
+            self.beats_since_anim_change += 1
+            self.next_beat_cool += self.cooldown_time
+            frame = self.current_anim.next(
+                self.latest_audio_data,
+                False,
+                time.time_ns() / 1e9 - self.last_tick,
+            )
+            self.last_tick = time.time_ns() / 1e9
+            self.updateFromFrame(frame)
+            # bpm = self.calcBPM()
+            # print(f"bpm: {bpm}")
