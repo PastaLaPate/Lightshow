@@ -116,14 +116,14 @@ class Device[T: BaseDeviceSettings, R: BaseModel](ABC):
     def name(self) -> str:
         return self.config.name
 
+    @name.setter
+    def name(self, name: str) -> None:
+        self.config.name = name
+
     @id.setter
     def id(self, id: str) -> None:
         logger.warning("Editing a device's id. [%s]", id)
         self.config.id = id
-
-    @name.setter
-    def name(self, name: str) -> None:
-        self.config.name = name
 
     def hsv_to_rgb(self, h: float, s: float, v: float, a: float) -> tuple:
         if s:

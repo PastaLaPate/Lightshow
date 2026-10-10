@@ -192,7 +192,3 @@ class MovingHead(OutputDevice):
         self.top_offset = config.get("top_offset", self.top_offset)
         self.top_range = tuple(config.get("top_range", self.top_range))
         return super().load(data)
-
-    @property
-    def name(self):
-        return f"MovingHead #{self.id} ({self.device_name}) Connected to {self.ip}"

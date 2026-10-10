@@ -579,7 +579,3 @@ class LaunchpadX(InputDevice):
 
     def load(self, data):
         return True
-
-    @property
-    def name(self):
-        return f"LaunchpadX ({'Connected' if self.ready else 'Disconnected'})"

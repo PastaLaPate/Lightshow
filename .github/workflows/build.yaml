@@ -119,13 +119,13 @@ jobs:
           enable-cache: true
 
       - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libgl1 libglib2.0-0 libdbus-1-3 \
+        uses: awalsh128/cache-apt-pkgs-action@v1.6.3
+        with:
+          packages: libgl1 libglib2.0-0 libdbus-1-3 \
             libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 \
             libxcb-render-util0 libxcb-xinerama0 libxcb-xkb1 \
             libxkbcommon-x11-0 upx-ucl fuse libasound2-dev libjack-jackd2-dev
+          version: 1.0
 
       - name: Install dependencies
         run: make install
