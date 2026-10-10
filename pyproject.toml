@@ -59,7 +59,7 @@ major_version_zero = true
 py-modules = []
 
 [tool.ty.src]
-exclude = ["cz_conventional_chore.py"]
+exclude = ["scripts/cz_conventional_chore.py"]
 
 [tool.uv]
 link-mode = "copy"
