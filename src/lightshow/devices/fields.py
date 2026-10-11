@@ -10,8 +10,8 @@ class WidgetType(StrEnum):
     Spinner = "spinner"
     Slider = "slider"  # Custom spinbox  + slider next to it widget
     Checkbox = "checkbox"
-    ColorPicker = "colorpicker"
-    FileSelector = "fileselector"
+    ColorPicker = "colorpicker"  # TODO: IMPLEMENT
+    FileSelector = "fileselector"  # TODO: IMPLEMENT
 
 
 class FieldExtras(BaseModel):
@@ -21,9 +21,6 @@ class FieldExtras(BaseModel):
     connected_readonly: bool = False
     step: float | None = None
     placeholder: str | None = None
-
-
-# TODO: Maybe rename connected_readonly to runtime_immutable or smth like that
 
 
 def _field(

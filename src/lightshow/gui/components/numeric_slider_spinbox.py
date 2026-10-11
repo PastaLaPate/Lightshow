@@ -37,7 +37,7 @@ class NumericSliderSpinBox(QWidget):
                 self.decimals = -exponent
                 self.multiplier = 10**self.decimals
 
-    def _construct_ui(self):
+    def _construct_ui(self) -> None:
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
@@ -67,7 +67,7 @@ class NumericSliderSpinBox(QWidget):
 
         self.slider.valueChanged.connect(self._on_slider_changed)
 
-    def _on_slider_changed(self, value: int):
+    def _on_slider_changed(self, value: int) -> None:
         final_value: float | int = value / self.multiplier if self.is_float else value
 
         if self.spinbox:
@@ -80,24 +80,29 @@ class NumericSliderSpinBox(QWidget):
 
         self.valueChanged.emit(final_value)
 
-    def _on_spinbox_float_changed(self, value: float):
+    def _on_spinbox_float_changed(self, value: float) -> None:
         assert self.slider is not None
         self.slider.blockSignals(True)
         self.slider.setValue(int(value * self.multiplier))
         self.slider.blockSignals(False)
         self.valueChanged.emit(value)
 
-    def _on_spinbox_int_changed(self, value: int):
+    def _on_spinbox_int_changed(self, value: int) -> None:
         assert self.slider is not None
         self.slider.blockSignals(True)
         self.slider.setValue(value)
         self.slider.blockSignals(False)
         self.valueChanged.emit(value)
 
-    def value(self):
+    def value(self) -> int | float:
         assert self.spinbox is not None
         return self.spinbox.value()
 
-    def setValue(self, value):
+    def setValue(self, value: float) -> None:
         assert self.spinbox is not None
-        self.spinbox.setValue(value)
+        if isinstance(self.spinbox, QSpinBox):
+            self.spinbox.setValue(int(value))
+        else:
+            self.spinbox.setValue(value)
+
+    # TODO: Might need to override setLocked
