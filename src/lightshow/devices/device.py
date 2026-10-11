@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any
+from typing import Any, get_args, get_origin
 
 from pydantic import BaseModel, ValidationError
 
 from lightshow.core.logger import Logger
+from lightshow.devices.devices_types import DeviceTypeName
 
 
 class PacketType(Enum):
@@ -50,20 +51,28 @@ class BaseDeviceSettings(BaseModel):
 
 logger = Logger("BaseDevice")
 
-"""
-Settings may be noted with `requires_reconnect` to make them uneditable when connected
-ex: ip: str = Field(json_schema_extra={"requires_reconnect": True})
-"""
-
 
 class Device[T: BaseDeviceSettings, R: BaseModel](ABC):
-    DEVICE_TYPE_NAME = "DUMMY DEVICE"
+    DEVICE_TYPE_NAME: DeviceTypeName
 
     CONFIG_SCHEMA: type[T]
-    RUNTIME_SCHEMA: type[R] | None
+    RUNTIME_SCHEMA: type[R] | None = None
+
+    def __init_subclass__(cls, **kw):
+        # Avoids having to redefine CONFIG_SCHEMA and RUNTIME_SCHEMA that are already set by the generics
+        super().__init_subclass__(**kw)
+        for base in cls.__dict__.get("__orig_bases__", ()):
+            origin, args = get_origin(base), get_args(base)
+            if not (isinstance(origin, type) and issubclass(origin, Device)):
+                continue
+            if len(args) == 2 and all(isinstance(a, type) for a in args):
+                cls.CONFIG_SCHEMA, cls.RUNTIME_SCHEMA = args
 
     def __init__(self, config: T):
         super().__init__()
+        if not hasattr(self, "CONFIG_SCHEMA"):
+            raise TypeError(f"{type(self).__name__} has no CONFIG_SCHEMA")
+
         self.ready = False
         self.config = config
         self.runtime = self.RUNTIME_SCHEMA() if self.RUNTIME_SCHEMA else None
@@ -156,11 +165,11 @@ class Device[T: BaseDeviceSettings, R: BaseModel](ABC):
         return self.name or "Device"
 
 
-class OutputDevice(Device):
+class OutputDevice[T: BaseDeviceSettings, R: BaseModel](Device[T, R]):
     @abstractmethod
     def on(self, packet: PacketData):
         pass
 
 
-class InputDevice(Device):
+class InputDevice[T: BaseDeviceSettings, R: BaseModel](Device[T, R]):
     pass

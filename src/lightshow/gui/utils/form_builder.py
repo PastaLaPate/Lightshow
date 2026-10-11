@@ -11,9 +11,9 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDoubleSpinBox,
+    QFormLayout,
     QLineEdit,
     QSpinBox,
-    QVBoxLayout,
     QWidget,
 )
 
@@ -191,7 +191,7 @@ class ModelForm(QWidget):
 
     def construct[T: BaseModel](self, model: type[T], instance: T | None):
         self.fields.clear()
-        layout = QVBoxLayout()
+        layout = QFormLayout()
         specs = inspect_model(model, instance)
         for spec in specs:
             factory: BaseFieldFactory[Any] = self.registry.resolve(spec)
@@ -199,7 +199,7 @@ class ModelForm(QWidget):
             self.fields[spec.name] = FormField(
                 spec, w, spec.value, partial(factory.set_locked, w)
             )
-            layout.addWidget(w)
+            layout.addRow(spec.extras.label, w)
         self.setLayout(layout)
 
     def set_connected(self, connected: bool):

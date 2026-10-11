@@ -17,6 +17,7 @@ class WidgetType(StrEnum):
 class FieldExtras(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    label: str
     widget: WidgetType | None = None  # if None, guess it from python's type
     connected_readonly: bool = False
     step: float | None = None
@@ -32,6 +33,7 @@ def _field(
 
 
 def IntField(
+    label: str,
     default: int = 0,
     min: int | None = None,
     max: int | None = None,
@@ -44,13 +46,16 @@ def IntField(
     return _field(
         default,
         widget,
-        FieldExtras(widget=widget, connected_readonly=connected_readonly, step=step),
+        FieldExtras(
+            label=label, widget=widget, connected_readonly=connected_readonly, step=step
+        ),
         ge=min,
         le=max,
     )
 
 
 def FloatField(
+    label: str,
     default: float = 0,
     min: float | None = None,
     max: float | None = None,
@@ -63,13 +68,16 @@ def FloatField(
     return _field(
         default,
         widget,
-        FieldExtras(widget=widget, connected_readonly=connected_readonly, step=step),
+        FieldExtras(
+            label=label, widget=widget, connected_readonly=connected_readonly, step=step
+        ),
         ge=min,
         le=max,
     )
 
 
 def BoolField(
+    label: str,
     default: bool = False,
     widget: Literal[WidgetType.Checkbox] = WidgetType.Checkbox,
     connected_readonly: bool = False,
@@ -77,11 +85,12 @@ def BoolField(
     return _field(
         default,
         widget,
-        FieldExtras(widget=widget, connected_readonly=connected_readonly),
+        FieldExtras(label=label, widget=widget, connected_readonly=connected_readonly),
     )
 
 
 def StrField(
+    label: str,
     default: str = "",
     max_length: int | None = None,
     placeholder: str | None = None,
@@ -95,6 +104,7 @@ def StrField(
         default,
         widget,
         FieldExtras(
+            label=label,
             widget=widget,
             connected_readonly=connected_readonly,
             placeholder=placeholder,

@@ -1,13 +1,19 @@
 import socket
 import threading
 import traceback
-from typing import Any, ClassVar, Literal
+from typing import Any
 
 import requests
+from pydantic import BaseModel
 
 from lightshow.core.logger import Logger
 from lightshow.devices.animations.aanimation import RGB, Command
-from lightshow.devices.device import OutputDevice, PacketStatus, PacketType
+from lightshow.devices.device import (
+    BaseDeviceSettings,
+    OutputDevice,
+    PacketStatus,
+    PacketType,
+)
 from lightshow.devices.devices_types import DeviceTypeName
 from lightshow.devices.moving_head.moving_head_controller import (
     MovingHeadController,
@@ -15,16 +21,17 @@ from lightshow.devices.moving_head.moving_head_controller import (
 from lightshow.gui.utils import ui_signals
 
 
-class MovingHead(OutputDevice):
-    DEVICE_TYPE_NAME: Literal["LED Moving Head"] = DeviceTypeName.MOVING_HEAD.value
+class MovingHeadSettings(BaseDeviceSettings):
+    ip: str
+    port: int
 
-    SHOWED_PROPS: ClassVar = [
-        "udp_address",
-        "base_servo_range",
-        "top_servo_range",
-        "current_anim",
-    ]
-    EDITABLE_PROPS: ClassVar = [("ip", str)]
+
+class MovingHeadRuntime(BaseModel):
+    pass
+
+
+class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
+    DEVICE_TYPE_NAME = DeviceTypeName.MOVING_HEAD
 
     def __init__(self, config):
         super().__init__(config)
