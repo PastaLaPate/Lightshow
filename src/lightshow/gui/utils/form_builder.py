@@ -1,11 +1,21 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from functools import partial
+from types import UnionType
+from typing import Annotated, Any, Union, get_args, get_origin
 
 from pydantic import BaseModel
-from pydantic.fields import FieldInfo
-from PySide6.QtWidgets import QCheckBox, QDoubleSpinBox, QLineEdit, QSpinBox, QWidget
+from pydantic_core import PydanticUndefined
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import (
+    QCheckBox,
+    QDoubleSpinBox,
+    QLineEdit,
+    QSpinBox,
+    QVBoxLayout,
+    QWidget,
+)
 
 from lightshow.devices.fields import FieldExtras, WidgetType
 from lightshow.gui.components.numeric_slider_spinbox import NumericSliderSpinBox
@@ -20,34 +30,54 @@ class FieldSpec:
     constraints: dict[str, Any] = field(default_factory=dict)
 
     @property
-    def widget_hint(self) -> str | None:
-        return self.extras.widget
-
-    @property
     def connected_readonly(self) -> bool:
         return self.extras.connected_readonly
 
 
-def inspect_model(model: type[BaseModel], instance=None) -> list[FieldSpec]:
+def unwrap(tp: type[Any]) -> type[Any]:
+    while True:
+        origin = get_origin(tp)
+        if origin is Annotated:
+            tp = get_args(tp)[0]
+        elif origin in (Union, UnionType):
+            args = [a for a in get_args(tp) if a is not type(None)]
+            if len(args) != 1:  # things like str | int, banned
+                return tp
+            tp = args[0]
+        else:
+            return tp
+
+
+# TODO: Implement Greater exclusive (GT and LT)
+
+
+def inspect_model[T: BaseModel](
+    model: type[T], instance: T | None = None
+) -> list[FieldSpec]:
     specs: list[FieldSpec] = []
-    name: str
-    info: FieldInfo
     for name, info in model.model_fields.items():
+        schema_extra = info.json_schema_extra
+        if not schema_extra or "ui" not in schema_extra:
+            continue
+
+        extras = FieldExtras.model_validate(schema_extra["ui"])
+
         constraints = {  # dict comprehension are from another planet
             k: getattr(m, k)
             for m in info.metadata
             for k in ("ge", "gt", "le", "lt", "max_length")
             if getattr(m, k, None) is not None
         }
-        value = (
-            getattr(instance, name)
-            if instance
-            else info.get_default(call_default_factory=True)
+
+        if instance is not None:
+            value = getattr(instance, name)
+        else:
+            value = info.get_default(call_default_factory=True)
+            if value is PydanticUndefined:
+                value = None
+        specs.append(
+            FieldSpec(name, unwrap(info.annotation), value, extras, constraints)
         )
-        extras = FieldExtras.model_validate(
-            (info.json_schema_extra or {}).get("ui", {})
-        )
-        specs.append(FieldSpec(name, info.annotation, value, extras, constraints))
     return specs
 
 
@@ -119,15 +149,64 @@ class FieldFactoryRegistry:
             float: FloatFactory(),
         }
 
-        self.by_widget_type: dict[WidgetType, BaseFieldFactory] = {
-            WidgetType.Checkbox: CheckBoxFactory(),
-            WidgetType.Spinner: FloatFactory(),
-            WidgetType.Field: LineEditFactory(),
-            WidgetType.Slider: BarFactory(),
+        self.by_widget: dict[tuple[type, WidgetType], BaseFieldFactory] = {
+            (int, WidgetType.Spinner): SpinnerFactory(),
+            (float, WidgetType.Spinner): FloatFactory(),
+            (int, WidgetType.Slider): BarFactory(),
+            (float, WidgetType.Slider): BarFactory(),
+            (bool, WidgetType.Checkbox): CheckBoxFactory(),
+            (str, WidgetType.Field): LineEditFactory(),
             # WidgetType.ColorPicker:
         }
 
-    def resolve(self, spec: FieldSpec) -> BaseFieldFactory:
-        if spec.extras.widget in self.by_widget_type:
-            return self.by_widget_type[spec.extras.widget]
-        return self.by_type[spec.type]
+    def resolve(self, spec: FieldSpec) -> BaseFieldFactory[Any]:
+        widget = spec.extras.widget
+        if widget is None:
+            return self.by_type[spec.type]
+        try:
+            return self.by_widget[(spec.type, widget)]
+        except KeyError:
+            raise ValueError(
+                f"No factory found for {spec.type} with {spec.extras.widget}"
+            )
+
+
+class FormField(QObject):
+    onChanged = Signal(object)
+
+    def __init__(
+        self, spec: FieldSpec, widget: QWidget, value: Any, lock: Callable[[bool], None]
+    ):
+        self.spec = spec
+        self.widget: QWidget = widget
+        self.value: Any = value
+        self.lock: Callable[[bool], None] = lock
+
+
+class ModelForm(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.registry = FieldFactoryRegistry()
+        self.fields: dict[str, FormField] = {}
+
+    def construct[T: BaseModel](self, model: type[T], instance: T | None):
+        self.fields.clear()
+        layout = QVBoxLayout()
+        specs = inspect_model(model, instance)
+        for spec in specs:
+            factory: BaseFieldFactory[Any] = self.registry.resolve(spec)
+            w = factory.construct(spec, partial(self.field_changed, spec.name))
+            self.fields[spec.name] = FormField(
+                spec, w, spec.value, partial(factory.set_locked, w)
+            )
+            layout.addWidget(w)
+        self.setLayout(layout)
+
+    def set_connected(self, connected: bool):
+        for f in self.fields.values():
+            if f.spec.connected_readonly:
+                f.lock(connected)
+
+    def field_changed(self, name, value):
+        self.fields[name].value = value
+        self.fields[name].onChanged.emit(value)
