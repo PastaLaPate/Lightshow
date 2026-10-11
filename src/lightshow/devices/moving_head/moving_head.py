@@ -15,6 +15,7 @@ from lightshow.devices.device import (
     PacketType,
 )
 from lightshow.devices.devices_types import DeviceTypeName
+from lightshow.devices.fields import IntField, StrField
 from lightshow.devices.moving_head.moving_head_controller import (
     MovingHeadController,
 )
@@ -22,8 +23,8 @@ from lightshow.gui.utils import ui_signals
 
 
 class MovingHeadSettings(BaseDeviceSettings):
-    ip: str
-    port: int
+    ip: str = StrField("IP", "", placeholder="0.0.0.0")
+    port: int = IntField("Port", 3000)
 
 
 class MovingHeadRuntime(BaseModel):

@@ -10,9 +10,11 @@ from PySide6.QtWidgets import (
 )
 
 from lightshow.devices.device import Device
+from lightshow.devices.moving_head import MovingHead
 from lightshow.gui.components.editable_label import EditableLabel
 from lightshow.gui.components.status_circle import StatusCircle
 from lightshow.gui.utils import ui_signals
+from lightshow.gui.utils.form_builder import ModelForm
 
 from .base_panel import BasePanel
 
@@ -77,6 +79,23 @@ class DeviceHeader(QWidget):
         self.device_type.setText(device_type)
 
 
+class DeviceProps(QWidget):
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+
+        layout = QHBoxLayout()
+
+        form = ModelForm()
+        self.form = form
+
+        layout.addWidget(form)
+
+        self.setLayout(layout)
+
+    def render_device(self, device_type: type[Device]):
+        self.form.construct(device_type.CONFIG_SCHEMA, None)
+
+
 class DeviceDetailsPanel(BasePanel):
     """Panel for displaying and managing device configuration details."""
 
@@ -98,18 +117,29 @@ class DeviceDetailsPanel(BasePanel):
         self.placeholder_label = QLabel("Select a device to see its details.")
         self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignTop)
 
+        props_widget = QWidget()
+        props_layout = QVBoxLayout()
+        self.device_header = DeviceHeader()
+        self.device_props = DeviceProps()
+        props_layout.addWidget(self.device_header)
+        props_layout.addWidget(self.device_props)
+        props_layout.addStretch()
+        props_widget.setLayout(props_layout)
+
         self.stacked_layout = QStackedLayout()
         self.stacked_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.stacked_layout.addWidget(props_widget)
         self.stacked_layout.addWidget(self.placeholder_label)
+        self.stacked_layout.setCurrentIndex(1)
 
         layout.addWidget(title_label)
         layout.addLayout(self.stacked_layout)
-        layout.addWidget(DeviceHeader())
 
     def device_selected(self, device_id: str | None):
         assert self.stacked_layout is not None
         print(device_id)
         if device_id:
             self.stacked_layout.setCurrentIndex(0)
+            self.device_props.render_device(MovingHead)
         else:
             self.stacked_layout.setCurrentIndex(1)
