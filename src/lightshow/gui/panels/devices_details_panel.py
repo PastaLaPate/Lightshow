@@ -1,6 +1,7 @@
 from enum import IntEnum, auto
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -11,6 +12,7 @@ from PySide6.QtWidgets import (
 
 from lightshow.devices.device import Device
 from lightshow.devices.moving_head import MovingHead
+from lightshow.gui.components.badge import Badge
 from lightshow.gui.components.editable_label import EditableLabel
 from lightshow.gui.components.status_circle import StatusCircle
 from lightshow.gui.utils import ui_signals
@@ -34,6 +36,7 @@ class DeviceHeader(QWidget):
         self._status = DeviceStatus.DISCONNECTED
 
         layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
 
         self.status_circle = StatusCircle()
         self.status_circle.setFixedHeight(16)
@@ -42,7 +45,7 @@ class DeviceHeader(QWidget):
         self.device_name.setStyleSheet("font-size: 16px; font-weight: bold;")
         self.device_name.text_changed.connect(self.device_renamed)
 
-        self.device_type = QLabel("Moving Head")
+        self.device_type = Badge("Moving Head", QColor(100, 100, 100))
 
         layout.addWidget(self.status_circle)
         layout.addWidget(self.device_name)
@@ -84,6 +87,7 @@ class DeviceProps(QWidget):
         super().__init__(parent)
 
         layout = QHBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
 
         form = ModelForm()
         self.form = form
@@ -118,7 +122,9 @@ class DeviceDetailsPanel(BasePanel):
         self.placeholder_label.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         props_widget = QWidget()
+        props_widget.setContentsMargins(0, 0, 0, 0)
         props_layout = QVBoxLayout()
+        props_layout.setContentsMargins(0, 0, 0, 0)
         self.device_header = DeviceHeader()
         self.device_props = DeviceProps()
         props_layout.addWidget(self.device_header)

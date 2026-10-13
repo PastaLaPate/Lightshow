@@ -23,7 +23,6 @@ def fetch_last_tag():
 
 def is_update_available() -> tuple[bool, str]:
     latest_version = fetch_last_tag()
-    print(latest_version)
     r = semver.compare(VERSION, latest_version)
     if r == -1:
         return (True, f"New version available: {latest_version}")
