@@ -391,7 +391,7 @@ class MovingHeadPanelSlot(PanelSlot):
 
 
 class LaunchpadX(InputDevice):
-    DEVICE_TYPE_NAME: Literal["Novation Launchpad X"] = DeviceTypeName.LAUNCHPAD_X.value
+    DEVICE_TYPE_NAME = DeviceTypeName.LAUNCHPAD_X
 
     def __init__(self, config):
         from lightshow.gui.main_window import UIManager

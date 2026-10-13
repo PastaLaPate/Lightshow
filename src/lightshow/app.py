@@ -4,6 +4,7 @@ from time import time_ns
 
 import pyqtgraph as pg
 from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QStyleFactory
 
 from lightshow.audio import detectors
 from lightshow.audio.detectors.methods.percentil import Percentile
@@ -260,6 +261,7 @@ def main() -> None:
     audio_handler.add_listener_on_init(listener)
 
     app = QApplication(sys.argv)
+    app.setStyle(QStyleFactory.create("basic"))
     app.setApplicationName("lightshow")
 
     if os.name == "nt":
