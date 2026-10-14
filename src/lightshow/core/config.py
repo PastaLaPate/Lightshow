@@ -19,14 +19,16 @@ from collections.abc import Iterator
 from dataclasses import dataclass, field
 from importlib.metadata import version
 from pathlib import Path
-from typing import Any, ClassVar, TypedDict, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar, TypedDict, TypeVar
 
 import distro
 
 from lightshow.audio.types import AudioDevice
 from lightshow.core.logger import Logger
-from lightshow.devices.devices_types import DeviceTypeName
 from lightshow.devices.store import DeviceStore
+
+if TYPE_CHECKING:
+    from lightshow.devices.devices_types import DeviceTypeName
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Generic Setting[T]
