@@ -1,5 +1,3 @@
-from enum import IntEnum, auto
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -12,6 +10,7 @@ from PySide6.QtWidgets import (
 
 from lightshow.devices.device import Device
 from lightshow.devices.moving_head import MovingHead
+from lightshow.devices.store import DeviceStatus
 from lightshow.gui.components.badge import Badge
 from lightshow.gui.components.editable_label import EditableLabel
 from lightshow.gui.components.status_circle import StatusCircle
@@ -19,12 +18,6 @@ from lightshow.gui.utils import ui_signals
 from lightshow.gui.utils.form_builder import ModelForm
 
 from .base_panel import BasePanel
-
-
-class DeviceStatus(IntEnum):
-    DISCONNECTED = auto()
-    CONNECTING = auto()
-    CONNECTED = auto()
 
 
 class DeviceHeader(QWidget):

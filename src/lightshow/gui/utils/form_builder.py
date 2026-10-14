@@ -177,6 +177,7 @@ class FormField(QObject):
     def __init__(
         self, spec: FieldSpec, widget: QWidget, value: Any, lock: Callable[[bool], None]
     ):
+        super().__init__()
         self.spec = spec
         self.widget: QWidget = widget
         self.value: Any = value

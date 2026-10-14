@@ -16,9 +16,8 @@ from PySide6.QtWidgets import (
 from lightshow.audio.streams import LoopbackAudioStreamHandler
 from lightshow.core.config import SETTINGS_CATEGORIES, _Settings, global_config
 from lightshow.core.logger import Logger
+from lightshow.devices import DEVICE_TYPES
 from lightshow.devices.device import Device
-from lightshow.devices.launchpad.launchpad import LaunchpadX
-from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.gui.controllers.device_controller import DeviceController
 from lightshow.gui.dialogs.about_dialog import AboutDialog
 from lightshow.gui.dialogs.settings_dialog import SettingsDialog
@@ -39,7 +38,7 @@ class UIManager(QMainWindow):
         self.logger = Logger("UIManager")
         self.listener = audio_listener
         self.audio_handler = audio_handler
-        self.device_types: list[type[Device]] = [MovingHead, LaunchpadX]
+        self.device_types: list[type[Device]] = DEVICE_TYPES
         self.ui_signals = ui_signals
 
         # Initialize panels

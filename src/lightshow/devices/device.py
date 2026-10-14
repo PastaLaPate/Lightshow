@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, get_args, get_origin
+from typing import get_args, get_origin
 
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ConfigDict
 
 from lightshow.core.logger import Logger
 from lightshow.devices.devices_types import DeviceTypeName
@@ -45,6 +45,7 @@ class PacketData:
 
 
 class BaseDeviceSettings(BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
     id: str
     name: str = "Device X"
 
@@ -95,27 +96,16 @@ class Device[T: BaseDeviceSettings, R: BaseModel](ABC):
 
     @abstractmethod
     def scan_for_device(self) -> bool:  # Returns if a device was found
-        pass
+        ...
+
+    @abstractmethod
+    def on_config_changed(self, field: str): ...
 
     @abstractmethod
     def init_device(
         self,
     ) -> bool:  # Returns if the device was successfully initialized
-        pass
-
-    # Name, data
-    @abstractmethod
-    def save(self) -> dict[str, Any]:
-        return self.config.model_dump()
-
-    # Returns if correctly loaded
-    @abstractmethod
-    def load(self, data: dict[str, Any]) -> bool:
-        try:
-            self.config = self.CONFIG_SCHEMA.model_validate(data)
-            return True
-        except ValidationError:
-            return False
+        ...
 
     @property
     def id(self) -> str:

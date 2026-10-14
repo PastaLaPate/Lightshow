@@ -25,8 +25,8 @@ import distro
 
 from lightshow.audio.types import AudioDevice
 from lightshow.core.logger import Logger
-from lightshow.devices.device import Device
 from lightshow.devices.devices_types import DeviceTypeName
+from lightshow.devices.store import DeviceStore
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Generic Setting[T]
@@ -402,13 +402,13 @@ class Config:
                 AudioDevice(is_default=True, is_loopback=True).to_dict(),
             )
         )
-        self.devices: dict[str, DeviceConfigType] = self._raw.get("devices", {})
+        raw_devices: dict[str, DeviceConfigType] = self._raw.get("devices", {})
+        self.device_store = DeviceStore(self.save)
+        self.device_store.load(raw_devices)
 
         # Managed settings
         self.settings: SettingsMap = SettingsMap(SETTINGS.all())
         self.settings._load_raw(self._raw)
-
-    # ── private ───────────────────────────────────────────────────────────────
 
     def _load_file(self) -> dict[str, Any]:
         try:
@@ -421,8 +421,6 @@ class Config:
         except json.JSONDecodeError:
             self.logger.error(f"{self.config_file} is invalid JSON — using defaults.")
             return {}
-
-    # ── public ────────────────────────────────────────────────────────────────
 
     def apply(self, changes: dict[str, Any]) -> None:
         """
@@ -442,7 +440,7 @@ class Config:
 
         # Persist unmanaged settings
         self._raw["audio_device"] = self.audio_device.to_dict()
-        self._raw["devices"] = self.devices
+        self._raw["devices"] = self.device_store.dump()
 
         with open(self.config_file, "w") as f:
             json.dump(self._raw, f, indent=4)
@@ -455,4 +453,3 @@ class Config:
 
 
 global_config = Config()
-live_devices: dict[str, Device] = {}
