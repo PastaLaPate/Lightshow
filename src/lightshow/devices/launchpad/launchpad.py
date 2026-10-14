@@ -28,6 +28,7 @@ from lightshow.devices.moving_head.moving_head_controller import (
     LEMNISCATE_ANIMATION,
     SQUARE_ANIMATION,
 )
+from lightshow.devices.store import DeviceStatus
 
 
 # Index in panel pixels
@@ -141,7 +142,7 @@ class ColorModes(Enum):
 class MovingHeadPanelSlot(PanelSlot):
     def __init__(self, launchpad: LaunchpadX, device_id: str, index: int) -> None:
         super().__init__(launchpad, device_id, index)
-        device = config.live_devices[device_id]
+        device = config.global_config.device_store.get(device_id)._device
         if not isinstance(device, MovingHead):
             raise TypeError("Created with another device than MovingHead")
         self.moving_head: MovingHead = device
@@ -390,6 +391,9 @@ class MovingHeadPanelSlot(PanelSlot):
         self.set_color(Buttons.FADE_BLACK, Colors.GRAY, mode="pulse")
 
 
+# TODO: Cleanup this shit, what happens if a moving head disconnects while it has a panel ??
+
+
 class LaunchpadX(InputDevice):
     DEVICE_TYPE_NAME = DeviceTypeName.LAUNCHPAD_X
 
@@ -402,7 +406,8 @@ class LaunchpadX(InputDevice):
         self.device_name = "Not Connected"
         UIManager.get().ui_signals.finish_connection.connect(self._on_device_connected)
         UIManager.get().device_details.register(
-            "connect_clicked", self._connect_device_callback
+            "connect_clicked",
+            self._connect_device_callback,  # TODO: Okay, okay this shit needs to be changed
         )
         # State Management
         self.used_panels: dict[int, None | str] = {  # panel_id: device_id using it
@@ -425,7 +430,9 @@ class LaunchpadX(InputDevice):
 
     def _on_device_connected(self, device_id: str):
         # Assign the device a panel if one is available
-        if not isinstance(config.live_devices[device_id], MovingHead):
+        if not isinstance(
+            config.global_config.device_store.get(device_id)._device, MovingHead
+        ):  # Use _device to avoid creating if not instanced
             return
         for panel_id, d_id in self.used_panels.items():
             if d_id is None:
@@ -437,7 +444,9 @@ class LaunchpadX(InputDevice):
 
     def _connect_device_callback(self, device_id: str):
         if (
-            device_id in config.live_devices and config.live_devices[device_id].ready
+            device_id in config.global_config.device_store.all()
+            and config.global_config.device_store.get(device_id).status
+            == DeviceStatus.CONNECTED
         ):  # = On device disconnect
             for panel_id, d_id in self.used_panels.items():
                 if d_id == device_id:
@@ -508,10 +517,10 @@ class LaunchpadX(InputDevice):
             )
             self.out_port = mido.open_output(self.device_name)  # type: ignore
             self.ready = True
-            self.out_port.send(mido.Message("sysex", data=[0, 32, 41, 2, 12, 14, 1]))  # pyright: ignore[reportOptionalMemberAccess]
+            self.out_port.send(mido.Message("sysex", data=[0, 32, 41, 2, 12, 14, 1]))
 
             self.start_effect_engine()  # Start the single shared thread
-            for device_id in config.live_devices:
+            for device_id in config.global_config.device_store.all():
                 self._on_device_connected(device_id)
             return True
         except Exception as e:  # noqa

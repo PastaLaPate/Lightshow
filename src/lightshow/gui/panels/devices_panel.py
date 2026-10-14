@@ -88,8 +88,8 @@ class DevicesPanel(BasePanel):
         """Refresh the device listbox with current devices."""
         if self.device_listbox is not None:
             self.device_listbox.clear()
-            for id, config in global_config.devices.items():
-                item = QListWidgetItem(config["props"]["name"])
+            for id, device_entry in global_config.device_store.all().items():
+                item = QListWidgetItem(device_entry.config.name)
                 item.setData(Qt.ItemDataRole.UserRole, id)
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
                 self.device_listbox.addItem(item)
@@ -113,7 +113,11 @@ class DevicesPanel(BasePanel):
         device_id = item.data(Qt.ItemDataRole.UserRole)
         new_name = item.text().strip()
 
-        if not device_id or not new_name or device_id not in global_config.devices:
+        if (
+            not device_id
+            or not new_name
+            or device_id not in global_config.device_store.all()
+        ):
             return
 
         ui_signals.rename_device.emit(device_id, new_name)
@@ -137,12 +141,12 @@ class DevicesPanel(BasePanel):
         if not current_item:
             return
         device_id = current_item.data(Qt.ItemDataRole.UserRole)
-        if device_id in global_config.devices:
+        if device_id in global_config.device_store.all():
             ui_signals.delete_device.emit(device_id)
 
     def _duplicate_device(self, device_id: str):
         """Duplicate an existing device with a new unique ID."""
-        if device_id not in global_config.devices:
+        if device_id not in global_config.device_store.all():
             return
 
         # source_config = global_config.devices[device_id]

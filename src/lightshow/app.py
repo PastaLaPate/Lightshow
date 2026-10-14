@@ -22,6 +22,7 @@ from lightshow.devices.device import (
     PacketType,
 )
 from lightshow.devices.moving_head.moving_head import MovingHead
+from lightshow.devices.store import DeviceStatus
 from lightshow.gui.main_window import UIManager
 from lightshow.gui.visualizers.frequencies_visualizer import FrequenciesVisualizer
 from lightshow.gui.visualizers.spike_detector_visualizer import SpikeDetectorVisualizer
@@ -119,7 +120,7 @@ class MainAudioListener(AudioListener):
                 logger.error(str(e))
 
     def send_packet_to_devices(self, packet: PacketData, force=False) -> None:
-        devices = config.live_devices.copy()
+        devices = config.global_config.device_store.all().copy()
         if force:  # Manual packets
             # Update state accordingly
             if packet.packet_type == PacketType.BREAK:
@@ -128,8 +129,11 @@ class MainAudioListener(AudioListener):
                     self._stop_break(packet.audio_data)
             elif packet.packet_type == PacketType.DROP:
                 self.drop_detected = packet.packet_status == PacketStatus.ON
-        for device in devices.values():
-            if device.ready and isinstance(device, OutputDevice):
+        for device_entry in devices.values():
+            if device_entry.status == DeviceStatus.CONNECTED and isinstance(
+                device_entry.device, OutputDevice
+            ):
+                device = device_entry.device
                 if isinstance(device, MovingHead):
                     if not device.manual or (
                         device.auto_tick and packet.packet_type == PacketType.TICK

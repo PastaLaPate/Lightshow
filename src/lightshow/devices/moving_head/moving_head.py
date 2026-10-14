@@ -1,7 +1,6 @@
 import socket
 import threading
 import traceback
-from typing import Any
 
 import requests
 from pydantic import BaseModel
@@ -179,24 +178,3 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
             self._packet_queue.append(packet)
 
         return super().on(packet)
-
-    def save(self) -> dict[str, Any]:
-        return {
-            "ip": self.ip,
-            "device_name": self.device_name,
-            "base_offset": self.base_offset,
-            "base_range": self.base_range,
-            "top_offset": self.top_offset,
-            "top_range": self.top_range,
-        }
-
-    def load(self, data: dict[str, Any]) -> bool:
-        config = data
-        # TODO: FIX THIS
-        self.device_name = "huh"
-        self.ip = config.get("ip", self.ip)
-        self.base_offset = config.get("base_offset", self.base_offset)
-        self.base_range = tuple(config.get("base_range", self.base_range))
-        self.top_offset = config.get("top_offset", self.top_offset)
-        self.top_range = tuple(config.get("top_range", self.top_range))
-        return super().load(data)
