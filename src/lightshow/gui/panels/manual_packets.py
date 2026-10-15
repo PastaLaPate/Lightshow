@@ -1,7 +1,7 @@
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QGridLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout
 
-from lightshow.devices.device import PacketData, PacketStatus, PacketType
+from lightshow.devices.types import PacketData, PacketStatus, PacketType
 
 from .base_panel import BasePanel
 

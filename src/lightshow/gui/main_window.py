@@ -16,8 +16,8 @@ from PySide6.QtWidgets import (
 from lightshow.audio.streams import LoopbackAudioStreamHandler
 from lightshow.core.config import SETTINGS_CATEGORIES, _Settings, global_config
 from lightshow.core.logger import Logger
-from lightshow.devices import DEVICE_TYPES
 from lightshow.devices.device import Device
+from lightshow.devices.registry import DEVICE_TYPES
 from lightshow.gui.controllers.device_controller import DeviceController
 from lightshow.gui.dialogs.about_dialog import AboutDialog
 from lightshow.gui.dialogs.settings_dialog import SettingsDialog

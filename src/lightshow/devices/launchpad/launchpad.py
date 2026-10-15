@@ -7,6 +7,7 @@ from itertools import cycle
 from typing import Literal
 
 import mido
+from pydantic import BaseModel
 
 from lightshow.core import config
 from lightshow.devices.device import InputDevice
@@ -27,8 +28,14 @@ from lightshow.devices.moving_head.moving_head_controller import (
     LEMNISCATE_ANIMATION,
     SQUARE_ANIMATION,
 )
-from lightshow.devices.store import DeviceStatus
-from lightshow.devices.types import DeviceTypeName, PacketData, PacketStatus, PacketType
+from lightshow.devices.status import DeviceStatus
+from lightshow.devices.types import (
+    BaseDeviceSettings,
+    DeviceTypeName,
+    PacketData,
+    PacketStatus,
+    PacketType,
+)
 
 
 # Index in panel pixels
@@ -394,7 +401,15 @@ class MovingHeadPanelSlot(PanelSlot):
 # TODO: Cleanup this shit, what happens if a moving head disconnects while it has a panel ??
 
 
-class LaunchpadX(InputDevice):
+class LaunchpadSettings(BaseDeviceSettings):
+    pass
+
+
+class LaunchpadRuntime(BaseModel):
+    pass
+
+
+class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
     DEVICE_TYPE_NAME = DeviceTypeName.LAUNCHPAD_X
 
     def __init__(self, config):

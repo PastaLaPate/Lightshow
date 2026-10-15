@@ -1,7 +1,7 @@
 from PySide6.QtCore import QObject
 
 from lightshow.core.config import global_config
-from lightshow.devices.devices_types import DeviceTypeName
+from lightshow.devices.types import DeviceTypeName
 from lightshow.gui.utils import ui_signals
 
 

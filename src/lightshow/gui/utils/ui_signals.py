@@ -1,6 +1,6 @@
 from PySide6.QtCore import QObject, Signal
 
-from lightshow.devices.devices_types import DeviceTypeName
+from lightshow.devices.types import DeviceTypeName
 
 
 class UISignals(QObject):

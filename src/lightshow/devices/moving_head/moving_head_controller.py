@@ -7,7 +7,6 @@ from typing import TypeGuard
 import numpy as np
 
 from lightshow.audio.data import AudioData
-from lightshow.core.config import _Settings, global_config
 from lightshow.core.logger import Logger
 from lightshow.devices.animations.aanimation import RGB, FlickerCommand
 from lightshow.devices.device import PacketData
@@ -50,6 +49,8 @@ BOUNCE_ANIMATION = BounceAnimation(DEFAULT_RGBs)
 
 class MovingHeadController:
     def __init__(self, device: MovingHead):
+        from lightshow.core.config import _Settings, global_config
+
         self.device = device
         self.waiting_music = False
         self.logger = Logger(f"MovingHeadController{{{device.id}}}")
