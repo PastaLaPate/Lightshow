@@ -106,8 +106,7 @@ class DevicesPanel(BasePanel):
             return
         current_item = self.device_listbox.currentItem()
         if current_item:
-            device_name = current_item.text()
-            ui_signals.device_selected.emit(device_name)
+            ui_signals.device_selected.emit(current_item.data(Qt.ItemDataRole.UserRole))
 
     def _on_item_renamed(self, item: QListWidgetItem):
         device_id = item.data(Qt.ItemDataRole.UserRole)

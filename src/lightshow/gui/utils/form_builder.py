@@ -190,18 +190,28 @@ class ModelForm(QWidget):
         self.registry = FieldFactoryRegistry()
         self.fields: dict[str, FormField] = {}
 
+        self.form_layout = QFormLayout()
+        self.setLayout(self.form_layout)
+
     def construct[T: BaseModel](self, model: type[T], instance: T | None):
         self.fields.clear()
-        layout = QFormLayout()
+
+        while self.form_layout.rowCount() > 0:
+            item = self.form_layout.takeRow(0)
+            if item.fieldItem:
+                item.fieldItem.widget().deleteLater()
+            if item.labelItem:
+                item.labelItem.widget().deleteLater()
+
         specs = inspect_model(model, instance)
+        print(specs)
         for spec in specs:
             factory: BaseFieldFactory[Any] = self.registry.resolve(spec)
             w = factory.construct(spec, partial(self.field_changed, spec.name))
             self.fields[spec.name] = FormField(
                 spec, w, spec.value, partial(factory.set_locked, w)
             )
-            layout.addRow(spec.extras.label, w)
-        self.setLayout(layout)
+            self.form_layout.addRow(spec.extras.label, w)
 
     def set_connected(self, connected: bool):
         for f in self.fields.values():

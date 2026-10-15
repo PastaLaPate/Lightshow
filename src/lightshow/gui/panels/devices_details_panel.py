@@ -8,8 +8,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from lightshow.core.config import global_config
 from lightshow.devices.device import Device
-from lightshow.devices.moving_head import MovingHead
+from lightshow.devices.registry import DEVICE_CLASSES
 from lightshow.devices.store import DeviceStatus
 from lightshow.gui.components.badge import Badge
 from lightshow.gui.components.editable_label import EditableLabel
@@ -136,9 +137,12 @@ class DeviceDetailsPanel(BasePanel):
 
     def device_selected(self, device_id: str | None):
         assert self.stacked_layout is not None
-        print(device_id)
         if device_id:
             self.stacked_layout.setCurrentIndex(0)
-            self.device_props.render_device(MovingHead)
+            entry = global_config.device_store.get(device_id)
+            print(device_id)
+            self.device_header.set_device_name(entry.config.name)
+            self.device_header.set_device_type(entry.type_name)
+            self.device_props.render_device(DEVICE_CLASSES[entry.type_name])
         else:
             self.stacked_layout.setCurrentIndex(1)
