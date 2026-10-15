@@ -10,14 +10,12 @@ from lightshow.devices.animations.aanimation import RGB, Command
 from lightshow.devices.device import (
     BaseDeviceSettings,
     OutputDevice,
-    PacketStatus,
-    PacketType,
 )
-from lightshow.devices.devices_types import DeviceTypeName
 from lightshow.devices.fields import IntField, StrField
 from lightshow.devices.moving_head.moving_head_controller import (
     MovingHeadController,
 )
+from lightshow.devices.types import DeviceTypeName, PacketStatus, PacketType
 from lightshow.gui.utils import ui_signals
 
 

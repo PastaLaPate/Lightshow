@@ -9,8 +9,7 @@ from typing import Literal
 import mido
 
 from lightshow.core import config
-from lightshow.devices.device import InputDevice, PacketData, PacketStatus, PacketType
-from lightshow.devices.devices_types import DeviceTypeName
+from lightshow.devices.device import InputDevice
 from lightshow.devices.moving_head.animations import BounceAnimation
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.devices.moving_head.moving_head_animations import AMHAnimation
@@ -29,6 +28,7 @@ from lightshow.devices.moving_head.moving_head_controller import (
     SQUARE_ANIMATION,
 )
 from lightshow.devices.store import DeviceStatus
+from lightshow.devices.types import DeviceTypeName, PacketData, PacketStatus, PacketType
 
 
 # Index in panel pixels

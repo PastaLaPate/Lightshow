@@ -2,26 +2,19 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from enum import IntEnum, auto
 from typing import Any
 from uuid import uuid4
 
 from pydantic import ValidationError
 from PySide6.QtCore import QObject, QTimer, Signal
 
-from lightshow.core.config import DeviceConfigType
 from lightshow.core.logger import Logger
-from lightshow.devices import DEVICE_CLASSES
-from lightshow.devices.device import BaseDeviceSettings, Device
-from lightshow.devices.devices_types import DeviceTypeName
+from lightshow.devices.device import Device
+from lightshow.devices.registry import DEVICE_CLASSES
+from lightshow.devices.status import DeviceStatus
+from lightshow.devices.types import BaseDeviceSettings, DeviceConfigType, DeviceTypeName
 
 logger = Logger("DeviceStore")
-
-
-class DeviceStatus(IntEnum):
-    DISCONNECTED = auto()
-    CONNECTING = auto()
-    CONNECTED = auto()
 
 
 @dataclass

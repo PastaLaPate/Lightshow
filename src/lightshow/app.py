@@ -18,11 +18,10 @@ from lightshow.core.update_checker import is_update_available
 from lightshow.devices.device import (
     OutputDevice,
     PacketData,
-    PacketStatus,
-    PacketType,
 )
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.devices.store import DeviceStatus
+from lightshow.devices.types import PacketStatus, PacketType
 from lightshow.gui.main_window import UIManager
 from lightshow.gui.visualizers.frequencies_visualizer import FrequenciesVisualizer
 from lightshow.gui.visualizers.spike_detector_visualizer import SpikeDetectorVisualizer

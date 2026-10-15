@@ -10,7 +10,7 @@ from lightshow.audio.data import AudioData
 from lightshow.core.config import _Settings, global_config
 from lightshow.core.logger import Logger
 from lightshow.devices.animations.aanimation import RGB, FlickerCommand
-from lightshow.devices.device import PacketData, PacketStatus, PacketType
+from lightshow.devices.device import PacketData
 from lightshow.devices.moving_head.animations import (
     BernoulliLemniscateAnimation,
     BounceAnimation,
@@ -31,6 +31,7 @@ from lightshow.devices.moving_head.moving_head_colors import (
     RedLowsModulator,
     random_rainbow_color,
 )
+from lightshow.devices.types import PacketStatus, PacketType
 
 if typing.TYPE_CHECKING:
     from lightshow.devices.moving_head.moving_head import MovingHead
