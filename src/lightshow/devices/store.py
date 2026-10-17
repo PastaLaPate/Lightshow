@@ -13,6 +13,7 @@ from lightshow.devices.device import Device
 from lightshow.devices.registry import DEVICE_CLASSES
 from lightshow.devices.status import DeviceStatus
 from lightshow.devices.types import BaseDeviceSettings, DeviceConfigType, DeviceTypeName
+from lightshow.document.history import global_history
 
 logger = Logger("DeviceStore")
 
@@ -91,37 +92,65 @@ class DeviceStore(QObject):
         }
         return out | self._quarantine
 
-    def new_device(
-        self, type_name: DeviceTypeName, device_id: str | None = None
-    ) -> str:
+    def _raw_create_device(self, type_name: DeviceTypeName, device_id: str) -> None:
         cls = DEVICE_CLASSES[type_name]
-        device_id = device_id or uuid4().hex
         cfg: BaseDeviceSettings = cls.CONFIG_SCHEMA(id=device_id)
         self._entries[device_id] = DeviceEntry(type_name, cfg)
         self.device_added.emit(device_id)
         self._save_timer.start()
-        return device_id
 
-    def delete_device(self, device_id: str) -> None:
+    def _restore_device(self, device_id: str, entry: DeviceEntry):
+        self._entries[device_id] = entry
+        self.device_added.emit(device_id)
+        self._save_timer.start()
+
+    def _raw_delete_device(self, device_id: str) -> None:
         self.disconnect_device(device_id)
         del self._entries[device_id]
         self.device_removed.emit(device_id)
         self._save_timer.start()
 
-    def update(self, device_id: str, field: str, value: Any) -> bool:
+    def _raw_update(self, device_id: str, field: str, value: Any) -> None:
         e = self._entries[device_id]
-        if getattr(e.config, field) == value:
-            return True
-        try:
-            setattr(e.config, field, value)
-        except ValidationError as error:
-            logger.warning("Rejected %s=%r: %s", field, value, error)
-            self.device_changed.emit(device_id, field)
-            return False
+        setattr(e.config, field, value)
         if e._device is not None:
             e._device.on_config_changed(field)
         self.device_changed.emit(device_id, field)
         self._save_timer.start()
+
+    def new_device(
+        self, type_name: DeviceTypeName, device_id: str | None = None
+    ) -> str:
+        device_id = device_id or uuid4().hex
+        self._raw_create_device(type_name, device_id)
+        global_history.record(
+            undo=lambda: self._raw_delete_device(device_id),
+            redo=lambda: self._raw_create_device(type_name, device_id),
+        )
+        return device_id
+
+    def delete_device(self, device_id: str):
+        entry = self._entries[device_id]
+        self._raw_delete_device(device_id)
+        global_history.record(
+            undo=lambda: self._restore_device(device_id, entry),
+            redo=lambda: self._raw_delete_device(device_id),
+        )
+
+    def update(self, device_id: str, field: str, value: Any) -> bool:
+        old = getattr(self._entries[device_id].config, field)
+        if old == value:
+            return True
+        try:
+            self._raw_update(device_id, field, value)
+        except ValidationError as error:
+            logger.warning("Rejected %s=%r: %s", field, value, error)
+            self.device_changed.emit(device_id, field)
+            return False
+        global_history.record(
+            undo=lambda: self._raw_update(device_id, field, old),
+            redo=lambda: self._raw_update(device_id, field, value),
+        )
         return True
 
     def _set_status(self, device_id: str, status: DeviceStatus) -> None:

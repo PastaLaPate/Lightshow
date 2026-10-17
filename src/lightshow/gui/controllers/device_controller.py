@@ -12,6 +12,9 @@ class DeviceController(QObject):
         ui_signals.rename_device.connect(self.handle_rename_device)
         ui_signals.delete_device.connect(self.handle_delete_device)
 
+        global_config.device_store.device_added.connect(ui_signals.new_device)
+        global_config.device_store.device_removed.connect(ui_signals.device_deleted)
+
     def handle_create_device(self, device_type: DeviceTypeName, name: str | None):
         id = global_config.device_store.new_device(device_type)
         global_config.device_store.get(id).config.name = (
