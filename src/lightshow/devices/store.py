@@ -91,9 +91,11 @@ class DeviceStore(QObject):
         }
         return out | self._quarantine
 
-    def new_device(self, type_name: DeviceTypeName) -> str:
+    def new_device(
+        self, type_name: DeviceTypeName, device_id: str | None = None
+    ) -> str:
         cls = DEVICE_CLASSES[type_name]
-        device_id = uuid4().hex
+        device_id = device_id or uuid4().hex
         cfg: BaseDeviceSettings = cls.CONFIG_SCHEMA(id=device_id)
         self._entries[device_id] = DeviceEntry(type_name, cfg)
         self.device_added.emit(device_id)
