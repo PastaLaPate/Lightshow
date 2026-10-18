@@ -1,9 +1,15 @@
+import sys
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import partial
 from types import UnionType
 from typing import Annotated, Any, Union, get_args, get_origin
+
+if sys.version_info >= (3, 15):
+    from typing import TypeForm
+else:
+    from typing_extensions import TypeForm
 
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
@@ -34,7 +40,7 @@ class FieldSpec:
         return self.extras.connected_readonly
 
 
-def unwrap(tp: type[Any]) -> type[Any]:
+def unwrap(tp: TypeForm[Any]) -> TypeForm[Any]:
     while True:
         origin = get_origin(tp)
         if origin is Annotated:
@@ -57,7 +63,12 @@ def inspect_model[T: BaseModel](
     specs: list[FieldSpec] = []
     for name, info in model.model_fields.items():
         schema_extra = info.json_schema_extra
-        if not schema_extra or "ui" not in schema_extra:
+        if (
+            not schema_extra
+            or not isinstance(schema_extra, dict)
+            or "ui" not in schema_extra
+            or info.annotation is None
+        ):
             continue
 
         extras = FieldExtras.model_validate(schema_extra["ui"])
