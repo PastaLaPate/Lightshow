@@ -18,10 +18,11 @@ from lightshow.core.config import SETTINGS_CATEGORIES, _Settings, global_config
 from lightshow.core.logger import Logger
 from lightshow.devices.device import Device
 from lightshow.devices.registry import DEVICE_TYPES
+from lightshow.document.history import global_history
 from lightshow.gui.controllers.device_controller import DeviceController
 from lightshow.gui.dialogs.about_dialog import AboutDialog
 from lightshow.gui.dialogs.settings_dialog import SettingsDialog
-from lightshow.gui.input.shortcuts import ShortcutMap
+from lightshow.gui.input.shortcuts import ShortcutMap, Shortcuts
 from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.gui.panels.stats import StatsPanel
@@ -52,6 +53,16 @@ class UIManager(QMainWindow):
 
         # Shortcuts:
         self.shortcut_map = ShortcutMap()
+
+        self.undo_action = QAction("Undo", self)
+        self.shortcut_map.apply(self.undo_action, Shortcuts.UNDO)
+        self.undo_action.triggered.connect(global_history.undo)
+        self.addAction(self.undo_action)
+
+        self.redo_action = QAction("Redo", self)
+        self.shortcut_map.apply(self.redo_action, Shortcuts.REDO)
+        self.redo_action.triggered.connect(global_history.redo)
+        self.addAction(self.redo_action)
 
         # Register internal handlers
         """

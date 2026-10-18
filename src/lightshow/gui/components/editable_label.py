@@ -50,6 +50,10 @@ class EditableLabel(QWidget):
         return False
 
     def _to_label(self):
+
+        if self.line_edit.isHidden():
+            return
+
         if self.label.text() != self.line_edit.text():
             self.text_changed.emit(self.line_edit.text())
         self.label.setText(self.line_edit.text())

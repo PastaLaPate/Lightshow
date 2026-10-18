@@ -3,6 +3,8 @@ from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass
 
+from lightshow.core.logger import Logger
+
 
 @dataclass
 class Op:
@@ -14,6 +16,9 @@ class Op:
 class Entry:
     label: str
     ops: list[Op]
+
+
+logger = Logger("History")
 
 
 class History:
@@ -47,16 +52,27 @@ class History:
         self._open.append(Op(undo, redo))
 
     def undo(self):
+        self.debug_dump()
+        if len(self._undo) < 1:
+            return
         entry = self._undo.pop()
         for op in reversed(entry.ops):
             op.undo()
         self._redo.append(entry)
 
     def redo(self):
+        if len(self._redo) < 1:
+            return
         entry = self._redo.pop()
         for op in entry.ops:
             op.redo()
         self._undo.append(entry)
+
+    def debug_dump(self):
+        logger.debug("=====HISTORY=====")
+        logger.debug("UNDO ENTRIES :")
+        for entry in self._undo:
+            logger.debug(f"  {entry.label} OPS: {entry.ops}")
 
 
 global_history = History()
