@@ -87,12 +87,16 @@ class DevicesPanel(BasePanel):
     def refresh_list(self, *args):
         """Refresh the device listbox with current devices."""
         if self.device_listbox is not None:
-            self.device_listbox.clear()
-            for id, device_entry in global_config.device_store.all().items():
-                item = QListWidgetItem(device_entry.config.name)
-                item.setData(Qt.ItemDataRole.UserRole, id)
-                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
-                self.device_listbox.addItem(item)
+            self.device_listbox.blockSignals(True)
+            try:
+                self.device_listbox.clear()
+                for id, device_entry in global_config.device_store.all().items():
+                    item = QListWidgetItem(device_entry.config.name)
+                    item.setData(Qt.ItemDataRole.UserRole, id)
+                    item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
+                    self.device_listbox.addItem(item)
+            finally:
+                self.device_listbox.blockSignals(False)
 
     def _device_created(self, id: str):
         self.refresh_list()

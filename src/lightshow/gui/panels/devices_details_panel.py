@@ -101,8 +101,10 @@ class DeviceDetailsPanel(BasePanel):
         super().__init__()
         self.device_types: list[type[Device]] = device_types
         self.stacked_layout: QStackedLayout | None = None
+        self.current_device: str | None = None
 
         ui_signals.device_selected.connect(self.device_selected)
+        ui_signals.device_renamed.connect(self.device_renamed)
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the device details panel UI elements."""
@@ -135,12 +137,16 @@ class DeviceDetailsPanel(BasePanel):
         layout.addWidget(title_label)
         layout.addLayout(self.stacked_layout)
 
+    def device_renamed(self, device_id: str, new_name: str):
+        if device_id == self.current_device:
+            self.device_header.set_device_name(new_name)
+
     def device_selected(self, device_id: str | None):
         assert self.stacked_layout is not None
-        if device_id:
+        self.current_device = device_id
+        if device_id is not None:
             self.stacked_layout.setCurrentIndex(0)
             entry = global_config.device_store.get(device_id)
-            print(device_id)
             self.device_header.set_device_name(entry.config.name)
             self.device_header.set_device_type(entry.type_name)
             self.device_props.render_device(DEVICE_CLASSES[entry.type_name])

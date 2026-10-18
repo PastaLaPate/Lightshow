@@ -39,6 +39,7 @@ class DeviceEntry:
 class DeviceStore(QObject):
     device_added = Signal(str)  # device_id
     device_removed = Signal(str)  # device_id
+    device_renamed = Signal(str, str)  # device_id, new_name
     device_changed = Signal(str, str)  # device_id, field
     device_status_changed = Signal(str, object)  # device_id, New status
 
@@ -118,6 +119,10 @@ class DeviceStore(QObject):
         self.device_changed.emit(device_id, field)
         self._save_timer.start()
 
+    def _raw_rename(self, device_id: str, value: str) -> None:
+        self._raw_update(device_id, "name", value)
+        self.device_renamed.emit(device_id, value)
+
     def new_device(
         self, type_name: DeviceTypeName, device_id: str | None = None
     ) -> str:
@@ -135,6 +140,14 @@ class DeviceStore(QObject):
         global_history.record(
             undo=lambda: self._restore_device(device_id, entry),
             redo=lambda: self._raw_delete_device(device_id),
+        )
+
+    def rename_device(self, device_id: str, new_name: str):
+        old_name = self._entries[device_id].config.name
+        self._raw_rename(device_id, new_name)
+        global_history.record(
+            undo=lambda: self._raw_rename(device_id, old_name),
+            redo=lambda: self._raw_rename(device_id, new_name),
         )
 
     def update(self, device_id: str, field: str, value: Any) -> bool:
