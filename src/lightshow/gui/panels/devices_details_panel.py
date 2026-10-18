@@ -121,8 +121,12 @@ class DeviceDetailsPanel(BasePanel):
         props_widget.setContentsMargins(0, 0, 0, 0)
         props_layout = QVBoxLayout()
         props_layout.setContentsMargins(0, 0, 0, 0)
+
         self.device_header = DeviceHeader()
+        self.device_header.device_renamed.connect(self.rename_device)
+
         self.device_props = DeviceProps()
+
         props_layout.addWidget(self.device_header)
         props_layout.addWidget(self.device_props)
         props_layout.addStretch()
@@ -136,6 +140,10 @@ class DeviceDetailsPanel(BasePanel):
 
         layout.addWidget(title_label)
         layout.addLayout(self.stacked_layout)
+
+    def rename_device(self, new_name: str):
+        if self.current_device is not None:
+            ui_signals.rename_device.emit(self.current_device, new_name)
 
     def device_renamed(self, device_id: str, new_name: str):
         if device_id == self.current_device:

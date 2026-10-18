@@ -49,7 +49,7 @@ class DevicesPanel(BasePanel):
         self.device_type_combo: QComboBox | None = None
 
         ui_signals.new_device.connect(self._device_created)
-        ui_signals.device_renamed.connect(self.refresh_list)
+        ui_signals.device_renamed.connect(self._device_renamed)
         ui_signals.device_deleted.connect(self.refresh_list)
 
     def create_qt_ui(self, layout: QVBoxLayout):
@@ -124,6 +124,14 @@ class DevicesPanel(BasePanel):
             return
 
         ui_signals.rename_device.emit(device_id, new_name)
+
+    def _device_renamed(self, device_id: str, new_name: str):
+        assert self.device_listbox is not None
+        for i in range(self.device_listbox.count()):
+            item = self.device_listbox.item(i)
+            if item.data(Qt.ItemDataRole.UserRole) == device_id:
+                item.setText(new_name)
+                break
 
     def _add_device_callback(self):
         """Handle adding a new device."""
