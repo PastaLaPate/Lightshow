@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - master
+  schedule:
+    # Nightly builds releases
+    - cron: "0 0 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -36,6 +40,15 @@ jobs:
             echo "Tag v${{ steps.get_version.outputs.version }} already exists, skipping release."
           else
             echo "should_release=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine if we should upload artifacts
+        id: check_upload
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ steps.check_tag.outputs.should_release }}" = "true" ]; then
+            echo "is_upload_event=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_upload_event=false" >> $GITHUB_OUTPUT
           fi
 
   lint:
@@ -85,6 +98,7 @@ jobs:
             -DestinationPath dist/lightshow-portable-win-${{ needs.check-version.outputs.version }}.zip
 
       - name: Upload portable
+        if: needs.check-version.outputs.is_upload_event == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: windows-portable
@@ -168,6 +182,7 @@ jobs:
             lightshow-${{ needs.check-version.outputs.version }}-x86_64.AppImage
 
       - name: Upload AppImage
+        if: needs.check-version.outputs.is_upload_event == 'true'
         uses: actions/upload-artifact@v7
         with:
           name: linux-appimage
