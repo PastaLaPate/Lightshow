@@ -36,6 +36,7 @@ from lightshow.devices.types import (
     PacketStatus,
     PacketType,
 )
+from lightshow.gui.utils import ui_signals
 
 
 # Index in panel pixels
@@ -419,7 +420,7 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
         self.in_port: mido.ports.BaseInput | None = None
         self.out_port: mido.ports.BaseOutput | None = None
         self.device_name = "Not Connected"
-        UIManager.get().ui_signals.finish_connection.connect(self._on_device_connected)
+        ui_signals.finish_connection.connect(self._on_device_connected)
         UIManager.get().device_details.register(
             "connect_clicked",
             self._connect_device_callback,  # TODO: Okay, okay this shit needs to be changed

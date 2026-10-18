@@ -21,6 +21,7 @@ from lightshow.devices.registry import DEVICE_TYPES
 from lightshow.gui.controllers.device_controller import DeviceController
 from lightshow.gui.dialogs.about_dialog import AboutDialog
 from lightshow.gui.dialogs.settings_dialog import SettingsDialog
+from lightshow.gui.input.shortcuts import ShortcutMap
 from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.gui.panels.stats import StatsPanel
@@ -39,7 +40,6 @@ class UIManager(QMainWindow):
         self.listener = audio_listener
         self.audio_handler = audio_handler
         self.device_types: list[type[Device]] = DEVICE_TYPES
-        self.ui_signals = ui_signals
 
         # Initialize panels
         self.audio_panel = AudioPanel(audio_listener, audio_handler)
@@ -49,6 +49,9 @@ class UIManager(QMainWindow):
         self.stats_panel = StatsPanel()
 
         self.device_controller = DeviceController()
+
+        # Shortcuts:
+        self.shortcut_map = ShortcutMap()
 
         # Register internal handlers
         """
@@ -75,8 +78,8 @@ class UIManager(QMainWindow):
 
         # Connect signals
         # self.ui_signals.finish_connection.connect(self._on_connection_finished)
-        self.ui_signals.show_error.connect(self._show_error_dialog)
-        self.ui_signals.show_info.connect(self._show_info_dialog)
+        ui_signals.show_error.connect(self._show_error_dialog)
+        ui_signals.show_info.connect(self._show_info_dialog)
         # self.ui_signals.connection_status_changed.connect(
         #    self._on_connection_status_changed
         # )
