@@ -130,7 +130,11 @@ class DevicesPanel(BasePanel):
         for i in range(self.device_listbox.count()):
             item = self.device_listbox.item(i)
             if item.data(Qt.ItemDataRole.UserRole) == device_id:
-                item.setText(new_name)
+                self.device_listbox.blockSignals(True)
+                try:
+                    item.setText(new_name)
+                finally:
+                    self.device_listbox.blockSignals(False)
                 break
 
     def _add_device_callback(self):
