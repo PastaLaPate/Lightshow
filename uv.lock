@@ -299,6 +299,15 @@ wheels = [
 ]
 
 [[package]]
+name = "darkdetect"
+version = "0.8.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/45/77/7575be73bf12dee231d0c6e60ce7fb7a7be4fcd58823374fc59a6e48262e/darkdetect-0.8.0.tar.gz", hash = "sha256:b5428e1170263eb5dea44c25dc3895edd75e6f52300986353cd63533fe7df8b1", size = 7681, upload-time = "2022-12-16T14:14:42.113Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f2/f2/728f041460f1b9739b85ee23b45fa5a505962ea11fd85bdbe2a02b021373/darkdetect-0.8.0-py3-none-any.whl", hash = "sha256:a7509ccf517eaad92b31c214f593dbcf138ea8a43b2935406bbd565e15527a85", size = 8955, upload-time = "2022-12-16T14:14:40.92Z" },
+]
+
+[[package]]
 name = "dbus-next"
 version = "0.2.3"
 source = { registry = "https://pypi.org/simple" }
@@ -544,6 +553,7 @@ dependencies = [
     { name = "pyinstaller" },
     { name = "pyopengl" },
     { name = "pyopengl-accelerate" },
+    { name = "pyqtdarktheme-fork" },
     { name = "pyqtgraph" },
     { name = "pyside6" },
     { name = "requests" },
@@ -578,6 +588,7 @@ requires-dist = [
     { name = "pyinstaller", specifier = ">=6.22.3" },
     { name = "pyopengl", specifier = ">=3.1.10" },
     { name = "pyopengl-accelerate", specifier = ">=3.1.10" },
+    { name = "pyqtdarktheme-fork", specifier = ">=2.3.6" },
     { name = "pyqtgraph", specifier = ">=0.14.0" },
     { name = "pyside6", specifier = ">=6.12.0" },
     { name = "requests", specifier = ">=2.34.2" },
@@ -1099,6 +1110,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/e4/11/b213bebff182584360cb8d17c72c1677fec5c5c228de439e63bcf8ab1c8f/pyparsing-3.3.3.tar.gz", hash = "sha256:928ae7e20211f3b6f3915a72f06a0cfd29ab9d24279dd6346b6b1a7146397d36", size = 1050487, upload-time = "2026-09-20T20:59:05.609Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/38/bb/d215ee7c73b61497b28a5503f9f53523f294fcc936762b7caf90e0c1c2b5/pyparsing-3.3.3-py3-none-any.whl", hash = "sha256:ece8c00a69cf01b45d0b1dedabb469c90d8caf996d4fda40f147627a122849a4", size = 126420, upload-time = "2026-09-20T20:59:04.025Z" },
+]
+
+[[package]]
+name = "pyqtdarktheme-fork"
+version = "2.3.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "darkdetect" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/e8/9d/2ce9dca0e37e4ef2385102effec80457e981b0a64923376d122a52190bef/pyqtdarktheme_fork-2.3.6.tar.gz", hash = "sha256:9ab287a033a4742767bcb6698fb60247beef7967d74eb949f7ab36ee866ff1d7", size = 40476, upload-time = "2026-03-04T12:50:23.721Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8f/8e/fecdf206415c432fcc301a19701ea437af5dbdcd33020ac4f5288d060a65/pyqtdarktheme_fork-2.3.6-py3-none-any.whl", hash = "sha256:876dc8cc0e01468a3f7fe5a860dfd422ccab48b33beef18dfdecb6312c20c556", size = 54552, upload-time = "2026-03-04T12:50:21.311Z" },
 ]
 
 [[package]]

@@ -3,6 +3,7 @@ import sys
 from time import time_ns
 
 import pyqtgraph as pg
+import qdarktheme
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QStyleFactory
 
@@ -276,6 +277,7 @@ def main() -> None:
     audio_handler.add_listener_on_init(listener)
 
     app = QApplication(sys.argv)
+    qdarktheme.setup_theme()
     app.setStyle(QStyleFactory.create("basic"))
     app.setApplicationName("lightshow")
 
