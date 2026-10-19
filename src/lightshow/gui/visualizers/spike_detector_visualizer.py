@@ -1,5 +1,3 @@
-import importlib
-import importlib.util
 import traceback
 from collections import deque
 from dataclasses import dataclass
@@ -12,17 +10,11 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.audio.data import AudioData
+from lightshow.core.config import OPENGL_AVAILABLE
 from lightshow.core.logger import Logger
 from lightshow.gui.utils import ui_signals
 
 _logger = Logger.for_class("Audio Visualization")
-
-if importlib.util.find_spec("OpenGL", "GL"):
-    OPENGL_AVAILABLE = True
-    _logger.debug("Using OpenGL")
-else:
-    OPENGL_AVAILABLE = False
-    _logger.warning("Unable to use OpenGL. Expect poor performance")
 
 
 @dataclass

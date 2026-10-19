@@ -11,6 +11,7 @@ Design:
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import platform
@@ -346,6 +347,11 @@ elif platform.system() == "Darwin":
 else:
     OS = distro.name(pretty=True)
 ARCH = " ".join(platform.architecture())
+
+if importlib.util.find_spec("OpenGL", "GL"):
+    OPENGL_AVAILABLE = True
+else:
+    OPENGL_AVAILABLE = False
 
 
 # ──────────────────────────────────────────────────────────────────────────────

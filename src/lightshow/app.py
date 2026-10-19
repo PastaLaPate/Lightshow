@@ -12,7 +12,14 @@ from lightshow.audio.processors import SpectrumProcessor
 from lightshow.audio.streams import LoopbackAudioStreamHandler
 from lightshow.audio.types import AAudioStreamHandler, AudioListener
 from lightshow.core import config
-from lightshow.core.config import ARCH, OS, PYTHON_VERSION, VERSION, resource_path
+from lightshow.core.config import (
+    ARCH,
+    OPENGL_AVAILABLE,
+    OS,
+    PYTHON_VERSION,
+    VERSION,
+    resource_path,
+)
 from lightshow.core.logger import Logger
 from lightshow.core.update_checker import is_update_available
 from lightshow.devices.device import (
@@ -254,6 +261,11 @@ def main() -> None:
         else "Unable to fetch latest version info.",
     )
     logger.debug("OS: %s | Python: %s | Architecture: %s", OS, PYTHON_VERSION, ARCH)
+    if OPENGL_AVAILABLE:
+        logger.debug("Using OpenGL")
+    else:
+        logger.warning("Unable to use OpenGL. Expect poor performance")
+
     global ui_manager
     from PySide6.QtCore import QTimer
     from PySide6.QtGui import QIcon
