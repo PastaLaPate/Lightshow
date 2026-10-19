@@ -19,7 +19,7 @@ dependencies = [
   "requests>=2.34.2",
   "semver>=3.1.0",
   "soundcard>=0.4.6",
-  "ty>=0.0.88",
+  "ty>=0.0.89",
   "websocket-client>=1.9.2",
   "winrt-runtime>=3.2.1 ; platform_system == \"Windows\"",
   "winrt-windows-foundation>=3.2.1 ; platform_system == \"Windows\"",
@@ -39,8 +39,8 @@ dev = [
   "commitizen>=4.19.2",
   "isort>=9.0.1",
   "pre-commit>=4.7.0",
-  "ruff>=0.17.0",
-  "ty>=0.0.88",
+  "ruff>=0.17.1",
+  "ty>=0.0.89",
 ]
 
 [build-system]
