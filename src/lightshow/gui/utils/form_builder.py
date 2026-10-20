@@ -13,7 +13,7 @@ else:
 
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QSignalBlocker, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDoubleSpinBox,
@@ -80,99 +80,107 @@ def inspect_model[T: BaseModel](
             if getattr(m, k, None) is not None
         }
 
+        type_ = unwrap(info.annotation)
+
         if instance is not None:
             value = getattr(instance, name)
         else:
             value = info.get_default(call_default_factory=True)
             if value is PydanticUndefined:
                 value = None
-        specs.append(
-            FieldSpec(name, unwrap(info.annotation), value, extras, constraints)
-        )
+        specs.append(FieldSpec(name, type_, value, extras, constraints))
     return specs
 
 
-class BaseFieldFactory[T](ABC):
+class BaseFieldFactory[T, W: QWidget](ABC):
     @abstractmethod
-    def construct(
-        self, spec: FieldSpec, on_changed: Callable[[T], None]
-    ) -> QWidget: ...
+    def construct(self, spec: FieldSpec, on_changed: Callable[[T], None]) -> W: ...
 
     @abstractmethod
-    def set_value(self, widget: QWidget, value: T) -> None: ...
+    def apply_value(self, widget: W, value: T) -> None: ...
 
-    def set_locked(self, widget: QWidget, locked: bool) -> None:
+    def set_value(self, widget: W, value: T) -> None:
+        with QSignalBlocker(widget):
+            self.apply_value(widget, value)  # Avoid signal loop
+
+    def set_locked(self, widget: W, locked: bool) -> None:
         widget.setEnabled(not locked)
 
 
-class CheckBoxFactory(BaseFieldFactory[bool]):
-    def construct(self, spec: FieldSpec, on_changed: Callable[[bool], None]) -> QWidget:
+class RangedNumberFactory[T: float | int, W: QWidget](BaseFieldFactory[T, W]):
+    def initial(self, value: float | None, lo: float, hi: float) -> float | int:
+        return value if value is not None else min(max(0, lo), hi)
+
+
+class CheckBoxFactory(BaseFieldFactory[bool, QCheckBox]):
+    def construct(
+        self, spec: FieldSpec, on_changed: Callable[[bool], None]
+    ) -> QCheckBox:
         w = QCheckBox()
         w.setChecked(bool(spec.value))
         w.toggled.connect(on_changed)
         return w
 
-    def set_value(self, widget: QWidget, value: bool):
-        if isinstance(widget, QCheckBox):
-            widget.setChecked(value)
+    def apply_value(self, widget: QCheckBox, value: bool):
+        widget.setChecked(value)
 
 
-class SpinnerFactory(BaseFieldFactory[int]):
-    def construct(self, spec: FieldSpec, on_changed: Callable[[int], None]) -> QWidget:
+class SpinnerFactory(RangedNumberFactory[int, QSpinBox]):
+    def construct(self, spec: FieldSpec, on_changed: Callable[[int], None]) -> QSpinBox:
         c = spec.constraints
         w = QSpinBox()
         w.setRange(c.get("ge", -(2**31)), c.get("le", 2**31 - 1))
-        w.setValue(spec.value)
+        w.setValue(int(self.initial(spec.value, w.minimum(), w.maximum())))
         w.valueChanged.connect(on_changed)
         return w
 
-    def set_value(self, widget: QWidget, value: int):
-        if isinstance(widget, QSpinBox):
-            widget.setValue(value)
+    def apply_value(self, widget: QSpinBox, value: int):
+        widget.setValue(value)
 
 
-class FloatFactory(BaseFieldFactory[float]):
+class FloatFactory(RangedNumberFactory[float, QDoubleSpinBox]):
     def construct(
         self, spec: FieldSpec, on_changed: Callable[[float], None]
-    ) -> QWidget:
+    ) -> QDoubleSpinBox:
         c = spec.constraints
         w = QDoubleSpinBox()
         w.setRange(c.get("ge", -1e12), c.get("le", 1e12))
         w.setDecimals(4)
-        w.setValue(spec.value)
+        w.setValue(self.initial(spec.value, w.minimum(), w.maximum()))
         w.valueChanged.connect(on_changed)
         return w
 
-    def set_value(self, widget: QWidget, value: float):
-        if isinstance(widget, QDoubleSpinBox):
-            widget.setValue(value)
+    def apply_value(self, widget: QDoubleSpinBox, value: float):
+        widget.setValue(value)
 
 
-class BarFactory(BaseFieldFactory[float | int]):
-    def construct(self, spec: FieldSpec, on_changed: Callable[[float | int], None]):
+class BarFactory(RangedNumberFactory[float | int, NumericSliderSpinBox]):
+    def construct(
+        self, spec: FieldSpec, on_changed: Callable[[float | int], None]
+    ) -> NumericSliderSpinBox:
         c = spec.constraints
         w = NumericSliderSpinBox(c.get("ge", 0), c.get("le", 100))
-        w.setValue(spec.value)
+        w.setValue(self.initial(spec.value, w.min, w.max))
         w.valueChanged.connect(on_changed)
         return w
 
-    def set_value(self, widget: QWidget, value: float):
-        if isinstance(widget, NumericSliderSpinBox):
-            widget.setValue(value)
+    def apply_value(self, widget: NumericSliderSpinBox, value: float):
+        widget.setValue(value)
 
 
 # TODO: Show placeholder
-class LineEditFactory(BaseFieldFactory[str]):
-    def construct(self, spec: FieldSpec, on_changed: Callable[[str], None]):
+class LineEditFactory(BaseFieldFactory[str, QLineEdit]):
+    def construct(
+        self, spec: FieldSpec, on_changed: Callable[[str], None]
+    ) -> QLineEdit:
         w = QLineEdit(spec.value or "")
         if "max_length" in spec.constraints:
             w.setMaxLength(spec.constraints["max_length"])
         w.textChanged.connect(on_changed)
         return w
 
-    def set_value(self, widget: QWidget, value: str):
-        if isinstance(widget, QLineEdit):
-            widget.setText(value)
+    def apply_value(self, widget: QLineEdit, value: str):
+        widget.setText(value)
 
 
 class FieldFactoryRegistry:
@@ -194,7 +202,7 @@ class FieldFactoryRegistry:
             # WidgetType.ColorPicker:
         }
 
-    def resolve(self, spec: FieldSpec) -> BaseFieldFactory[Any]:
+    def resolve(self, spec: FieldSpec) -> BaseFieldFactory[Any, Any]:
         widget = spec.extras.widget
         if widget is None:
             return self.by_type[spec.type]
@@ -206,23 +214,13 @@ class FieldFactoryRegistry:
             )
 
 
-class FormField(QObject):
-    onChanged = Signal(object)
-
-    def __init__(
-        self,
-        spec: FieldSpec,
-        widget: QWidget,
-        value: Any,
-        lock: Callable[[bool], None],
-        set_value: Callable[[Any], None],
-    ):
-        super().__init__()
-        self.spec = spec
-        self.widget: QWidget = widget
-        self.value: Any = value
-        self.lock: Callable[[bool], None] = lock
-        self.set_value: Callable[[Any], None] = set_value
+@dataclass
+class FormField:
+    spec: FieldSpec
+    widget: QWidget
+    value: Any
+    lock: Callable[[bool], None]
+    set_value: Callable[[Any], None]
 
 
 class ModelForm(QWidget):
@@ -240,16 +238,12 @@ class ModelForm(QWidget):
         self.fields.clear()
 
         while self.form_layout.rowCount() > 0:
-            item = self.form_layout.takeRow(0)
-            if item.fieldItem:
-                item.fieldItem.widget().deleteLater()
-            if item.labelItem:
-                item.labelItem.widget().deleteLater()
+            self.form_layout.removeRow(0)
 
         specs = inspect_model(model, instance)
         print(specs)
         for spec in specs:
-            factory: BaseFieldFactory[Any] = self.registry.resolve(spec)
+            factory: BaseFieldFactory[Any, Any] = self.registry.resolve(spec)
             w = factory.construct(spec, partial(self._on_field_changed, spec.name))
             self.fields[spec.name] = FormField(
                 spec,
@@ -267,7 +261,6 @@ class ModelForm(QWidget):
 
     def set_field(self, name: str, value: Any):
         self.fields[name].set_value(value)
-        self.fields[name].onChanged.emit(value)
 
     def _on_field_changed(self, name: str, value: Any):
         self.set_field(name, value)
