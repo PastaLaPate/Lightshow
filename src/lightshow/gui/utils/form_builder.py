@@ -6,6 +6,10 @@ from functools import partial
 from types import UnionType
 from typing import Annotated, Any, Union, get_args, get_origin
 
+from PySide6.QtGui import QColor
+
+from lightshow.gui.components.color_picker import ColorPicker
+
 if sys.version_info >= (3, 15):
     from typing import TypeForm
 else:
@@ -212,6 +216,18 @@ class LineEditFactory(BaseFieldFactory[str, QLineEdit]):
         widget.setText(value)
 
 
+class ColorPickerFactory(BaseFieldFactory[str, ColorPicker]):
+    def construct(
+        self, spec: FieldSpec, on_changed: Callable[[str], None]
+    ) -> ColorPicker:
+        w = ColorPicker(QColor(spec.value))
+        w.color_changed.connect(on_changed)
+        return w
+
+    def apply_value(self, widget: ColorPicker, value: str):
+        widget.setColor(QColor(value))
+
+
 class FieldFactoryRegistry:
     def __init__(self):
         self.by_type: dict[type, BaseFieldFactory] = {
@@ -228,7 +244,7 @@ class FieldFactoryRegistry:
             (float, WidgetType.Slider): BarFactory(),
             (bool, WidgetType.Checkbox): CheckBoxFactory(),
             (str, WidgetType.Field): LineEditFactory(),
-            # WidgetType.ColorPicker:
+            (str, WidgetType.ColorPicker): ColorPickerFactory(),
         }
 
     def resolve(self, spec: FieldSpec) -> BaseFieldFactory[Any, Any]:
