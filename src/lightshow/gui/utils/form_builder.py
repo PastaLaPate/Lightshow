@@ -168,12 +168,12 @@ class BarFactory(RangedNumberFactory[float | int, NumericSliderSpinBox]):
         widget.setValue(value)
 
 
-# TODO: Show placeholder
 class LineEditFactory(BaseFieldFactory[str, QLineEdit]):
     def construct(
         self, spec: FieldSpec, on_changed: Callable[[str], None]
     ) -> QLineEdit:
         w = QLineEdit(spec.value or "")
+        w.setPlaceholderText(spec.extras.placeholder or "")
         if "max_length" in spec.constraints:
             w.setMaxLength(spec.constraints["max_length"])
         w.textChanged.connect(on_changed)
