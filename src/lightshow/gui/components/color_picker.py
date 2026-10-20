@@ -16,6 +16,7 @@ class ColorPicker(QWidget):
         self.dialog = QColorDialog()
 
         self._preview_btn = QPushButton()
+        self._preview_btn.clicked.connect(self.open_dialog)
         self._preview_btn.setFixedSize(24, 24)
 
         self._textedit = QLineEdit(self._color.name(QColor.NameFormat.HexRgb))
@@ -37,7 +38,10 @@ class ColorPicker(QWidget):
         self._update_preview_style()
 
     def open_dialog(self):
-        self.dialog.getColor(self.color())
+        color = self.dialog.getColor(self.color())
+        if color.isValid():
+            self.setColor(color)
+            self.color_changed.emit(color.name(QColor.NameFormat.HexRgb))
 
     def _update_realtime_preview(self, text: str):
         color = QColor(text)
