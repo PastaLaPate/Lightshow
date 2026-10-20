@@ -129,7 +129,14 @@ class SpinnerFactory(RangedNumberFactory[int, QSpinBox]):
     def construct(self, spec: FieldSpec, on_changed: Callable[[int], None]) -> QSpinBox:
         c = spec.constraints
         w = QSpinBox()
-        w.setRange(c.get("ge", -(2**31)), c.get("le", 2**31 - 1))
+        # Use GT (exclusive) or GE (inclusive) for minimum
+        min_val = c.get("gt", c.get("ge", -(2**31)))
+        if isinstance(min_val, float):
+            min_val = int(min_val)
+        # If GT is set, add 1 to make it exclusive for integers
+        if "gt" in c:
+            min_val += 1
+        w.setRange(min_val, c.get("le", c.get("lt", 2**31 - 1)))
         w.setValue(int(self.initial(spec.value, w.minimum(), w.maximum())))
         w.valueChanged.connect(on_changed)
         return w
@@ -144,7 +151,9 @@ class FloatFactory(RangedNumberFactory[float, QDoubleSpinBox]):
     ) -> QDoubleSpinBox:
         c = spec.constraints
         w = QDoubleSpinBox()
-        w.setRange(c.get("ge", -1e12), c.get("le", 1e12))
+        # Use GT (exclusive) or GE (inclusive) for minimum
+        min_val = c.get("gt", c.get("ge", -1e12))
+        w.setRange(min_val, c.get("le", c.get("lt", 1e12)))
         w.setDecimals(4)
         w.setValue(self.initial(spec.value, w.minimum(), w.maximum()))
         w.valueChanged.connect(on_changed)
@@ -159,10 +168,30 @@ class BarFactory(RangedNumberFactory[float | int, NumericSliderSpinBox]):
         self, spec: FieldSpec, on_changed: Callable[[float | int], None]
     ) -> NumericSliderSpinBox:
         c = spec.constraints
-        w = NumericSliderSpinBox(c.get("ge", 0), c.get("le", 100))
+        w = NumericSliderSpinBox(self._get_min(c), self._get_max(c))
         w.setValue(self.initial(spec.value, w.min, w.max))
         w.valueChanged.connect(on_changed)
         return w
+
+    def _get_min(self, c: dict) -> float | int:
+        # Use GT (exclusive) or GE (inclusive) for minimum
+        min_val = c.get("gt", c.get("ge", 0))
+        if isinstance(min_val, float):
+            min_val = int(min_val)
+        # If GT is set, add 1 to make it exclusive for integers
+        if "gt" in c:
+            min_val += 1
+        return min_val
+
+    def _get_max(self, c: dict) -> float | int:
+        # Use LT (exclusive) or LE (inclusive) for maximum
+        max_val = c.get("lt", c.get("le", 100))
+        if isinstance(max_val, float):
+            max_val = int(max_val)
+        # If LT is set, subtract 1 to make it exclusive for integers
+        if "lt" in c:
+            max_val -= 1
+        return max_val
 
     def apply_value(self, widget: NumericSliderSpinBox, value: float):
         widget.setValue(value)
