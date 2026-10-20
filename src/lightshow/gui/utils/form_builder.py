@@ -112,8 +112,9 @@ class CheckBoxFactory(BaseFieldFactory[bool]):
         w.toggled.connect(on_changed)
         return w
 
-    # def set_value(self, widget: QWidget, value: bool):
-    #    widget.setChecked(value)
+    def set_value(self, widget: QWidget, value: bool):
+        if isinstance(widget, QCheckBox):
+            widget.setChecked(value)
 
 
 class SpinnerFactory(BaseFieldFactory[int]):
@@ -124,6 +125,10 @@ class SpinnerFactory(BaseFieldFactory[int]):
         w.setValue(spec.value)
         w.valueChanged.connect(on_changed)
         return w
+
+    def set_value(self, widget: QWidget, value: int):
+        if isinstance(widget, QSpinBox):
+            widget.setValue(value)
 
 
 class FloatFactory(BaseFieldFactory[float]):
@@ -138,6 +143,10 @@ class FloatFactory(BaseFieldFactory[float]):
         w.valueChanged.connect(on_changed)
         return w
 
+    def set_value(self, widget: QWidget, value: float):
+        if isinstance(widget, QDoubleSpinBox):
+            widget.setValue(value)
+
 
 class BarFactory(BaseFieldFactory[float | int]):
     def construct(self, spec: FieldSpec, on_changed: Callable[[float | int], None]):
@@ -146,6 +155,10 @@ class BarFactory(BaseFieldFactory[float | int]):
         w.setValue(spec.value)
         w.valueChanged.connect(on_changed)
         return w
+
+    def set_value(self, widget: QWidget, value: float):
+        if isinstance(widget, NumericSliderSpinBox):
+            widget.setValue(value)
 
 
 # TODO: Show placeholder
@@ -156,6 +169,10 @@ class LineEditFactory(BaseFieldFactory[str]):
             w.setMaxLength(spec.constraints["max_length"])
         w.textChanged.connect(on_changed)
         return w
+
+    def set_value(self, widget: QWidget, value: str):
+        if isinstance(widget, QLineEdit):
+            widget.setText(value)
 
 
 class FieldFactoryRegistry:
@@ -249,7 +266,7 @@ class ModelForm(QWidget):
                 f.lock(connected)
 
     def set_field(self, name: str, value: Any):
-        self.fields[name].value = value
+        self.fields[name].set_value(value)
         self.fields[name].onChanged.emit(value)
 
     def _on_field_changed(self, name: str, value: Any):
