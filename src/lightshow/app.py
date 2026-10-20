@@ -301,7 +301,7 @@ def main() -> None:
     UIManager.init_singleton(listener, audio_handler)
     ui_manager = UIManager.get()
     ui_manager.setProperty("_NET_WM_NAME", "Lightshow")
-    ui_manager.resize(800, 600)
+    ui_manager.resize(app.primaryScreen().size())
     listener.track_tracker.start()
     ui_manager.show()
     ui_manager._apply_initial_visibility()

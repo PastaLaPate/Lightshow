@@ -1,3 +1,5 @@
+from typing import Any
+
 from PySide6.QtCore import QObject
 
 from lightshow.core.config import global_config
@@ -11,14 +13,18 @@ class DeviceController(QObject):
         super().__init__(None)
         ui_signals.create_device.connect(self.handle_create_device)
         ui_signals.rename_device.connect(self.handle_rename_device)
+        ui_signals.set_field.connect(self.handle_set_field)
         ui_signals.delete_device.connect(self.handle_delete_device)
 
         # global_config.device_store.device_added.connect(ui_signals.new_device) Handled via handle_create_device, to attribute a name
         global_config.device_store.device_renamed.connect(ui_signals.device_renamed)
+        global_config.device_store.device_changed.connect(self.send_field_set)
         global_config.device_store.device_removed.connect(ui_signals.device_deleted)
 
     def handle_create_device(self, device_type: DeviceTypeName, name: str | None):
-        with global_history.transaction("Create and rename device"):
+        with global_history.transaction(
+            f"Create and rename device of type {device_type}"
+        ):
             id = global_config.device_store.new_device(device_type)
             global_config.device_store.rename_device(
                 id, name or f"Device {len(global_config.device_store.all()) + 1}"
@@ -29,16 +35,28 @@ class DeviceController(QObject):
         if not self.id_exists(id) or new_name == "":
             return
 
-        with global_history.transaction("Rename device"):
+        with global_history.transaction(f"Rename device {id} to {new_name}"):
             global_config.device_store.rename_device(id, new_name)
+
+    def handle_set_field(self, id: str, name: str, value: Any):
+        if not self.id_exists(id) or name == "":
+            return
+
+        with global_history.transaction(f"Set {id}'s {name} to {value}"):
+            global_config.device_store.update(id, name, value)
 
     def handle_delete_device(self, id: str):
         if not self.id_exists(id):
             return
 
-        with global_history.transaction("Delete device"):
+        with global_history.transaction(f"Delete device {id}"):
             global_config.device_store.delete_device(id)
             ui_signals.device_selected.emit(None)
+
+    def send_field_set(self, id: str, field: str):
+        ui_signals.field_set.emit(
+            id, field, getattr(global_config.device_store.get(id).config, field)
+        )
 
     def id_exists(self, id: str):
         return id in global_config.device_store.all()

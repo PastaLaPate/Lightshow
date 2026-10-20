@@ -1,3 +1,5 @@
+from typing import Any
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
@@ -11,7 +13,7 @@ from PySide6.QtWidgets import (
 from lightshow.core.config import global_config
 from lightshow.devices.device import Device
 from lightshow.devices.registry import DEVICE_CLASSES
-from lightshow.devices.store import DeviceStatus
+from lightshow.devices.store import DeviceEntry, DeviceStatus
 from lightshow.gui.components.badge import Badge
 from lightshow.gui.components.editable_label import EditableLabel
 from lightshow.gui.components.status_circle import StatusCircle
@@ -77,21 +79,23 @@ class DeviceHeader(QWidget):
 
 
 class DeviceProps(QWidget):
+    field_changed = Signal(str, object)
+
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        form = ModelForm()
-        self.form = form
+        self.form = ModelForm()
+        self.form.field_changed.connect(self.field_changed)
 
-        layout.addWidget(form)
+        layout.addWidget(self.form)
 
         self.setLayout(layout)
 
-    def render_device(self, device_type: type[Device]):
-        self.form.construct(device_type.CONFIG_SCHEMA, None)
+    def render_device(self, entry: DeviceEntry):
+        self.form.construct(DEVICE_CLASSES[entry.type_name].CONFIG_SCHEMA, entry.config)
 
 
 class DeviceDetailsPanel(BasePanel):
@@ -105,6 +109,7 @@ class DeviceDetailsPanel(BasePanel):
 
         ui_signals.device_selected.connect(self.device_selected)
         ui_signals.device_renamed.connect(self.device_renamed)
+        ui_signals.field_set.connect(self.set_field)
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the device details panel UI elements."""
@@ -126,6 +131,7 @@ class DeviceDetailsPanel(BasePanel):
         self.device_header.device_renamed.connect(self.rename_device)
 
         self.device_props = DeviceProps()
+        self.device_props.field_changed.connect(self.field_changed)
 
         props_layout.addWidget(self.device_header)
         props_layout.addWidget(self.device_props)
@@ -145,9 +151,18 @@ class DeviceDetailsPanel(BasePanel):
         if self.current_device is not None:
             ui_signals.rename_device.emit(self.current_device, new_name)
 
+    def set_field(self, id: str, name: str, value: Any):
+        if self.current_device != id:
+            return
+        self.device_props.form.set_field(name, value)
+
     def device_renamed(self, device_id: str, new_name: str):
         if device_id == self.current_device:
             self.device_header.set_device_name(new_name)
+
+    def field_changed(self, name: str, value: Any):
+        if self.current_device is not None:
+            ui_signals.set_field.emit(self.current_device, name, value)
 
     def device_selected(self, device_id: str | None):
         assert self.stacked_layout is not None
@@ -157,6 +172,6 @@ class DeviceDetailsPanel(BasePanel):
             entry = global_config.device_store.get(device_id)
             self.device_header.set_device_name(entry.config.name)
             self.device_header.set_device_type(entry.type_name)
-            self.device_props.render_device(DEVICE_CLASSES[entry.type_name])
+            self.device_props.render_device(entry)
         else:
             self.stacked_layout.setCurrentIndex(1)

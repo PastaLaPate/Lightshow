@@ -98,6 +98,9 @@ class BaseFieldFactory[T](ABC):
         self, spec: FieldSpec, on_changed: Callable[[T], None]
     ) -> QWidget: ...
 
+    @abstractmethod
+    def set_value(self, widget: QWidget, value: T) -> None: ...
+
     def set_locked(self, widget: QWidget, locked: bool) -> None:
         widget.setEnabled(not locked)
 
@@ -108,6 +111,9 @@ class CheckBoxFactory(BaseFieldFactory[bool]):
         w.setChecked(bool(spec.value))
         w.toggled.connect(on_changed)
         return w
+
+    # def set_value(self, widget: QWidget, value: bool):
+    #    widget.setChecked(value)
 
 
 class SpinnerFactory(BaseFieldFactory[int]):
@@ -142,6 +148,7 @@ class BarFactory(BaseFieldFactory[float | int]):
         return w
 
 
+# TODO: Show placeholder
 class LineEditFactory(BaseFieldFactory[str]):
     def construct(self, spec: FieldSpec, on_changed: Callable[[str], None]):
         w = QLineEdit(spec.value or "")
@@ -186,16 +193,24 @@ class FormField(QObject):
     onChanged = Signal(object)
 
     def __init__(
-        self, spec: FieldSpec, widget: QWidget, value: Any, lock: Callable[[bool], None]
+        self,
+        spec: FieldSpec,
+        widget: QWidget,
+        value: Any,
+        lock: Callable[[bool], None],
+        set_value: Callable[[Any], None],
     ):
         super().__init__()
         self.spec = spec
         self.widget: QWidget = widget
         self.value: Any = value
         self.lock: Callable[[bool], None] = lock
+        self.set_value: Callable[[Any], None] = set_value
 
 
 class ModelForm(QWidget):
+    field_changed = Signal(str, object)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.registry = FieldFactoryRegistry()
@@ -218,9 +233,13 @@ class ModelForm(QWidget):
         print(specs)
         for spec in specs:
             factory: BaseFieldFactory[Any] = self.registry.resolve(spec)
-            w = factory.construct(spec, partial(self.field_changed, spec.name))
+            w = factory.construct(spec, partial(self._on_field_changed, spec.name))
             self.fields[spec.name] = FormField(
-                spec, w, spec.value, partial(factory.set_locked, w)
+                spec,
+                w,
+                spec.value,
+                partial(factory.set_locked, w),
+                partial(factory.set_value, w),
             )
             self.form_layout.addRow(spec.extras.label, w)
 
@@ -229,6 +248,10 @@ class ModelForm(QWidget):
             if f.spec.connected_readonly:
                 f.lock(connected)
 
-    def field_changed(self, name, value):
+    def set_field(self, name: str, value: Any):
         self.fields[name].value = value
         self.fields[name].onChanged.emit(value)
+
+    def _on_field_changed(self, name: str, value: Any):
+        self.set_field(name, value)
+        self.field_changed.emit(name, value)

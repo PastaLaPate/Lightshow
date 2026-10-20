@@ -17,10 +17,12 @@ class UISignals(QObject):
     create_device = Signal(
         DeviceTypeName, object
     )  # When new is clicked, DeviceType, name (optional)
+    set_field = Signal(str, str, object)  # device_id, field, value
     rename_device = Signal(str, str)  # id, new_name
     delete_device = Signal(str)  # id
 
     new_device = Signal(str)  # New device has been created, id
+    field_set = Signal(str, str, object)  # device_id, field, new_value
     device_renamed = Signal(str, str)  # id, new_name
     device_deleted = Signal(str)  # id
 
