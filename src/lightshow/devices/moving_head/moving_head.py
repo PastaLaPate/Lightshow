@@ -4,6 +4,7 @@ import traceback
 
 import requests
 from pydantic import BaseModel
+from PySide6.QtWidgets import QFileDialog
 
 from lightshow.core.logger import Logger
 from lightshow.devices.animations.aanimation import RGB, Command
@@ -12,6 +13,7 @@ from lightshow.devices.device import (
     OutputDevice,
 )
 from lightshow.devices.fields import (
+    FileSelectorField,
     IntField,
     StrField,
     ValidationScheme,
@@ -30,6 +32,11 @@ class MovingHeadSettings(BaseDeviceSettings):
     )
     port: int = IntField("Port", 3000)
     color_test: str = StrField("Color", widget=WidgetType.ColorPicker)
+    file_test: str = FileSelectorField(
+        "File",
+        filters=[],
+        file_mode=QFileDialog.FileMode.Directory,
+    )
 
 
 class MovingHeadRuntime(BaseModel):

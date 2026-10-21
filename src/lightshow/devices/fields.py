@@ -3,6 +3,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.fields import FieldInfo
+from PySide6.QtWidgets import QFileDialog
 
 
 class WidgetType(StrEnum):
@@ -11,7 +12,7 @@ class WidgetType(StrEnum):
     Slider = "slider"  # Custom spinbox  + slider next to it widget
     Checkbox = "checkbox"
     ColorPicker = "colorpicker"
-    FileSelector = "fileselector"  # TODO: IMPLEMENT
+    FileSelector = "fileselector"
 
 
 class ValidationScheme(StrEnum):
@@ -24,6 +25,36 @@ class ValidationScheme(StrEnum):
     Any = "none"
 
 
+class FileFilters(StrEnum):
+    # Universal
+    All = "All Files (*)"
+
+    # Groups & Media
+    Images = "Images (*.png *.jpg *.jpeg *.webp *.gif *.bmp)"
+    Archives = "Archives (*.zip *.tar.gz *.tgz *.rar *.7z)"
+    Documents = "Documents (*.pdf *.docx *.doc *.txt *.odt)"
+
+    # Specific Formats
+    Png = "PNG Files (*.png)"
+    Jpeg = "JPEG Files (*.jpg *.jpeg)"
+    Webp = "WebP Files (*.webp)"
+    Gif = "GIF Files (*.gif)"
+
+    Json = "JSON Files (*.json)"
+    Yaml = "YAML Files (*.yaml *.yml)"
+    Csv = "CSV Files (*.csv)"
+    Xml = "XML Files (*.xml)"
+
+    Text = "Text Files (*.txt *.log)"
+    Markdown = "Markdown Files (*.md)"
+    Pdf = "PDF Files (*.pdf)"
+
+    Python = "Python Files (*.py *.pyw)"
+    Html = "HTML Files (*.html *.htm)"
+    Css = "CSS Files (*.css)"
+    JavaScript = "JavaScript Files (*.js *.mjs)"
+
+
 class FieldExtras(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -34,6 +65,13 @@ class FieldExtras(BaseModel):
     placeholder: str | None = None
     step: float | None = None
     validation_scheme: ValidationScheme = ValidationScheme.Any
+
+    # FileSelector specific parameters
+    file_selector_title: str | None = None
+    file_selector_file_mode: QFileDialog.FileMode = QFileDialog.FileMode.AnyFile
+    file_selector_options: QFileDialog.Option | None = None
+    file_selector_default_path: str | None = None
+    file_selector_filters: list[FileFilters | str] | None = None
 
 
 def _field(default: Any, extras: FieldExtras, **constraints) -> FieldInfo:
@@ -117,4 +155,29 @@ def StrField(
             validation_scheme=validation_scheme,
         ),
         max_length=max_length,
+    )
+
+
+def FileSelectorField(
+    label: str,
+    default: str = "",
+    title: str | None = None,
+    file_mode: QFileDialog.FileMode = QFileDialog.FileMode.AnyFile,
+    options: QFileDialog.Option | None = None,
+    default_path: str | None = None,
+    filters: list[FileFilters | str] | None = None,
+    connected_readonly: bool = False,
+):
+    return _field(
+        default,
+        FieldExtras(
+            label=label,
+            widget=WidgetType.FileSelector,
+            connected_readonly=connected_readonly,
+            file_selector_title=title,
+            file_selector_file_mode=file_mode,
+            file_selector_options=options,
+            file_selector_default_path=default_path,
+            file_selector_filters=filters,
+        ),
     )

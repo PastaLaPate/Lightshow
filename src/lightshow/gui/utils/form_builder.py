@@ -9,6 +9,7 @@ from typing import Annotated, Any, Union, get_args, get_origin
 from PySide6.QtGui import QColor
 
 from lightshow.gui.components.color_picker import ColorPicker
+from lightshow.gui.components.path_selector import PathSelector
 from lightshow.gui.components.validating_lineedit import ValidatingLineEdit
 
 if sys.version_info >= (3, 15):
@@ -56,9 +57,6 @@ def unwrap(tp: TypeForm[Any]) -> TypeForm[Any]:
             tp = args[0]
         else:
             return tp
-
-
-# TODO: Implement Greater exclusive (GT and LT)
 
 
 def inspect_model[T: BaseModel](
@@ -228,6 +226,31 @@ class ColorPickerFactory(BaseFieldFactory[str, ColorPicker]):
         widget.setColor(QColor(value))
 
 
+class PathSelectorFactory(BaseFieldFactory[str, PathSelector]):
+    def construct(
+        self, spec: FieldSpec, on_changed: Callable[[str], None]
+    ) -> PathSelector:
+        # Extract file selector parameters from extras
+        title = spec.extras.file_selector_title or "Select File or Directory"
+        file_mode = spec.extras.file_selector_file_mode
+        options = spec.extras.file_selector_options
+        default_path = spec.extras.file_selector_default_path or spec.value or ""
+        filters = spec.extras.file_selector_filters or []
+
+        w = PathSelector(
+            path=default_path,
+            title=title,
+            file_mode=file_mode,
+            options=options,
+            filters=filters,
+        )
+        w.path_changed.connect(on_changed)
+        return w
+
+    def apply_value(self, widget: PathSelector, value: str):
+        widget.setPath(value)
+
+
 class FieldFactoryRegistry:
     def __init__(self):
         self.by_type: dict[type, BaseFieldFactory] = {
@@ -245,6 +268,7 @@ class FieldFactoryRegistry:
             (bool, WidgetType.Checkbox): CheckBoxFactory(),
             (str, WidgetType.Field): LineEditFactory(),
             (str, WidgetType.ColorPicker): ColorPickerFactory(),
+            (str, WidgetType.FileSelector): PathSelectorFactory(),
         }
 
     def resolve(self, spec: FieldSpec) -> BaseFieldFactory[Any, Any]:
