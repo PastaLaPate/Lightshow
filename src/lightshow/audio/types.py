@@ -46,9 +46,7 @@ class AudioDevice:
                 # Then we look for a microphone loopback device with the same name.
                 speaker = sc.default_speaker()
                 self.name = speaker.name
-                print("help")
                 self._device = self._find_in_device_list(device_list, speaker.name)
-                print(self._device.name)
             else:
                 # Just gets the default mic.
                 self._device = sc.default_microphone()

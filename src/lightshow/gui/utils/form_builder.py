@@ -328,7 +328,6 @@ class ModelForm(QWidget):
                 f.lock(connected)
 
     def set_field(self, name: str, value: Any):
-        print(self.fields)
         self.fields[name].set_value(value)
 
     def _on_field_changed(self, name: str, value: Any):

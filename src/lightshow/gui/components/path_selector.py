@@ -43,7 +43,7 @@ class PathSelector(QWidget):
         self._path_edit.setPlaceholderText("Select a file or directory...")
         self._path_edit.returnPressed.connect(self.open_dialog)
 
-        self._browse_btn = QPushButton()
+        self._browse_btn = QPushButton("...")
         self._browse_btn.clicked.connect(self.open_dialog)
         self._browse_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 

@@ -5,6 +5,7 @@ from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
+    QPushButton,
     QStackedLayout,
     QVBoxLayout,
     QWidget,
@@ -107,6 +108,12 @@ class DeviceDetailsPanel(BasePanel):
         self.stacked_layout: QStackedLayout | None = None
         self.current_device: str | None = None
 
+        self._connect_button_messages_dict: dict[DeviceStatus, str] = {
+            DeviceStatus.DISCONNECTED: "Connect to device",
+            DeviceStatus.CONNECTING: "Connecting to device",
+            DeviceStatus.CONNECTED: "Disconnect from device",
+        }
+
         ui_signals.device_selected.connect(self._on_device_selected)
         ui_signals.device_renamed.connect(self._on_device_renamed)
         ui_signals.device_status_changed.connect(self._on_device_status_changed)
@@ -134,9 +141,13 @@ class DeviceDetailsPanel(BasePanel):
         self.device_props = DeviceProps()
         self.device_props.field_changed.connect(self._on_field_changed)
 
+        self.connect_btn = QPushButton()
+
         props_layout.addWidget(self.device_header)
         props_layout.addWidget(self.device_props)
         props_layout.addStretch()
+        props_layout.addWidget(self.connect_btn)
+
         props_widget.setLayout(props_layout)
 
         self.stacked_layout = QStackedLayout()
@@ -147,6 +158,10 @@ class DeviceDetailsPanel(BasePanel):
 
         layout.addWidget(title_label)
         layout.addLayout(self.stacked_layout)
+
+    def update_status(self, new_status: DeviceStatus):
+        self.connect_btn.setText(self._connect_button_messages_dict[new_status])
+        self.connect_btn.setEnabled(new_status != DeviceStatus.CONNECTING)
 
     def rename_device(self, new_name: str):
         if self.current_device is not None:
@@ -166,6 +181,7 @@ class DeviceDetailsPanel(BasePanel):
     def _on_device_status_changed(self, device_id: str, new_status: DeviceStatus):
         if device_id == self.current_device:
             self.device_header.set_status(new_status)
+            self.update_status(new_status)
 
     def _on_field_changed(self, name: str, value: Any):
         if self.current_device is not None:
@@ -180,6 +196,7 @@ class DeviceDetailsPanel(BasePanel):
             self.device_header.set_device_name(entry.config.name)
             self.device_header.set_device_type(entry.type_name)
             self.device_header.set_status(entry.status)
+            self.update_status(entry.status)
             self.device_props.render_device(entry)
         else:
             self.stacked_layout.setCurrentIndex(1)
