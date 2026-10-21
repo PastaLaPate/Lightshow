@@ -107,8 +107,9 @@ class DeviceDetailsPanel(BasePanel):
         self.stacked_layout: QStackedLayout | None = None
         self.current_device: str | None = None
 
-        ui_signals.device_selected.connect(self.device_selected)
-        ui_signals.device_renamed.connect(self.device_renamed)
+        ui_signals.device_selected.connect(self._on_device_selected)
+        ui_signals.device_renamed.connect(self._on_device_renamed)
+        ui_signals.device_status_changed.connect(self._on_device_status_changed)
         ui_signals.field_set.connect(self.set_field)
 
     def create_qt_ui(self, layout: QVBoxLayout):
@@ -131,7 +132,7 @@ class DeviceDetailsPanel(BasePanel):
         self.device_header.device_renamed.connect(self.rename_device)
 
         self.device_props = DeviceProps()
-        self.device_props.field_changed.connect(self.field_changed)
+        self.device_props.field_changed.connect(self._on_field_changed)
 
         props_layout.addWidget(self.device_header)
         props_layout.addWidget(self.device_props)
@@ -154,17 +155,23 @@ class DeviceDetailsPanel(BasePanel):
     def set_field(self, id: str, name: str, value: Any):
         if self.current_device != id:
             return
+        if name == "name" or name == "id":  # Name and ID arent in the form
+            return
         self.device_props.form.set_field(name, value)
 
-    def device_renamed(self, device_id: str, new_name: str):
+    def _on_device_renamed(self, device_id: str, new_name: str):
         if device_id == self.current_device:
             self.device_header.set_device_name(new_name)
 
-    def field_changed(self, name: str, value: Any):
+    def _on_device_status_changed(self, device_id: str, new_status: DeviceStatus):
+        if device_id == self.current_device:
+            self.device_header.set_status(new_status)
+
+    def _on_field_changed(self, name: str, value: Any):
         if self.current_device is not None:
             ui_signals.set_field.emit(self.current_device, name, value)
 
-    def device_selected(self, device_id: str | None):
+    def _on_device_selected(self, device_id: str | None):
         assert self.stacked_layout is not None
         self.current_device = device_id
         if device_id is not None:
@@ -172,6 +179,7 @@ class DeviceDetailsPanel(BasePanel):
             entry = global_config.device_store.get(device_id)
             self.device_header.set_device_name(entry.config.name)
             self.device_header.set_device_type(entry.type_name)
+            self.device_header.set_status(entry.status)
             self.device_props.render_device(entry)
         else:
             self.stacked_layout.setCurrentIndex(1)

@@ -310,7 +310,6 @@ class ModelForm(QWidget):
             self.form_layout.removeRow(0)
 
         specs = inspect_model(model, instance)
-        print(specs)
         for spec in specs:
             factory: BaseFieldFactory[Any, Any] = self.registry.resolve(spec)
             w = factory.construct(spec, partial(self._on_field_changed, spec.name))
@@ -329,6 +328,7 @@ class ModelForm(QWidget):
                 f.lock(connected)
 
     def set_field(self, name: str, value: Any):
+        print(self.fields)
         self.fields[name].set_value(value)
 
     def _on_field_changed(self, name: str, value: Any):

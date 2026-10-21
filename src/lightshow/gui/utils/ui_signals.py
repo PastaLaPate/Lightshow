@@ -1,6 +1,7 @@
 from PySide6.QtCore import QObject, Signal
 
 from lightshow.audio.types import AudioDevice
+from lightshow.devices.status import DeviceStatus
 from lightshow.devices.types import DeviceTypeName
 
 
@@ -30,6 +31,7 @@ class UISignals(QObject):
 
     new_device = Signal(str)  # New device has been created, id
     field_set = Signal(str, str, object)  # device_id, field, new_value
+    device_status_changed = Signal(str, DeviceStatus)  # device_id, new_status
     device_renamed = Signal(str, str)  # id, new_name
     device_deleted = Signal(str)  # id
 
