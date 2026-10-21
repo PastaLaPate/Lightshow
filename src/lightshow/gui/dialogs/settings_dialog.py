@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from lightshow.core.config import Setting, SettingListItem, SettingTab
 from lightshow.gui.panels.base_panel import BasePanel
+from lightshow.gui.utils import ui_signals
 
 
 class SettingsDialog(QDialog, BasePanel):
@@ -290,7 +291,7 @@ class SettingsDialog(QDialog, BasePanel):
 
     def _on_apply(self) -> None:
         if self._pending_changes:
-            self.trigger("apply", dict(self._pending_changes))
+            ui_signals.settings_changed.emit(dict(self._pending_changes))
             self._pending_changes.clear()
 
     def _on_accept(self) -> None:

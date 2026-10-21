@@ -1,4 +1,5 @@
 import threading
+from typing import Any
 
 import soundcard
 from PySide6.QtCore import Qt
@@ -14,9 +15,10 @@ from PySide6.QtWidgets import (
 
 from lightshow.audio.streams import AAudioStreamHandler
 from lightshow.audio.types import AudioDevice
-from lightshow.core.config import global_config
+from lightshow.core.config import _Settings, global_config
 from lightshow.core.logger import Logger
 from lightshow.gui.components.logs import Logs
+from lightshow.gui.utils import ui_signals
 
 from .base_panel import BasePanel
 
@@ -32,28 +34,16 @@ class AudioPanel(BasePanel):
         audio_handler: AAudioStreamHandler,
     ):
         super().__init__()
+
         self.listener = listener
-        listener.track_tracker.add_track_changed_listener(self.on_track_changed)
+
+        listener.track_tracker.add_track_changed_listener(self._on_track_changed)
+
         self.audio_handler = audio_handler
         self.audio_devices: dict[
             str, dict
         ] = {}  # Name -> Serialized device info (id, is_loopback, etc)
-        self.audio_devices["Autodetect used speaker"] = AudioDevice(
-            is_default=True, is_loopback=True
-        ).to_dict()
-        recordable_mics = soundcard.all_microphones(include_loopback=True)
-        recordable_speakers = [d for d in recordable_mics if d.isloopback]
-        for speaker in recordable_speakers:
-            self.audio_devices[f"[Loopback] {speaker.name}"] = AudioDevice(
-                name=speaker.name, is_default=False, is_loopback=True
-            ).to_dict()
-        self.audio_devices["Autodetect default input (mic)"] = AudioDevice(
-            is_default=True, is_loopback=False
-        ).to_dict()
-        for mic in soundcard.all_microphones(include_loopback=False):
-            self.audio_devices[mic.name] = AudioDevice(
-                name=mic.name, is_default=False, is_loopback=False
-            ).to_dict()
+
         self.is_streaming = False
         self.audio_thread: threading.Thread | None = None
 
@@ -64,6 +54,34 @@ class AudioPanel(BasePanel):
         self.kick_visualizer = None
         self.spectrumWidget = QWidget()
         self.logs = Logs()
+
+        ui_signals.streaming_status_changed.connect(self._on_stream_status_changed)
+        ui_signals.settings_changed.connect(self._on_settings_changed)
+
+        self.fetch_audio_devices()
+
+    def fetch_audio_devices(self):
+        self.audio_devices.clear()
+        self.audio_devices["Autodetect used speaker"] = AudioDevice(
+            is_default=True, is_loopback=True
+        ).to_dict()
+
+        recordable_mics = soundcard.all_microphones(include_loopback=True)
+        recordable_speakers = [d for d in recordable_mics if d.isloopback]
+
+        for speaker in recordable_speakers:
+            self.audio_devices[f"[Loopback] {speaker.name}"] = AudioDevice(
+                name=speaker.name, is_default=False, is_loopback=True
+            ).to_dict()
+
+        self.audio_devices["Autodetect default input (mic)"] = AudioDevice(
+            is_default=True, is_loopback=False
+        ).to_dict()
+
+        for mic in soundcard.all_microphones(include_loopback=False):
+            self.audio_devices[mic.name] = AudioDevice(
+                name=mic.name, is_default=False, is_loopback=False
+            ).to_dict()
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the audio panel UI elements."""
@@ -92,7 +110,7 @@ class AudioPanel(BasePanel):
             selected_device = keys[values.index(global_config.audio_device.to_dict())]
             if selected_device:
                 self.device_combo.setCurrentText(selected_device)
-        except Exception as e:  # noqa
+        except KeyError:
             logger.warning(
                 "Failed to set audio device combo to saved config value, defaulting to first option."
             )
@@ -140,34 +158,46 @@ class AudioPanel(BasePanel):
     def _stream_button_callback(self):
         """Handle stream button clicks."""
         if not self.is_streaming:
-            self.trigger("start_stream")
+            ui_signals.start_stream.emit()
         else:
-            self.trigger("stop_stream")
+            ui_signals.stop_stream.emit()
 
-    def set_streaming(self, value: bool):
-        """Update streaming state and UI."""
-        self.is_streaming = value
+    def _on_stream_status_changed(self, status: bool):
+        self.is_streaming = status
         if self.stream_button and self.device_combo:
-            self.stream_button.setText("Stop Stream" if value else "Start Stream")
-            self.device_combo.setEnabled(not value)
+            self.stream_button.setText("Stop Stream" if status else "Start Stream")
+            self.device_combo.setEnabled(not status)
 
     def _device_selection_callback(self):
         """Handle audio device selection."""
         try:
             if self.device_combo:
                 app_data = self.device_combo.currentText()
-                # self.config.device_index = self.audio_devices[app_data]
-                self.trigger(
-                    "device_changed",
-                    AudioDevice.from_dict(self.audio_devices[app_data]),
+                ui_signals.set_audio_device.emit(
+                    AudioDevice.from_dict(self.audio_devices[app_data])
                 )
         except Exception as e:  # noqa
             logger.error(str(e))
 
-    def on_track_changed(
+    def _on_track_changed(
         self,
         session,
         infos,
     ):
         if self.playing_label:
             self.playing_label.setText(f"Playing: {infos.title} - {infos.artist}")
+
+    def _on_settings_changed(self, changed_settings: dict[str, Any]):
+        if _Settings.SHOW_SPECTRUM.id in changed_settings:
+            if changed_settings[_Settings.SHOW_SPECTRUM.id]:
+                self.spectrumWidget.show()
+            else:
+                self.spectrumWidget.hide()
+
+        if _Settings.SHOW_BEAT_DETECTION.id in changed_settings:
+            w = self.kick_visualizer
+            if isinstance(w, QWidget):
+                if changed_settings[_Settings.SHOW_BEAT_DETECTION.id]:
+                    w.show()
+                else:
+                    w.hide()

@@ -19,6 +19,7 @@ from lightshow.core.logger import Logger
 from lightshow.devices.device import Device
 from lightshow.devices.registry import DEVICE_TYPES
 from lightshow.document.history import global_history
+from lightshow.gui.controllers.audio_controller import AudioController
 from lightshow.gui.controllers.device_controller import DeviceController
 from lightshow.gui.dialogs.about_dialog import AboutDialog
 from lightshow.gui.dialogs.settings_dialog import SettingsDialog
@@ -50,6 +51,7 @@ class UIManager(QMainWindow):
         self.stats_panel = StatsPanel()
 
         self.device_controller = DeviceController()
+        self.audio_controller = AudioController(audio_listener, audio_handler)
 
         # Shortcuts:
         self.shortcut_map = ShortcutMap()
@@ -64,45 +66,15 @@ class UIManager(QMainWindow):
         self.redo_action.triggered.connect(global_history.redo)
         self.addAction(self.redo_action)
 
-        # Register internal handlers
-        """
-        self.audio_panel.register("start_stream", self._start_stream_callback)
-        self.audio_panel.register("stop_stream", self._stop_stream_callback)
-        self.audio_panel.register(
-            "device_changed", self._audio_device_changed_callback
-        )
-
-        self.devices_panel.register("device_selected", self._on_device_select)
-        self.devices_panel.register("device_added", lambda name: None)
-        self.devices_panel.register("device_deleted", self._delete_device)
-
-        self.device_details.register(
-            "connect_clicked", self._connect_device_callback
-        )
-        self.device_details.register("device_renamed", self._on_device_renamed)
-        self.device_details.register("delete_clicked", self._delete_device)
-
-        self.manual_packets.register(
-            "send_manual_packet", self._send_packet_callback
-        )
-        """
-
-        # Connect signals
-        # self.ui_signals.finish_connection.connect(self._on_connection_finished)
-        ui_signals.show_error.connect(self._show_error_dialog)
-        ui_signals.show_info.connect(self._show_info_dialog)
-        # self.ui_signals.connection_status_changed.connect(
-        #    self._on_connection_status_changed
-        # )
-        # self.ui_signals.streaming_status_changed.connect(
-        #    self._stream_status_changed
-        # )
         self.about_dialog = AboutDialog(self)
         self.settings_dialog = SettingsDialog(self)
-        self.settings_dialog.register("apply", self._apply_settings)
         self.settings_dialog.load(
             SETTINGS_CATEGORIES, saved_values=global_config.settings.as_dict()
         )
+
+        ui_signals.settings_changed.connect(self._apply_settings)
+        ui_signals.show_error.connect(self._show_error_dialog)
+        ui_signals.show_info.connect(self._show_info_dialog)
 
         # Setup UI
         self._setup_ui()
@@ -123,20 +95,6 @@ class UIManager(QMainWindow):
         if UIManager._instance is None:
             raise RuntimeError("UIManager not initialized. Call init_singleton first.")
         return UIManager._instance
-
-    def register(self, panel: str, event: str, callback):
-        """Public API to register custom callbacks on panels."""
-        mapping = {
-            "audio": self.audio_panel,
-            "devices": self.devices_panel,
-            # "details": self.device_details,
-        }
-        target = mapping.get(panel)
-        if not target:
-            raise ValueError(
-                f"Unknown panel: {panel}. Must be one of {list(mapping.keys())}"
-            )
-        target.register(event, callback)
 
     def _setup_ui(self):
         self.logger.info("Setting up the UI Layout.")
@@ -254,33 +212,10 @@ class UIManager(QMainWindow):
         self.settings_dialog.exec()
 
     def _apply_settings(self, settings: dict[str, Any]) -> None:
-        for sid, value in settings.items():
-            if sid == _Settings.SHOW_SPECTRUM.id:
-                if value:
-                    QTimer.singleShot(50, self.audio_panel.spectrumWidget.show)
-                else:
-                    self.audio_panel.spectrumWidget.hide()
-
-            elif sid == _Settings.SHOW_BEAT_DETECTION.id:
-                w = self.audio_panel.kick_visualizer
-                if isinstance(w, QWidget):
-                    if value:
-                        QTimer.singleShot(50, w.show)
-                    else:
-                        w.hide()
-
         global_config.apply(settings)
         global_config.save()
 
     """
-    def _on_device_select(self, device_name):
-        \"""Handle device selection.\"""
-        self.device_details.show_for(device_name)
-
-    def _on_device_renamed(self, old_id, new_id):
-        \"""Handle device rename.\"""
-        self.devices_panel.refresh_list()
-        self.device_details.show_for(new_id)
 
     def _connect_device_callback(self, device_id):
         \"""Handle connect/disconnect button click.\"""
@@ -346,45 +281,6 @@ class UIManager(QMainWindow):
         \"""Update connection status display.\"""
         self.device_details.set_status(f"Status: {status}")
 
-    def _stream_status_changed(self, is_streaming):
-        \"""Handle streaming status change.\"""
-        self.audio_panel.set_streaming(is_streaming)
-
-    def _delete_device(self, device_id):
-        \"""Handle device deletion.\"""
-        if not device_id:
-            return
-        if device_id in live_devices:
-            live_devices[device_id].disconnect()
-            del live_devices[device_id]
-        if device_id in global_config.devices:
-            del global_config.devices[device_id]
-        self.device_details.selected_device_id = None
-        self.devices_panel.refresh_list()
-        self.device_details.clear()
-
-    def _audio_device_changed_callback(self, new_device: AudioDevice):
-        global_config.audio_device = new_device
-
-    def _start_stream_callback(self):
-        \"""Start audio stream.\"""
-        try:
-            self.audio_handler.reinit_stream()
-            self.listener.clear_state()
-            # As the stream is started in a separate thread, if it fails the exception won't be caught here. Instead, we rely on error handling in the audio stream thread to emit an error signal that we can show in the UI.
-            # self.audio_panel.set_streaming(True)
-        except Exception as e:  # noqa
-            self.ui_signals.show_error.emit(
-                "Streaming Error",
-                f"Failed to start audio stream:\n\n{traceback.format_exc()}",
-            )
-            self.audio_panel.set_streaming(False)
-
-    def _stop_stream_callback(self):
-        \"""Stop audio stream.\"""
-        self.audio_handler.stop_stream()
-        # Same, we rely on the audio stream thread to emit a signal if stopping fails, so we don't wrap this in a try-except.
-        # self.audio_panel.set_streaming(False)
 
     def _send_packet_callback(self, packet_data):
         self.logger.info(
