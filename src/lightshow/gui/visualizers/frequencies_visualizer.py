@@ -2,92 +2,95 @@ import traceback
 
 import numpy as np
 import pyqtgraph as pg
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.audio.types import AudioData
-from lightshow.core.config import OPENGL_AVAILABLE
 from lightshow.core.logger import Logger
 from lightshow.gui.utils import ui_signals
 
 _logger = Logger.for_class("Audio Visualization")
 
+_MAJOR_HZ = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
+_MINOR_HZ = [
+    30, 40, 60, 70, 80, 90,
+    150, 300, 400, 700, 800, 900,
+    1500, 3000, 4000, 6000, 7000, 8000, 15000,
+]  # fmt: skip
 
-def _hermite_interpolate(values: np.ndarray, upsample: int = 8) -> np.ndarray:
-    n = len(values)
-    m = np.empty(n)
-    m[0] = values[1] - values[0]
-    m[-1] = values[-1] - values[-2]
-    m[1:-1] = 0.5 * (values[2:] - values[:-2])
-    t = np.linspace(0.0, 1.0, upsample, endpoint=False)
-    t2, t3 = t**2, t**3
-    h00 = 2 * t3 - 3 * t2 + 1
-    h10 = t3 - 2 * t2 + t
-    h01 = -2 * t3 + 3 * t2
-    h11 = t3 - t2
-    segments = (
-        np.outer(h00, values[:-1])
-        + np.outer(h10, m[:-1])
-        + np.outer(h01, values[1:])
-        + np.outer(h11, m[1:])
-    )
-    return segments.T.ravel()
+
+def _hz_label(hz: int) -> str:
+    return f"{hz // 1000}k" if hz >= 1000 else str(hz)
 
 
 class FrequenciesVisualizer(QWidget):
-    """
-    Real-time spectrum visualizer with:
-    - Log-scaled frequency axis (Hz labels)
-    - Log-scaled power axis (dB)
-    - Hermite-smoothed curve
-    """
-
-    SAMPLE_RATE = 44100
-    CHUNK_SIZE = 1024
+    DB_FLOOR = -60.0
 
     def __init__(
         self,
-        freq_range: tuple[int, int] = (0, 2049),
-        sample_rate: int = SAMPLE_RATE,
-        chunk_size: int = CHUNK_SIZE,
-        upsample: int = 4,
+        sample_rate: int = 44100,
+        f_min: float = 20.0,
+        f_max: float | None = None,
+        n_points: int = 256,
+        smooth_width: int = 5,
+        attack: float = 0.6,
+        release: float = 0.15,
+        peak_decay_db: float = 0.05,
+        fps: int = 120,
     ):
         super().__init__()
-        self.freq_range = freq_range
+        nyquist = sample_rate / 2
         self.sample_rate = sample_rate
-        self.chunk_size = chunk_size
-        self.upsample = upsample
+        self.f_min = float(f_min)
+        self.f_max = float(min(f_max or nyquist, nyquist))
+        self.n_points = n_points
+        self._attack = attack
+        self._release = release
+        self._peak_decay_db = peak_decay_db
 
-        # Hz value for each FFT bin
+        if smooth_width > 1:
+            k = np.hanning(smooth_width + 2)[1:-1]
+            self._kernel = k / k.sum()
+        else:
+            self._kernel = np.ones(1)
 
-        self._peak_ref = 1.0  # running maximum, updated each frame
-        self._bin_hz = np.fft.rfftfreq(
-            chunk_size, d=1.0 / sample_rate
-        )  # shape: (n_bins,)
+        # State
+        self._latest: np.ndarray | None = None  # written by audio thread
+        self._n_bins = -1
+        self._ref_db: float | None = None
+        self._shown: np.ndarray | None = None
+        self._error_shown = False
 
         self._setup_ui()
         self._setup_log_x_axis()
 
-    # ------------------------------------------------------------------
-    # UI
-    # ------------------------------------------------------------------
+        self._timer = QTimer(self)
+        self._timer.setInterval(max(1, 1000 // fps))
+        self._timer.timeout.connect(self._render)
+        self._timer.start()
 
     def _setup_ui(self) -> None:
         pg.setConfigOption("antialias", True)
-        self.plot = pg.PlotWidget(useOpenGL=OPENGL_AVAILABLE)
+        self.plot = pg.PlotWidget()
         self.plot.setBackground("#1e1e1e")
 
-        plot_item: pg.PlotItem | None = self.plot.getPlotItem()
+        plot_item = self.plot.getPlotItem()
         if plot_item is not None:
-            plot_item.setClipToView(True)
-            plot_item.setDownsampling(mode="peak")
-            plot_item.setLabel("bottom", "Frequency", units="Hz")
-            plot_item.setLabel("left", "Power", units="dB")
+            plot_item.setLabel("bottom", "Frequency (Hz)")
+            plot_item.setLabel("left", "Power (dB)")
+            plot_item.getAxis("bottom").enableAutoSIPrefix(False)
+            plot_item.getAxis("left").enableAutoSIPrefix(False)
             plot_item.getViewBox().setMouseEnabled(False, False)
 
         self.plot.showGrid(x=True, y=True, alpha=0.2)
 
-        pen = pg.mkPen(color=(100, 255, 0), width=2)
-        self.energy_curve = self.plot.plot([], [], pen=pen)
+        self.energy_curve = self.plot.plot(
+            [],
+            [],
+            pen=pg.mkPen(color=(100, 255, 0), width=2),
+            fillLevel=self.DB_FLOOR,
+            brush=(100, 255, 0, 35),
+        )
         self.energy_curve.setSkipFiniteCheck(True)
         self.energy_curve.setZValue(1)
 
@@ -97,109 +100,90 @@ class FrequenciesVisualizer(QWidget):
         self.setLayout(layout)
 
     def _setup_log_x_axis(self) -> None:
-        """Replace the bottom axis with a log-scaled one with Hz tick labels."""
         plot_item = self.plot.getPlotItem()
-        if not plot_item:
+        if plot_item is None:
             return
 
-        # Work in log10(Hz) space on the x-axis
-        # Place ticks at round Hz values
-        major_hz = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000]
-        minor_hz = [
-            30,
-            40,
-            60,
-            70,
-            80,
-            90,
-            150,
-            300,
-            400,
-            700,
-            800,
-            900,
-            1500,
-            3000,
-            4000,
-            6000,
-            7000,
-            8000,
-            15000,
-        ]
+        in_range = lambda hz: self.f_min <= hz <= self.f_max
+        major = [(np.log10(hz), _hz_label(hz)) for hz in _MAJOR_HZ if in_range(hz)]
+        minor = [(np.log10(hz), "") for hz in _MINOR_HZ if in_range(hz)]
+        plot_item.getAxis("bottom").setTicks([major, minor])
 
-        def hz_label(hz: int) -> str:
-            return f"{hz // 1000}k" if hz >= 1000 else str(hz)
+        self.plot.setXRange(np.log10(self.f_min), np.log10(self.f_max), padding=0)  # type: ignore
+        self.plot.setYRange(self.DB_FLOOR, 0, padding=0.05)  # type: ignore
 
-        major_ticks = [(np.log10(hz), hz_label(hz)) for hz in major_hz]
-        minor_ticks = [(np.log10(hz), "") for hz in minor_hz]
+    def _build_grid(self, n_bins: int) -> None:
+        fft_size = 2 * (n_bins - 1)
+        self._bin_hz = np.fft.rfftfreq(fft_size, d=1.0 / self.sample_rate)
 
-        axis = plot_item.getAxis("bottom")
-        axis.setTicks([major_ticks, minor_ticks])
+        edges = np.geomspace(self.f_min, self.f_max, self.n_points + 1)
+        self._centers_hz = np.sqrt(edges[:-1] * edges[1:])
+        self._x = np.log10(self._centers_hz)
 
-        # Set x range in log10 space: 20 Hz → nyquist
-        nyquist = self.sample_rate / 2
-        # ty getting wrong types for some reason, so ignore type checking here
-        self.plot.setXRange(np.log10(20), np.log10(nyquist), padding=0)  # type: ignore
-        self.plot.setYRange(-60, 0, padding=0.05)  # type: ignore
+        idx = np.clip(np.searchsorted(self._bin_hz, edges), 0, n_bins)
+        starts, stops = idx[:-1], idx[1:]
 
-    # ------------------------------------------------------------------
-    # Precompute log-spaced x positions for the visible bins
-    # ------------------------------------------------------------------
+        # Bands holding >= 2 bins use max-pooling; the others use interpolation.
+        self._wide = (stops - starts) >= 2
+        self._limit = max(int(stops[-1]), 1)
+        # reduceat needs indices strictly inside the sliced array
+        self._starts = np.minimum(starts, self._limit - 1)
 
-    def _log_x_for_bins(self, bin_indices: np.ndarray) -> np.ndarray:
-        # Clamp indices to valid range
-        clamped = np.clip(bin_indices, 0, len(self._bin_hz) - 1)
-        hz = self._bin_hz[clamped]
-        hz = np.where(hz < 1.0, 1.0, hz)
-        return np.log10(hz)
-
-    # ------------------------------------------------------------------
-    # Audio callback
-    # ------------------------------------------------------------------
+        self._n_bins = n_bins
+        self._shown = None  # shape changed, restart temporal smoothing
 
     def __call__(self, data: AudioData) -> None:
+        self._latest = np.array(data.frequencies, dtype=np.float32, copy=True)
+
+    def _render(self) -> None:
+        power = self._latest
+        if power is None:
+            return
+        self._latest = None
+
         try:
-            lo, hi = self.freq_range
-            hi = min(hi, len(data.frequencies))
-            lo = max(lo, 0)
-            bins = data.frequencies[lo:hi].astype(np.float32)
-            if bins.size < 2:
+            if power.size < 2:
                 return
+            if power.size != self._n_bins:
+                self._build_grid(power.size)
 
-            # Update running peak with slow decay so it tracks loud moments
-            frame_max = float(bins.max())
-            if frame_max > self._peak_ref:
-                self._peak_ref = frame_max
+            # 1-2. dB per bin, then resample to the log grid
+            db = 10.0 * np.log10(np.maximum(power, 1e-12))
+            curve = np.interp(self._centers_hz, self._bin_hz, db)
+            if self._wide.any():
+                band_max = np.maximum.reduceat(db[: self._limit], self._starts)
+                curve = np.where(self._wide, np.maximum(curve, band_max), curve)
+
+            # 3. normalise against a smoothed running peak (never below 0 dB)
+            peak = float(curve.max())
+            if self._ref_db is None:
+                self._ref_db = peak
+            elif peak > self._ref_db:
+                self._ref_db += 0.5 * (peak - self._ref_db)
             else:
-                self._peak_ref *= 0.995  # slow decay
-            self._peak_ref = max(self._peak_ref, 1.0)  # never divide by zero
+                self._ref_db = max(self._ref_db - self._peak_decay_db, peak)
+            ref = max(self._ref_db, 0.0)
+            rel = np.clip(curve - ref, self.DB_FLOOR, 0.0)
 
-            # Convert to dB relative to running peak → range (-inf, 0]
-            EPS = 1e-10
-            db = 10.0 * np.log10(np.maximum(bins, EPS) / self._peak_ref)
-            db = np.clip(db, -60.0, 0.0)
+            # 4. smooth along frequency
+            if len(self._kernel) > 1:
+                pad = len(self._kernel) // 2
+                rel = np.convolve(
+                    np.pad(rel, pad, mode="edge"), self._kernel, mode="valid"
+                )
 
-            # Hermite smooth
-            smoothed = _hermite_interpolate(db, upsample=self.upsample)
+            # 5. attack / release over time
+            if self._shown is None:
+                self._shown = rel
+            else:
+                coef = np.where(rel > self._shown, self._attack, self._release)
+                self._shown = self._shown + coef * (rel - self._shown)
 
-            # Log x axis
-            n = len(data.frequencies)
-            if not hasattr(self, "_last_n") or self._last_n != n:
-                self._bin_hz = np.fft.rfftfreq(2 * (n - 1), d=1.0 / self.sample_rate)
-                self._last_n = n
-                self._setup_log_x_axis()
-
-            bin_indices = np.arange(lo, lo + len(bins))
-            log_x = self._log_x_for_bins(bin_indices)
-            x_up = np.interp(
-                np.linspace(0, len(log_x) - 1, len(smoothed)),
-                np.arange(len(log_x)),
-                log_x,
-            )
-
-            self.energy_curve.setData(x_up, smoothed)
+            self.energy_curve.setData(self._x, self._shown)
         except Exception:  # noqa
-            ui_signals.show_error.emit(
-                "UI Error",
-                f"Error when updating frequencies visualizer: \n {traceback.format_exc()}",
-            )
+            if not self._error_shown:  # don't spam a dialog at 60 Hz
+                self._error_shown = True
+                ui_signals.show_error.emit(
+                    "UI Error",
+                    f"Error when updating frequencies visualizer: \n {traceback.format_exc()}",
+                )
