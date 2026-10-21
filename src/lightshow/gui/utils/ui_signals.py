@@ -5,35 +5,53 @@ from lightshow.devices.status import DeviceStatus
 from lightshow.devices.types import DeviceTypeName
 
 
-class UISignals(QObject):
-    """Signals for thread-safe communication with UI."""
+class DeviceRequests(QObject):
+    create = Signal(DeviceTypeName, object)  # type, name | None
+    rename = Signal(str, str)
+    delete = Signal(str)
+    set_field = Signal(str, str, object)
 
-    settings_changed = Signal(dict)  # Dict of changed settings
 
-    finish_connection = Signal(str)
-    show_error = Signal(str, str)
-    show_info = Signal(str, str)
+class DeviceEvents(QObject):
+    created = Signal(str)
+    renamed = Signal(str, str)
+    deleted = Signal(str)
+    field_set = Signal(str, str, object)
+    status_changed = Signal(str, DeviceStatus)
+    selected = Signal(object)  # selection is UI state, see below
     connection_status_changed = Signal(str)
+    finish_connection = Signal(str)
 
-    streaming_status_changed = Signal(bool)  # current stream status: True == streaming
+
+class AudioRequests(QObject):
     start_stream = Signal()
     stop_stream = Signal()
-    set_audio_device = Signal(AudioDevice)  # AudioDevice
+    set_device = Signal(AudioDevice)
 
-    device_selected = Signal(object)  # id | None
 
-    create_device = Signal(
-        DeviceTypeName, DeviceTypeName
-    )  # When new is clicked, DeviceType, name (optional)
-    set_field = Signal(str, str, object)  # device_id, field, value
-    rename_device = Signal(str, str)  # id, new_name
-    delete_device = Signal(str)  # id
+class AudioEvents(QObject):
+    streaming_status_changed = Signal(bool)
 
-    new_device = Signal(str)  # New device has been created, id
-    field_set = Signal(str, str, object)  # device_id, field, new_value
-    device_status_changed = Signal(str, DeviceStatus)  # device_id, new_status
-    device_renamed = Signal(str, str)  # id, new_name
-    device_deleted = Signal(str)  # id
+
+class DialogSignals(QObject):
+    show_error = Signal(str, str)
+    show_info = Signal(str, str)
+
+
+class SettingsSignals(QObject):
+    changed = Signal(dict)
+
+
+class UISignals:
+    """Plain namespace, no need for it to be a QObject."""
+
+    def __init__(self):
+        self.devices_req = DeviceRequests()
+        self.devices = DeviceEvents()
+        self.audio_req = AudioRequests()
+        self.audio = AudioEvents()
+        self.dialogs = DialogSignals()
+        self.settings = SettingsSignals()
 
 
 ui_signals = UISignals()
