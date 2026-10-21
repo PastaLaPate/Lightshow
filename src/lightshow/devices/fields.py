@@ -101,12 +101,12 @@ def StrField(
     default: str = "",
     max_length: int | None = None,
     placeholder: str | None = None,
+    validation_scheme: ValidationScheme = ValidationScheme.Any,
     widget: Literal[
         WidgetType.Field, WidgetType.ColorPicker, WidgetType.FileSelector
     ] = WidgetType.Field,
     connected_readonly: bool = False,
 ):
-    # TODO: Add way to set the str's validation scheme: IP, IP+port, URL, email, color etc. Maybe in the form of another widget type ?
     return _field(
         default,
         FieldExtras(
@@ -114,6 +114,7 @@ def StrField(
             widget=widget,
             connected_readonly=connected_readonly,
             placeholder=placeholder,
+            validation_scheme=validation_scheme,
         ),
         max_length=max_length,
     )

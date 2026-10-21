@@ -9,6 +9,7 @@ from typing import Annotated, Any, Union, get_args, get_origin
 from PySide6.QtGui import QColor
 
 from lightshow.gui.components.color_picker import ColorPicker
+from lightshow.gui.components.validating_lineedit import ValidatingLineEdit
 
 if sys.version_info >= (3, 15):
     from typing import TypeForm
@@ -22,7 +23,6 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QDoubleSpinBox,
     QFormLayout,
-    QLineEdit,
     QSpinBox,
     QWidget,
 )
@@ -201,18 +201,18 @@ class BarFactory(RangedNumberFactory[float | int, NumericSliderSpinBox]):
         widget.setValue(value)
 
 
-class LineEditFactory(BaseFieldFactory[str, QLineEdit]):
+class LineEditFactory(BaseFieldFactory[str, ValidatingLineEdit]):
     def construct(
         self, spec: FieldSpec, on_changed: Callable[[str], None]
-    ) -> QLineEdit:
-        w = QLineEdit(spec.value or "")
+    ) -> ValidatingLineEdit:
+        w = ValidatingLineEdit(spec.value or "", spec.extras.validation_scheme)
         w.setPlaceholderText(spec.extras.placeholder or "")
         if "max_length" in spec.constraints:
             w.setMaxLength(spec.constraints["max_length"])
-        w.textChanged.connect(on_changed)
+        w.committed.connect(lambda new: on_changed(new))
         return w
 
-    def apply_value(self, widget: QLineEdit, value: str):
+    def apply_value(self, widget: ValidatingLineEdit, value: str):
         widget.setText(value)
 
 
