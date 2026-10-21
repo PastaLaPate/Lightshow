@@ -129,7 +129,3 @@ PyQTGraph for visualization.
 DBUS/winrt for tracks tracking.
 
 Soundcard for audio stream, numpy for treatment.
-
-```
-
-```
