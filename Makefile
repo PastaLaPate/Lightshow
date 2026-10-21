@@ -5,6 +5,8 @@ CYAN  := \033[0;36m
 GREEN := \033[0;32m
 NC    := \033[0m
 
+ARGS ?=
+
 .PHONY: help
 help:
 	@echo -e ""
@@ -40,4 +42,4 @@ hooks: ## Install hooks
 
 .PHONY: commit
 commit: ## CZ commit
-	PYTHONPATH=. uv run cz commit
+	PYTHONPATH=. uv run cz commit $(ARGS)
