@@ -231,7 +231,7 @@ class PathSelectorFactory(BaseFieldFactory[str, PathSelector]):
         self, spec: FieldSpec, on_changed: Callable[[str], None]
     ) -> PathSelector:
         # Extract file selector parameters from extras
-        title = spec.extras.file_selector_title or "Select File or Directory"
+        title = spec.extras.file_selector_title
         file_mode = spec.extras.file_selector_file_mode
         options = spec.extras.file_selector_options
         default_path = spec.extras.file_selector_default_path or spec.value or ""

@@ -1,5 +1,5 @@
-from PySide6.QtCore import QMargins, Signal
-from PySide6.QtGui import QColor
+from PySide6.QtCore import QMargins, Qt, Signal
+from PySide6.QtGui import QColor, QCursor
 from PySide6.QtWidgets import QColorDialog, QHBoxLayout, QLineEdit, QPushButton, QWidget
 
 
@@ -18,6 +18,7 @@ class ColorPicker(QWidget):
         self._preview_btn = QPushButton()
         self._preview_btn.clicked.connect(self.open_dialog)
         self._preview_btn.setFixedSize(24, 24)
+        self._preview_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         self._textedit = QLineEdit(self._color.name(QColor.NameFormat.HexRgb))
         self._textedit.editingFinished.connect(self.editingFinished)

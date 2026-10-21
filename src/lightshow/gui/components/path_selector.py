@@ -1,3 +1,5 @@
+import os
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QCursor
 from PySide6.QtWidgets import (
@@ -19,13 +21,20 @@ class PathSelector(QWidget):
     def __init__(
         self,
         path: str = "",
-        title: str = "Select File or Directory",
+        title: str | None = None,
         file_mode: QFileDialog.FileMode = QFileDialog.FileMode.AnyFile,
         options: QFileDialog.Option | None = None,
         accept_all_label: str = "Select...",
         filters: list[FileFilters | str] | None = None,
     ):
         super().__init__()
+
+        self.dialog_names: dict[QFileDialog.FileMode, str] = {
+            QFileDialog.FileMode.AnyFile: "Select a file",
+            QFileDialog.FileMode.ExistingFile: "Select a file",
+            QFileDialog.FileMode.ExistingFiles: "Select a or multiple files",
+            QFileDialog.FileMode.Directory: "Select a directory",
+        }
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -68,33 +77,36 @@ class PathSelector(QWidget):
 
     def open_dialog(self):
         """Open a file/directory dialog."""
-        path, _ = (
-            QFileDialog.getOpenFileName(
-                parent=self,
-                caption=self._title,
-                filter=self._build_filter(),
-                options=self._options,
-                selectedFilter=self._filters[-1],
-            )
-            if self._options is not None
-            else QFileDialog.getOpenFileName(
-                parent=self,
-                caption=self._title,
-                filter=self._build_filter(),
-                selectedFilter=self._filters[-1],
-            )
+        dialog = QFileDialog(
+            self,
+            self._title
+            if self._title is not None
+            else self.dialog_names[self._file_mode],
         )
+        dialog.setFileMode(self._file_mode)
+        dialog.setLabelText(QFileDialog.DialogLabel.Accept, self._accept_all_label)
 
-        if path:
-            self.setPath(path)
-            self.path_changed.emit(path)
+        if self._options is not None:
+            dialog.setOptions(self._options)
 
-    def _build_filter(self) -> str:
-        """Build the file filter string based on file_mode and filters."""
         if self._file_mode == QFileDialog.FileMode.Directory:
-            return "All Files (*)"
+            if self._options is None:
+                dialog.setOption(QFileDialog.Option.ShowDirsOnly, True)
+        else:
+            dialog.setNameFilters(self._filters)
+            dialog.selectNameFilter(self._filters[-1])
 
-        return ";;".join(self._filters)
+        if self._path:
+            dialog.setDirectory(os.path.dirname(self._path) or ".")
+            dialog.selectFile(self._path)
+
+        if dialog.exec() != QFileDialog.DialogCode.Accepted:
+            return
+
+        selected = dialog.selectedFiles()
+        if selected:
+            self.setPath(selected[0])
+            self.path_changed.emit(selected[0])
 
     def setTitle(self, title: str):
         """Set the dialog title."""
