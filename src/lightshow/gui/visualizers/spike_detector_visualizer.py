@@ -255,19 +255,16 @@ class SpikeDetectorVisualizer(QWidget):
             )
 
     def _add_marker(self, marker_type, detected, current_energy):
-        if detected:
-            self.marker_data[marker_type].x.append(self.global_index)
-            self.marker_data[marker_type].y.append(current_energy)
-            # cap marker history
-            maxlen = 200
-            if len(self.marker_data[marker_type].x) > maxlen:
-                self.marker_data[marker_type].x = self.marker_data[marker_type].x[
-                    -maxlen:
-                ]
-                self.marker_data[marker_type].y = self.marker_data[marker_type].x[
-                    -maxlen:
-                ]
-            self.marker_data[marker_type].dirty = True
+        if not detected:
+            return
+        md = self.marker_data[marker_type]
+        md.x.append(self.global_index)
+        md.y.append(current_energy)
+        maxlen = 200
+        if len(md.x) > maxlen:
+            del md.x[:-maxlen]
+            del md.y[:-maxlen]
+        md.dirty = True
 
     def qt_update(self):
         """Update plot items with buffered data."""
@@ -298,6 +295,7 @@ class SpikeDetectorVisualizer(QWidget):
                 mx = self.marker_data[mtype].x
                 my = self.marker_data[mtype].y
                 item.setData(mx, my)
+                self.marker_data[mtype].dirty = False
 
         max_x = self.global_index
         min_x = max(0, max_x - self.visualization_len)
