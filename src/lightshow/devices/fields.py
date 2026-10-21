@@ -10,8 +10,18 @@ class WidgetType(StrEnum):
     Spinner = "spinner"
     Slider = "slider"  # Custom spinbox  + slider next to it widget
     Checkbox = "checkbox"
-    ColorPicker = "colorpicker"  # TODO: IMPLEMENT
+    ColorPicker = "colorpicker"
     FileSelector = "fileselector"  # TODO: IMPLEMENT
+
+
+class ValidationScheme(StrEnum):
+    Email = "email"
+    Url = "url"
+    IP = "ip"
+    IPPort = "ip_port"
+    Color = "color"
+    Hex = "hex"
+    Any = "none"
 
 
 class FieldExtras(BaseModel):
@@ -20,13 +30,13 @@ class FieldExtras(BaseModel):
     label: str
     widget: WidgetType | None = None  # if None, guess it from python's type
     connected_readonly: bool = False
-    step: float | None = None
+
     placeholder: str | None = None
+    step: float | None = None
+    validation_scheme: ValidationScheme = ValidationScheme.Any
 
 
-def _field(
-    default: Any, widget: WidgetType, extras: FieldExtras, **constraints
-) -> FieldInfo:
+def _field(default: Any, extras: FieldExtras, **constraints) -> FieldInfo:
     return Field(
         default, json_schema_extra={"ui": extras.model_dump(mode="json")}, **constraints
     )
@@ -45,7 +55,6 @@ def IntField(
         raise ValueError("Can't use a Slider widget without min and max.")
     return _field(
         default,
-        widget,
         FieldExtras(
             label=label, widget=widget, connected_readonly=connected_readonly, step=step
         ),
@@ -67,7 +76,6 @@ def FloatField(
         raise ValueError("Can't use a Slider widget without min and max.")
     return _field(
         default,
-        widget,
         FieldExtras(
             label=label, widget=widget, connected_readonly=connected_readonly, step=step
         ),
@@ -84,7 +92,6 @@ def BoolField(
 ):
     return _field(
         default,
-        widget,
         FieldExtras(label=label, widget=widget, connected_readonly=connected_readonly),
     )
 
@@ -102,7 +109,6 @@ def StrField(
     # TODO: Add way to set the str's validation scheme: IP, IP+port, URL, email, color etc. Maybe in the form of another widget type ?
     return _field(
         default,
-        widget,
         FieldExtras(
             label=label,
             widget=widget,

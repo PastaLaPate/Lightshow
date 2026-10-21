@@ -11,7 +11,11 @@ from lightshow.devices.device import (
     BaseDeviceSettings,
     OutputDevice,
 )
-from lightshow.devices.fields import IntField, StrField, WidgetType
+from lightshow.devices.fields import (
+    IntField,
+    StrField,
+    WidgetType,
+)
 from lightshow.devices.moving_head.moving_head_controller import (
     MovingHeadController,
 )
@@ -20,7 +24,11 @@ from lightshow.gui.utils import ui_signals
 
 
 class MovingHeadSettings(BaseDeviceSettings):
-    ip: str = StrField("IP", "", placeholder="0.0.0.0")
+    ip: str = StrField(
+        "IP",
+        "",
+        placeholder="0.0.0.0",
+    )
     port: int = IntField("Port", 3000)
     color_test: str = StrField("Color", widget=WidgetType.ColorPicker)
 
