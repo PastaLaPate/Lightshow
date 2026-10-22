@@ -52,7 +52,7 @@ class SettingsDialog(QDialog, BasePanel):
         root_layout.setContentsMargins(8, 8, 8, 8)
         root_layout.setSpacing(6)
 
-        self.search_bar.setPlaceholderText("Search settings…")
+        self.search_bar.setPlaceholderText("Search settings...")
         self.search_bar.setClearButtonEnabled(True)
         self.search_bar.textChanged.connect(self._on_search)
         root_layout.addWidget(self.search_bar)
@@ -108,7 +108,7 @@ class SettingsDialog(QDialog, BasePanel):
         items:
             Pass ``SETTINGS_CATEGORIES`` from config.py.
         saved_values:
-            Flat ``{setting_id: value}`` dict — use
+            Flat ``{setting_id: value}`` dict, use
             ``global_config.settings.as_dict()`` to build it.
             When omitted, widgets show their declared defaults.
         """
@@ -271,7 +271,7 @@ class SettingsDialog(QDialog, BasePanel):
                 widget.setValue(int(value))
 
             elif isinstance(widget, QComboBox):
-                # Options may be ints or strings — match by string representation
+                # Options may be ints or strings, match by string representation
                 idx = widget.findText(str(value))
                 if idx >= 0:
                     widget.setCurrentIndex(idx)

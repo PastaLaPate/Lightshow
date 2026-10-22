@@ -30,7 +30,6 @@ class SpectrumProcessor(Processor):
         elif 0 < max_abs < 0.001:
             arr = arr / max_abs
 
-        # NO window, NO zero-padding — keeps bin math identical to old code
         fft_result = np.fft.rfft(arr)
         power_spectrum = np.square(np.abs(fft_result)) * self.sensitivity
 

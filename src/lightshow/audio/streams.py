@@ -28,7 +28,7 @@ class LoopbackAudioCapture(AAudioCapture):
     as AudioCapture (queue + listeners).
 
     soundcard's record() is a blocking call, so capture runs in its own
-    thread and pushes chunks into a bounded queue — identical pattern to
+    thread and pushes chunks into a bounded queue - identical pattern to
     the sounddevice-based AudioCapture.
     """
 
@@ -79,7 +79,7 @@ class LoopbackAudioCapture(AAudioCapture):
 
     def _enqueue(self, raw: np.ndarray) -> None:
         """Normalise a raw frame array and push it onto the queue."""
-        # raw shape: (frames, channels) — mix down to mono
+        # raw shape: (frames, channels), mix down to mono
         if raw.ndim == 2:
             samples = raw[:, 0].copy()
         else:

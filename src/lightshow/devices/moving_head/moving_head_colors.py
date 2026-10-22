@@ -1,4 +1,6 @@
+import math
 import random
+import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 
@@ -82,12 +84,17 @@ class ColorTransformer(ABC):
 class RedLowsModulator(ColorTransformer):
     """Color mode that returns red with brightness modulated by low-frequency energy."""
 
-    DECAY = 0.95  # Peak decays 5% per frame — tune this
     MIN_BRIGHTNESS = 50
     MAX_BRIGHTNESS = 255
 
+    ATTACK_TAU = 0.02  # how fast it rises on a hit
+    RELEASE_TAU = 0.20  # how slowly it falls
+    PEAK_HALF_LIFE = 1.5  # how fast the normalization peak decays
+
     def __init__(self):
         self.peak_energy = 1.0  # Avoid division by zero, self-calibrates upward
+        self.level = 0.0
+        self._last_t = time.monotonic()
 
     @staticmethod
     def override() -> bool:
@@ -99,28 +106,29 @@ class RedLowsModulator(ColorTransformer):
 
     @staticmethod
     def filter() -> Callable[[AAnimation], bool]:
-
         return lambda x: True
 
     def next(self, color, audio_data):
-        brightness = self.MAX_BRIGHTNESS
+        now = time.monotonic()
+        dt = min(now - self._last_t, 0.1)
+        self._last_t = now
 
         try:
-            lows_energy = audio_data.get_ps_mean([0, 2])
-
-            # Track peak with decay for dynamic normalization
-            self.peak_energy = max(self.peak_energy * self.DECAY, lows_energy, 1.0)
-
-            # Normalize to [0.0, 1.0] relative to recent peak
-            normalized = min(lows_energy / self.peak_energy, 1.0)
-
-            brightness = int(
-                self.MIN_BRIGHTNESS
-                + normalized * (self.MAX_BRIGHTNESS - self.MIN_BRIGHTNESS)
+            lows = audio_data.get_ps_mean([0, 2])
+            self.peak_energy = max(
+                self.peak_energy * 0.5 ** (dt / self.PEAK_HALF_LIFE), lows, 1.0
             )
+            target = min(lows / self.peak_energy, 1.0)
         except AttributeError, IndexError, ValueError:
-            pass
+            target = 1.0  # fallback: full brightness
 
+        tau = self.ATTACK_TAU if target > self.level else self.RELEASE_TAU
+        self.level += (target - self.level) * (1 - math.exp(-dt / tau))
+
+        brightness = int(
+            self.MIN_BRIGHTNESS
+            + self.level * (self.MAX_BRIGHTNESS - self.MIN_BRIGHTNESS)
+        )
         return RGB(brightness, 0, 0)
 
 

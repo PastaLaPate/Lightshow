@@ -50,7 +50,7 @@ class _ContextFilter(logging.Filter):
 
 
 # ---------------------------------------------------------------------------
-# Qt handler — pushes HTML into a queue, drained by the GUI thread
+# Qt handler, pushes HTML into a queue, drained by the GUI thread
 # ---------------------------------------------------------------------------
 
 
@@ -141,7 +141,7 @@ class _RootLoggerConfig:
         self._qt_widget = widget
 
     def process_log_queue(self) -> None:
-        """Drain the Qt queue — call this from a GUI timer."""
+        """Drain the Qt queue, call this from a GUI timer."""
         if not self._qt_widget:
             return
         while not self._qt_queue.empty():

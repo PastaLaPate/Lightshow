@@ -2,7 +2,7 @@
 lightshow/utils/config.py
 
 Design:
-  - Setting[T]        generic dataclass carrying id, name, type, default, …
+  - Setting[T]        generic dataclass carrying id, name, type, default, ...
   - _Settings         namespace object: SETTINGS.SHOW_SPECTRUM : Setting[bool]
   - SettingsMap       typed dict-like: config.settings[SETTINGS.SHOW_SPECTRUM] → bool
   - SETTINGS_CATEGORIES  list[SettingListItem] for the UI tree (icons, tabs, order)
@@ -64,7 +64,7 @@ class Setting[T]:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# SettingsMap — typed dict-like container
+# SettingsMap - typed dict-like container
 # ──────────────────────────────────────────────────────────────────────────────
 
 
@@ -110,7 +110,7 @@ class SettingsMap:
         self._store[setting_id] = _coerce(value, meta)
 
     def as_dict(self) -> dict[str, Any]:
-        """Flat {id: value} snapshot — used for serialisation and the dialog."""
+        """Flat {id: value} snapshot, used for serialisation and the dialog."""
         return dict(self._store)
 
     def ids(self) -> list[str]:
@@ -256,7 +256,7 @@ class SettingListItem:
 
 
 # Declares the UI tree order, icons, and tab grouping.
-# The Setting objects are the single source of truth — referenced, not copied.
+# The Setting objects are the single source of truth, referenced, not copied.
 SETTINGS_CATEGORIES: list[SettingListItem] = [
     SettingListItem(
         id="ui",
@@ -391,7 +391,7 @@ class Config:
         self.logger = Logger("ConfigManager")
 
         if not self.config_folder.exists():
-            self.logger.info("Config folder doesn't exist — creating it…")
+            self.logger.info("Config folder doesn't exist, creating it...")
             self.config_folder.mkdir(parents=True)
 
         self.config_file = self.config_folder / config_file
@@ -418,10 +418,10 @@ class Config:
             with open(self.config_file) as f:
                 return json.load(f)
         except FileNotFoundError:
-            self.logger.info(f"{self.config_file} not found — using defaults.")
+            self.logger.info(f"{self.config_file} not found, using defaults.")
             return {}
         except json.JSONDecodeError:
-            self.logger.error(f"{self.config_file} is invalid JSON — using defaults.")
+            self.logger.error(f"{self.config_file} is invalid JSON, using defaults.")
             return {}
 
     def apply(self, changes: dict[str, Any]) -> None:
@@ -434,7 +434,7 @@ class Config:
                 self.settings.set_by_id(key, value)
                 self._raw[key] = self.settings.get_by_id(key)
             except KeyError:
-                self.logger.warning(f"apply(): unknown setting id {key!r} — ignored")
+                self.logger.warning(f"apply(): unknown setting id {key!r}, ignored")
 
     def save(self) -> None:
         # Persist managed settings
@@ -450,7 +450,7 @@ class Config:
         self.logger.info(f"Configuration saved to {self.config_file}")
 
     def get_raw(self, key: str, default: T) -> T:
-        """Low-level raw access — prefer config.settings[SETTINGS.X]."""
+        """Low-level raw access, prefer config.settings[SETTINGS.X]."""
         return self._raw.get(key, default)
 
 

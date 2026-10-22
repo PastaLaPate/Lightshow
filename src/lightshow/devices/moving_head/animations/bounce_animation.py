@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from itertools import cycle
 
+from lightshow.devices.animations import FlickerCommand
 from lightshow.devices.animations.aanimation import RGB, FadeCommand
 from lightshow.devices.moving_head.moving_head_animations import (
     AMHAnimation,
@@ -31,7 +32,8 @@ class BounceAnimation(AMHAnimation):
         # Arc height as a function of progress, in 0..1 (0 = bottom of the
         # top range, 1 = top). Peaks at the middle, lower at the sides.
         self.y_f = lambda x: 0.7 - 2 * (x - 0.5) ** 2
-        self.color = RGB(255, 255, 255)
+        self.base_color = RGB(255, 255, 255)
+        self.color: RGB | FlickerCommand | FadeCommand = self.base_color
 
     def setRGB(self, color_mode: COLOR_MODE):
         self.color_mode = color_mode
@@ -83,9 +85,13 @@ class BounceAnimation(AMHAnimation):
             v = self._compute_required_velocity(dt if dt > 0 else 1 / 60)
             self.velocity = max(v, 0.2)
 
-        # Update color
-        color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
-        self.color = self.apply_transformer(color, audio_data)
+        if not isTick:  # beat: pick a new color, once
+            self.base_color = (
+                next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
+            )
+            self.color = self.apply_transformer(self.base_color, audio_data)
+        elif self.transformer and self.transformer.reactive():
+            self.color = self.apply_transformer(self.base_color, audio_data)
 
         # Progress 0..1 -> normalized -1..1 -> servo angles
         x = 2.0 * self.cycle_progress - 1.0
