@@ -127,3 +127,7 @@ class PathSelector(QWidget):
     def setFilters(self, filters: list[str]):
         """Set file filters."""
         self._filters = filters
+
+    def setEnabled(self, enabled: bool):
+        self._path_edit.setEnabled(enabled)
+        self._browse_btn.setEnabled(enabled)

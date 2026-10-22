@@ -105,4 +105,8 @@ class NumericSliderSpinBox(QWidget):
         else:
             self.spinbox.setValue(value)
 
-    # TODO: Might need to override setLocked
+    def setEnabled(self, enabled: bool) -> None:
+        assert self.spinbox is not None
+        assert self.slider is not None
+        self.spinbox.setEnabled(enabled)
+        self.slider.setEnabled(enabled)

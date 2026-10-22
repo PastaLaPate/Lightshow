@@ -28,14 +28,27 @@ from lightshow.gui.utils import ui_signals
 
 class MovingHeadSettings(BaseDeviceSettings):
     ip: str = StrField(
-        "IP", "", placeholder="0.0.0.0", validation_scheme=ValidationScheme.IP
+        "IP",
+        "",
+        placeholder="0.0.0.0",
+        validation_scheme=ValidationScheme.IP,
+        connected_readonly=True,
     )
-    port: int = IntField("Port", 3000)
-    color_test: str = StrField("Color", widget=WidgetType.ColorPicker)
+    port: int = IntField(
+        "Port",
+        3000,
+        connected_readonly=True,
+    )
+    color_test: str = StrField(
+        "Color",
+        widget=WidgetType.ColorPicker,
+        connected_readonly=True,
+    )
     file_test: str = FileSelectorField(
         "File",
         filters=[],
         file_mode=QFileDialog.FileMode.Directory,
+        connected_readonly=True,
     )
 
 

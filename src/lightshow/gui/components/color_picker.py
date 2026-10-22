@@ -69,3 +69,7 @@ class ColorPicker(QWidget):
             self.color_changed.emit(color.name(QColor.NameFormat.HexRgb))
         else:
             self._textedit.setText(self._color.name(QColor.NameFormat.HexRgb))
+
+    def setEnabled(self, enabled: bool):
+        self._textedit.setEnabled(enabled)
+        self._preview_btn.setEnabled(enabled)

@@ -95,6 +95,9 @@ class DeviceProps(QWidget):
 
         self.setLayout(layout)
 
+    def set_connected(self, connected: bool):
+        self.form.set_connected(connected)
+
     def render_device(self, entry: DeviceEntry):
         self.form.construct(DEVICE_CLASSES[entry.type_name].CONFIG_SCHEMA, entry.config)
 
