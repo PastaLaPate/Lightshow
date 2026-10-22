@@ -95,7 +95,7 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
                 raise ConnectionError("Not received resetIndex, ip problem?")
         except ConnectionError as e:
             self.logger.error(f"Error connecting to {self.ip}: {e}")
-            ui_signals.show_error.emit(
+            ui_signals.dialogs.show_error.emit(
                 "Connection Error",
                 f"Failed to connect to {self.ip}. Please check the IP address and ensure the device is powered on. Error details: {traceback.format_exc()}",
             )
@@ -162,7 +162,7 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
 
         except ConnectionError as e:
             self.logger.error(f"Error sending message : {e}")
-            ui_signals.show_error.emit(
+            ui_signals.dialogs.show_error.emit(
                 "Connection Error",
                 f"Failed to send message to {self.ip}. Error details: {traceback.format_exc()}",
             )

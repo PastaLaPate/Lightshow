@@ -121,7 +121,7 @@ class LoopbackAudioCapture(AAudioCapture):
         except Exception:  # noqa: BLE001
             self.logger.error(f"Loopback capture error: {traceback.format_exc()}")
 
-            ui_signals.show_error.emit(
+            ui_signals.dialogs.show_error.emit(
                 "Audio Error",
                 f"Loopback stream start failed: \n {traceback.format_exc()}",
             )
@@ -167,7 +167,7 @@ class LoopbackAudioCapture(AAudioCapture):
                             dead.append(listener)
                     except Exception:  # noqa
                         self.logger.error(f"Listener error: {traceback.format_exc()}")
-                        ui_signals.show_error.emit(
+                        ui_signals.dialogs.show_error.emit(
                             "Audio Error",
                             f"Error in callback for listener '{listener.__class__.__name__}': \n {traceback.format_exc()}",
                         )
@@ -177,7 +177,7 @@ class LoopbackAudioCapture(AAudioCapture):
                 processed += 1
             except Exception as e:  # noqa
                 self.logger.error(f"Queue drain error: {e}")
-                ui_signals.show_error.emit(
+                ui_signals.dialogs.show_error.emit(
                     "Audio Error",
                     f"An error occurred while processing queued samples: \n {traceback.format_exc()}",
                 )
@@ -275,11 +275,11 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
             for listener in self.pending_listeners:
                 self.audio_capture.add_listener(listener)
             self.pending_listeners.clear()
-            ui_signals.streaming_status_changed.emit(True)
+            ui_signals.audio.streaming_status_changed.emit(True)
 
         except Exception as e:  # noqa
             self.logger.error(f"reinit_stream failed: {e}")
-            ui_signals.show_error.emit(
+            ui_signals.dialogs.show_error.emit(
                 "Audio Error",
                 f"Loopback stream init failed: \n {traceback.format_exc()}",
             )
@@ -325,7 +325,7 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
         except Exception:  # noqa
             self.logger.error(f"start_stream failed: {traceback.format_exc()}")
 
-            ui_signals.show_error.emit(
+            ui_signals.dialogs.show_error.emit(
                 "Audio Error",
                 f"Loopback stream start failed: \n {traceback.format_exc()}",
             )
@@ -336,7 +336,7 @@ class LoopbackAudioStreamHandler(AAudioStreamHandler):
             self.audio_capture.stop()
             self.pending_listeners = self.audio_capture.listeners.copy()
             self.audio_capture = None
-            ui_signals.streaming_status_changed.emit(False)
+            ui_signals.audio.streaming_status_changed.emit(False)
 
     def close(self) -> None:
         self.stop_stream()

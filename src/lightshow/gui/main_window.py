@@ -72,9 +72,9 @@ class UIManager(QMainWindow):
             SETTINGS_CATEGORIES, saved_values=global_config.settings.as_dict()
         )
 
-        ui_signals.settings_changed.connect(self._apply_settings)
-        ui_signals.show_error.connect(self._show_error_dialog)
-        ui_signals.show_info.connect(self._show_info_dialog)
+        ui_signals.settings.changed.connect(self._apply_settings)
+        ui_signals.dialogs.show_error.connect(self._show_error_dialog)
+        ui_signals.dialogs.show_info.connect(self._show_info_dialog)
 
         # Setup UI
         self._setup_ui()
@@ -257,7 +257,7 @@ class UIManager(QMainWindow):
                     self.device_details.connect_button.setText("Connect")
                     self.device_details.connect_button.setEnabled(True)
                 self.ui_signals.connection_status_changed.emit("Disconnected")
-                self.ui_signals.show_error.emit(
+                self.ui_signals.dialogs.show_error.emit(
                     "Connection error",
                     f"Failed to connect to device. Error details: {traceback.format_exc()}",
                 )

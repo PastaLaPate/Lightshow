@@ -114,10 +114,10 @@ class DeviceDetailsPanel(BasePanel):
             DeviceStatus.CONNECTED: "Disconnect from device",
         }
 
-        ui_signals.device_selected.connect(self._on_device_selected)
-        ui_signals.device_renamed.connect(self._on_device_renamed)
-        ui_signals.device_status_changed.connect(self._on_device_status_changed)
-        ui_signals.field_set.connect(self.set_field)
+        ui_signals.devices.selected.connect(self._on_device_selected)
+        ui_signals.devices.renamed.connect(self._on_device_renamed)
+        ui_signals.devices.status_changed.connect(self._on_device_status_changed)
+        ui_signals.devices.field_set.connect(self.set_field)
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the device details panel UI elements."""
@@ -165,7 +165,7 @@ class DeviceDetailsPanel(BasePanel):
 
     def rename_device(self, new_name: str):
         if self.current_device is not None:
-            ui_signals.rename_device.emit(self.current_device, new_name)
+            ui_signals.devices_req.rename.emit(self.current_device, new_name)
 
     def set_field(self, id: str, name: str, value: Any):
         if self.current_device != id:
@@ -185,7 +185,7 @@ class DeviceDetailsPanel(BasePanel):
 
     def _on_field_changed(self, name: str, value: Any):
         if self.current_device is not None:
-            ui_signals.set_field.emit(self.current_device, name, value)
+            ui_signals.devices_req.set_field.emit(self.current_device, name, value)
 
     def _on_device_selected(self, device_id: str | None):
         assert self.stacked_layout is not None

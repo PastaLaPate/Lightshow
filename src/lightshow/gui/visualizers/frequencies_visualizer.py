@@ -183,7 +183,7 @@ class FrequenciesVisualizer(QWidget):
         except Exception:  # noqa
             if not self._error_shown:  # don't spam a dialog at 60 Hz
                 self._error_shown = True
-                ui_signals.show_error.emit(
+                ui_signals.dialogs.show_error.emit(
                     "UI Error",
                     f"Error when updating frequencies visualizer: \n {traceback.format_exc()}",
                 )

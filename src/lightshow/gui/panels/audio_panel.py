@@ -55,8 +55,10 @@ class AudioPanel(BasePanel):
         self.spectrumWidget = QWidget()
         self.logs = Logs()
 
-        ui_signals.streaming_status_changed.connect(self._on_stream_status_changed)
-        ui_signals.settings_changed.connect(self._on_settings_changed)
+        ui_signals.audio.streaming_status_changed.connect(
+            self._on_stream_status_changed
+        )
+        ui_signals.settings.changed.connect(self._on_settings_changed)
 
         self.fetch_audio_devices()
 
@@ -158,9 +160,9 @@ class AudioPanel(BasePanel):
     def _stream_button_callback(self):
         """Handle stream button clicks."""
         if not self.is_streaming:
-            ui_signals.start_stream.emit()
+            ui_signals.audio_req.start_stream.emit()
         else:
-            ui_signals.stop_stream.emit()
+            ui_signals.audio_req.stop_stream.emit()
 
     def _on_stream_status_changed(self, status: bool):
         self.is_streaming = status
@@ -173,7 +175,7 @@ class AudioPanel(BasePanel):
         try:
             if self.device_combo:
                 app_data = self.device_combo.currentText()
-                ui_signals.set_audio_device.emit(
+                ui_signals.audio_req.set_device.emit(
                     AudioDevice.from_dict(self.audio_devices[app_data])
                 )
         except Exception as e:  # noqa

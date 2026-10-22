@@ -291,7 +291,7 @@ class SettingsDialog(QDialog, BasePanel):
 
     def _on_apply(self) -> None:
         if self._pending_changes:
-            ui_signals.settings_changed.emit(dict(self._pending_changes))
+            ui_signals.settings.changed.emit(dict(self._pending_changes))
             self._pending_changes.clear()
 
     def _on_accept(self) -> None:

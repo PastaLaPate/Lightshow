@@ -11,15 +11,15 @@ from lightshow.gui.utils import ui_signals
 class DeviceController(QObject):
     def __init__(self) -> None:
         super().__init__(None)
-        ui_signals.create_device.connect(self.handle_create_device)
-        ui_signals.rename_device.connect(self.handle_rename_device)
-        ui_signals.set_field.connect(self.handle_set_field)
-        ui_signals.delete_device.connect(self.handle_delete_device)
+        ui_signals.devices_req.create.connect(self.handle_create_device)
+        ui_signals.devices_req.rename.connect(self.handle_rename_device)
+        ui_signals.devices_req.set_field.connect(self.handle_set_field)
+        ui_signals.devices_req.delete.connect(self.handle_delete_device)
 
         # global_config.device_store.device_added.connect(ui_signals.new_device) Handled via handle_create_device, to attribute a name
-        global_config.device_store.device_renamed.connect(ui_signals.device_renamed)
+        global_config.device_store.device_renamed.connect(ui_signals.devices.renamed)
         global_config.device_store.device_changed.connect(self.send_field_set)
-        global_config.device_store.device_removed.connect(ui_signals.device_deleted)
+        global_config.device_store.device_removed.connect(ui_signals.devices.deleted)
 
     def handle_create_device(self, device_type: DeviceTypeName, name: str | None):
         with global_history.transaction(
@@ -29,7 +29,7 @@ class DeviceController(QObject):
             global_config.device_store.rename_device(
                 id, name or f"Device {len(global_config.device_store.all()) + 1}"
             )
-            ui_signals.new_device.emit(id)
+            ui_signals.devices.created.emit(id)
 
     def handle_rename_device(self, id: str, new_name: str):
         if not self.id_exists(id) or new_name == "":
@@ -51,10 +51,10 @@ class DeviceController(QObject):
 
         with global_history.transaction(f"Delete device {id}"):
             global_config.device_store.delete_device(id)
-            ui_signals.device_selected.emit(None)
+            ui_signals.devices.selected.emit(None)
 
     def send_field_set(self, id: str, field: str):
-        ui_signals.field_set.emit(
+        ui_signals.devices_req.set_field.emit(
             id, field, getattr(global_config.device_store.get(id).config, field)
         )
 

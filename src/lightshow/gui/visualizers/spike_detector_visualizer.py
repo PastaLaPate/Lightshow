@@ -188,7 +188,7 @@ class SpikeDetectorVisualizer(QWidget):
             except Empty:
                 break
             except Exception:  # noqa
-                ui_signals.show_error.emit(
+                ui_signals.dialogs.show_error.emit(
                     "UI Error",
                     f"Error when updating spike detector visualizer: \n {traceback.format_exc()}",
                 )
@@ -249,7 +249,7 @@ class SpikeDetectorVisualizer(QWidget):
 
             self.global_index += 1
         except Exception:  # noqa
-            ui_signals.show_error.emit(
+            ui_signals.dialogs.show_error.emit(
                 "UI Error",
                 f"Error when updating spike detector visualizer: \n {traceback.format_exc()}",
             )

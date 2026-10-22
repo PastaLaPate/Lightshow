@@ -48,9 +48,9 @@ class DevicesPanel(BasePanel):
         self.device_listbox: DeviceListWidget | None = None
         self.device_type_combo: QComboBox | None = None
 
-        ui_signals.new_device.connect(self._device_created)
-        ui_signals.device_renamed.connect(self._device_renamed)
-        ui_signals.device_deleted.connect(self.refresh_list)
+        ui_signals.devices.created.connect(self._device_created)
+        ui_signals.devices.renamed.connect(self._device_renamed)
+        ui_signals.devices.deleted.connect(self.refresh_list)
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the devices panel UI elements."""
@@ -110,7 +110,9 @@ class DevicesPanel(BasePanel):
             return
         current_item = self.device_listbox.currentItem()
         if current_item:
-            ui_signals.device_selected.emit(current_item.data(Qt.ItemDataRole.UserRole))
+            ui_signals.devices.selected.emit(
+                current_item.data(Qt.ItemDataRole.UserRole)
+            )
 
     def _on_item_renamed(self, item: QListWidgetItem):
         device_id = item.data(Qt.ItemDataRole.UserRole)
@@ -123,7 +125,7 @@ class DevicesPanel(BasePanel):
         ):
             return
 
-        ui_signals.rename_device.emit(device_id, new_name)
+        ui_signals.devices_req.rename.emit(device_id, new_name)
 
     def _device_renamed(self, device_id: str, new_name: str):
         assert self.device_listbox is not None
@@ -146,7 +148,7 @@ class DevicesPanel(BasePanel):
             (t for t in list(DeviceTypeName) if t.value == device_type_name),
             DeviceTypeName.MOVING_HEAD,
         )
-        ui_signals.create_device.emit(device_type, "")
+        ui_signals.devices_req.create.emit(device_type, "")
 
     def _delete_selected_device(self):
         """Delete the currently selected device."""
@@ -157,7 +159,7 @@ class DevicesPanel(BasePanel):
             return
         device_id = current_item.data(Qt.ItemDataRole.UserRole)
         if device_id in global_config.device_store.all():
-            ui_signals.delete_device.emit(device_id)
+            ui_signals.devices_req.delete.emit(device_id)
 
     def _duplicate_device(self, device_id: str):
         """Duplicate an existing device with a new unique ID."""
@@ -200,7 +202,7 @@ class DevicesPanel(BasePanel):
         for device in list(DeviceTypeName):
             new_device_action = QAction(device.value, parent=self.device_listbox)
             new_device_action.triggered.connect(
-                partial(ui_signals.create_device.emit, device, "")
+                partial(ui_signals.devices_req.create.emit, device, "")
             )
             new_action.addAction(new_device_action)
         menu.addMenu(new_action)
