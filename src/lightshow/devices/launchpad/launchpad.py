@@ -32,6 +32,7 @@ from lightshow.devices.status import DeviceStatus
 from lightshow.devices.types import (
     BaseDeviceSettings,
     DeviceTypeName,
+    FixtureCalibration,
     PacketData,
     PacketStatus,
     PacketType,
@@ -168,10 +169,12 @@ class MovingHeadPanelSlot(PanelSlot):
         for local_idx in self.idx_to_note:
             self.watchKey(local_idx, self._on_pressed, self._on_released)
 
-    def set_current_anim(self, anim: AMHAnimation):
+    def set_current_anim(self, anim: Callable[[FixtureCalibration], AMHAnimation]):
         transformer = self.moving_head.controller.current_anim.transformer
         color_mode = self.moving_head.controller.current_anim.color_mode
-        self.moving_head.controller.current_anim = anim
+        self.moving_head.controller.current_anim = anim(
+            self.moving_head.controller.get_calib()
+        )
         if transformer:
             self.moving_head.controller.current_anim.setTransformer(transformer)
             if self.moving_head.controller._is_circle_animation(
