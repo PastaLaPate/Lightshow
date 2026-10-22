@@ -32,8 +32,9 @@ from lightshow.devices.moving_head.moving_head_colors import (
     COLOR_MODE,
     RAINBOW_KICK_COLORS,
     TRANSFORMERS,
+    BlankTransformer,
+    ColorTransformer,
     DEFAULT_RGBs,
-    RedLowsModulator,
     random_rainbow_color,
 )
 from lightshow.devices.types import FixtureCalibration, PacketStatus, PacketType
@@ -161,31 +162,54 @@ class MovingHeadController:
 
     def rebuild_animations(self) -> None:
         # Called after calibration changed
-        idx = self.anim_list.index(self.current_anim)
         self.break_anim = CIRCLE_BREAK_ANIMATION(self.get_calib())
         self.anim_list = self._build_animations()
-        self._activate(self.anim_list[idx])
-
-    def _activate(self, anim: AMHAnimation) -> None:
-        self.current_anim = anim
-        self.beats_since_anim_change = 0
-        self.color_mode = random.choice(self.color_mode_list)
-
-        if isinstance(anim, HasPalette):
-            anim.setRGB(self.color_mode)
-
-        transformer = random.choice([t for t in TRANSFORMERS if t.filter()(anim)])()
-        anim.setTransformer(transformer)
-
-        if isinstance(anim, ColorOnTick):
-            anim.change_color_on_tick = isinstance(transformer, RedLowsModulator)
-
-        self.device.current_anim = type(anim).__name__
+        self._activate(random.choice(self.anim_list))
 
     def randomAnimation(self) -> None:
         candidates = [a for a in self.anim_list if a is not self.current_anim]
         self._activate(random.choice(candidates or self.anim_list))
         self._send(self._advance(self.current_anim, beat=True), force=True)
+
+    def _activate(self, anim: AMHAnimation) -> None:
+        self.current_anim = anim
+        self.beats_since_anim_change = 0
+        self.set_palette(None)
+        self.set_transformer(
+            random.choice([t for t in TRANSFORMERS if t.filter()(anim)])()
+        )
+        self.device.current_anim = type(anim).__name__
+
+    # public api
+    def set_palette(self, color_mode: COLOR_MODE | None = None) -> None:
+        """Set the palette on the current animation. None = pick a random mode."""
+        if color_mode is None:
+            color_mode = random.choice(self.color_mode_list)
+        self.color_mode = color_mode
+        if isinstance(self.current_anim, HasPalette):
+            self.current_anim.setRGB(color_mode)
+
+    def set_transformer(self, transformer: ColorTransformer) -> None:
+        anim = self.current_anim
+        anim.setTransformer(transformer)
+        if isinstance(anim, ColorOnTick):
+            # Any transformer that follows the audio updates per tick; all others
+            # only on beats. Set on every swap so the flag can never go stale.
+            anim.change_color_on_tick = transformer.reactive()
+
+    def toggle_transformer(self, kind: type[ColorTransformer]) -> None:
+        """Switch `kind` on, or back to Blank if it's already active."""
+        active = isinstance(self.current_anim.transformer, kind)
+        self.set_transformer(BlankTransformer() if active else kind())
+
+    def set_animation(self, factory: AnimationFactory) -> None:
+        """Replace the current animation, keeping the palette and transformer."""
+        previous = self.current_anim
+        self.current_anim = factory(self.get_calib())
+        self.beats_since_anim_change = 0
+        self.set_palette(self.color_mode)
+        self.set_transformer(previous.transformer or BlankTransformer())
+        self.device.current_anim = type(self.current_anim).__name__
 
     # packets
 
