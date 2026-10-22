@@ -211,7 +211,7 @@ class DeviceDetailsPanel(BasePanel):
             self.device_header.set_device_name(entry.config.name)
             self.device_header.set_device_type(entry.type_name)
             self.device_header.set_status(entry.status)
-            self.update_status(entry.status)
             self.device_props.render_device(entry)
+            self.update_status(entry.status)
         else:
             self.stacked_layout.setCurrentIndex(1)
