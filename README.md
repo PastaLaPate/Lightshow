@@ -122,6 +122,21 @@ Build using pyinstaller: `uv run pyinstaller lightshow.linux.spec`
 
 Feel free to open prs to fix code or add new devices.
 
+## AI Policy
+
+In this project like every one I create, code is handwritten and hand-reviewed. AI must strictly be used as a tool, not as a replacment for your brain. AI Use cases:
+
+- Explaining the code base
+- Help for architectural decisions: which pattern to use
+- Find TODOs and give snippet of example code.
+- Help for Libs' usage.
+
+What it musn't be used for:
+
+- Full AI Commit with no review
+- Full architectural decisions without thinking about alternatives
+- Code you don't know how it works.
+
 ## Stack
 
 PyQT6 for ui.
