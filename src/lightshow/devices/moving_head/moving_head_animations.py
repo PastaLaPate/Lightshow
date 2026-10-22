@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Literal, TypedDict
+from typing import Literal, Protocol, TypedDict, runtime_checkable
 
 from lightshow.audio.data import AudioData
 from lightshow.devices.animations.aanimation import (
@@ -15,6 +15,8 @@ from lightshow.devices.moving_head.moving_head_colors import (
     DEFAULT_RGBs,
 )
 from lightshow.devices.types import FixtureCalibration
+
+# TODO: Move those shits in animations modules' __init__ or smth
 
 
 def QUART_OUT(t):
@@ -80,3 +82,13 @@ class AMHAnimation(AAnimation):
             transformed = self.transformer.next(color, audio_data)
             return transformed
         return color
+
+
+@runtime_checkable
+class HasPalette(Protocol):
+    def setRGB(self, color_mode: COLOR_MODE) -> None: ...
+
+
+@runtime_checkable
+class ColorOnTick(Protocol):
+    change_color_on_tick: bool

@@ -13,6 +13,10 @@ class WidgetType(StrEnum):
     Checkbox = "checkbox"
     ColorPicker = "colorpicker"
     FileSelector = "fileselector"
+    Dropdown = "dropdown"  # Dropdown
+
+
+# TODO: Implement a way to have a list of x like list of animations that will be used
 
 
 class ValidationScheme(StrEnum):

@@ -80,9 +80,15 @@ class RGB(Command):  # out of 255
 
 class FlickerCommand(Command):
     color: RGB
-    flicker: int  # Duration in milliseconds
+    flicker: int
 
-    def __init__(self, rgb: RGB, flicker):
+    def __init__(self, rgb: RGB, flicker: int):
+        """Creates a FlickerCommand
+
+        Args:
+            rgb (RGB): color of the flicker.
+            flicker (int): duration in ms of the flicker.
+        """
         self.color = rgb
         self.flicker = flicker
 
@@ -96,9 +102,16 @@ class FlickerCommand(Command):
 class FadeCommand(Command):
     from_: RGB
     to: RGB
-    fade: int  # Duration in milliseconds
+    fade: int
 
     def __init__(self, from_: RGB, to: RGB, fade: int):
+        """Creates a FadeCommand.
+
+        Args:
+            from_ (RGB): color to fade from.
+            to (RGB): color to fade to.
+            fade (int): fade's duration in ms.
+        """
         self.from_ = from_
         self.to = to
         self.fade = fade

@@ -2,12 +2,13 @@ import random
 import time
 import typing
 from collections import deque
-from typing import TypeGuard
 
 import numpy as np
 
+from lightshow.audio.beat_tracker import BeatTracker
 from lightshow.audio.data import AudioData
 from lightshow.core.logger import Logger
+from lightshow.devices.animations import FadeCommand
 from lightshow.devices.animations.aanimation import RGB, FlickerCommand
 from lightshow.devices.device import PacketData
 from lightshow.devices.moving_head.animations import (
@@ -15,15 +16,20 @@ from lightshow.devices.moving_head.animations import (
     BounceAnimation,
     BreakCircleAnimation,
     CircleAnimation,
-    ListAnimation,
     RegularPolygonAnimation,
+)
+from lightshow.devices.moving_head.moving_head_animation_factories import (
+    AnimationFactory,
 )
 from lightshow.devices.moving_head.moving_head_animations import (
     QUART_OUT,
     AMHAnimation,
+    ColorOnTick,
+    HasPalette,
     MHAnimationFrame,
 )
 from lightshow.devices.moving_head.moving_head_colors import (
+    COLOR_MODE,
     RAINBOW_KICK_COLORS,
     TRANSFORMERS,
     DEFAULT_RGBs,
@@ -48,81 +54,96 @@ LEMNISCATE_ANIMATION = lambda calib: BernoulliLemniscateAnimation(
 CIRCLE_BREAK_ANIMATION = lambda calib: BreakCircleAnimation(calib, hue_speed=0.5)
 BOUNCE_ANIMATION = lambda calib: BounceAnimation(calib, rgb=DEFAULT_RGBs)
 
+NS_PER_S = 1e9
+
+
+def now_ns() -> int:
+    return time.monotonic_ns()
+
+
+DEFAULT_ANIMATIONS: tuple[AnimationFactory, ...] = (
+    TRIANGLE_ANIMATION,
+    CIRCLE_ANIMATION,
+    LEMNISCATE_ANIMATION,
+    SQUARE_ANIMATION,
+    BOUNCE_ANIMATION,
+)
+
+
+class FrameLimiter:
+    """Caps how often frames go to the fixture and tracks the achieved FPS."""
+
+    def __init__(self, max_fps: int):
+        self.min_interval_ns = NS_PER_S // max_fps
+        self._next_ns = 0
+        self._sent: deque[int] = deque(maxlen=max_fps * 2)
+
+    def try_acquire(self, force: bool = False) -> bool:
+        now = now_ns()
+        if not force and now < self._next_ns:
+            return False
+        self._next_ns = now + self.min_interval_ns
+        self._sent.append(now)
+        return True
+
+    @property
+    def fps(self) -> float:
+        if len(self._sent) < 2:
+            return 0.0
+        span_s = (self._sent[-1] - self._sent[0]) / NS_PER_S
+        return (len(self._sent) - 1) / span_s if span_s > 0 else 0.0
+
 
 class MovingHeadController:
+    ANIM_CHANGE_AFTER_BEATS = 20
+    BREAK_RAMP_S = 15.0  # break length at which the post-break hold is maxed out
+    BREAK_ADDED_TIME_MAX = 3.0  # s
+    BREAK_FLASH_MIN_NS = NS_PER_S
+    FPS_REPORT_EVERY_NS = 2 * NS_PER_S
+
+    # TODO: Add runtime schema things -> FPS tracker, current anim etc
+
     def __init__(self, device: MovingHead):
         from lightshow.core.config import _Settings, global_config
 
-        self.device = device
-        self.waiting_music = False
+        self.device: MovingHead = device
         self.logger = Logger(f"MovingHeadController{{{device.id}}}")
 
-        # =====================
-        #      Cooldowns
-        # =====================
-        self.next_beat_cool = 0  # In ns Time before a new beat can be processed
-        self.cooldown_time = 0.1 * 1e9  # Cooldown time in nanoseconds (0.3 seconds)
+        self.limiter = FrameLimiter(global_config.settings[_Settings.MAX_FPS] or 60)
+        self.beats = BeatTracker()
 
-        # In seconds
-        self.last_tick = time.time_ns() / 1e9
-
-        # =====================
-        #     Break related
-        # =====================
-        self.BREAK_ADDED_TIME_MAX = 3
-        self.BREAK_ADDED_TIME_CURVE = QUART_OUT
-        self.breaking = False
-        self.breaking_since = 0
-
-        self.beats_since_anim_change = 0
-        self.disable_anim_change = False
-        self.beats_time = deque(maxlen=30)  # last 30 beats to calculate average for BPM
-        self.last_fps_log_time = 0  # Throttle FPS logging
-        self.current_fps = 0  # Store current FPS for display
-
-        self.max_fps = global_config.settings[_Settings.MAX_FPS] or 60
-        self.frame_time = 1 / self.max_fps * 1e9  # For nanoseconds
-        self.next_frame_time = 0
-        self.avg_fps = deque(maxlen=self.max_fps * 2)
-
+        # flags
         self.blackout = False
+        self.waiting_music = False
+        self.breaking = False
+        self.disable_anim_change = False
+        self.beats_since_anim_change: int = 0
+        self.current_fps: float = 0.0
+
+        # private state
+        self.BREAK_ADDED_TIME_CURVE = QUART_OUT
+        self._break_started_ns: int = 0
+        self._hold_until_ns: int = (
+            0  # After break, due to FlickerCommand, wait until x to send frames
+        )
+        self._last_tick_ns: int = now_ns()
+        self._last_fps_report_ns: int = 0
+        self._active_oneshot: FadeCommand | FlickerCommand | None = None
 
         self.latest_audio_data = AudioData(np.zeros(20000))
 
-        self.break_anim = CIRCLE_BREAK_ANIMATION(self.get_calib())
-
-        self.init_lists()
-        self.init_state()
-
-    def init_lists(self):
-        self.anim_list: list[AMHAnimation] = [
-            TRIANGLE_ANIMATION(self.get_calib()),
-            CIRCLE_ANIMATION(self.get_calib()),
-            LEMNISCATE_ANIMATION(self.get_calib()),
-            SQUARE_ANIMATION(self.get_calib()),
-            BOUNCE_ANIMATION(self.get_calib()),
-        ]
-        self.color_mode_list = [
+        # animations
+        self.color_mode_list: list[COLOR_MODE] = [
             RAINBOW_KICK_COLORS,
             random_rainbow_color,
         ]
+        self.color_mode: COLOR_MODE = RAINBOW_KICK_COLORS
+        self.break_anim: AMHAnimation = CIRCLE_BREAK_ANIMATION(self.get_calib())
+        self.anim_list: list[AMHAnimation] = self._build_animations()
+        self.current_anim: AMHAnimation = random.choice(self.anim_list)
+        self._activate(self.current_anim)
 
-    def init_state(self):
-        self.current_anim = random.choice(self.anim_list)
-        self.color_mode = self._select_color_mode_for_anim(self.current_anim)
-        self.update_anim_color_mode()
-        self.device.current_anim = self.current_anim.__class__.__name__
-        # self.device.showed_props_update()
-
-    def _is_circle_animation(
-        self, anim
-    ) -> TypeGuard[CircleAnimation | BernoulliLemniscateAnimation]:
-        """Check if animation is a circle-like animation."""
-        return isinstance(anim, (CircleAnimation, BernoulliLemniscateAnimation))
-
-    def _select_color_mode_for_anim(self, anim):
-        """Select appropriate color mode for the given animation."""
-        return random.choice(self.color_mode_list)
+    # animations
 
     def get_calib(self) -> FixtureCalibration:
         config = self.device.config
@@ -134,194 +155,162 @@ class MovingHeadController:
             servo_limits=(0, 180),
         )
 
-    def update_anim_color_mode(self):
-        if isinstance(
-            self.current_anim,
-            (
-                ListAnimation,
-                CircleAnimation,
-                RegularPolygonAnimation,
-                BounceAnimation,
-            ),
-        ):
-            self.current_anim.setRGB(self.color_mode)
-        available_transformers = [
-            trans for trans in TRANSFORMERS if trans.filter()(self.current_anim)
-        ]
-        self.current_anim.setTransformer(random.choice(available_transformers)())
-        if self._is_circle_animation(self.current_anim):
-            self.current_anim.change_color_on_tick = isinstance(
-                self.current_anim.transformer, RedLowsModulator
-            )
-        """
-        if len(self.beats_time) > 1:
-            bpm = self.calcBPM()
-            if bpm < 100:
-                self.current_anim.setTransformer(toFadeBlack)"""
+    def _build_animations(self) -> list[AMHAnimation]:
+        calib = self.get_calib()
+        return [factory(calib) for factory in DEFAULT_ANIMATIONS]
 
-    def calcBPM(self):
-        # Convert nanoseconds to seconds by dividing by 1e9
-        time_diffs = np.diff(self.beats_time) / 1e9
-        if len(time_diffs) == 0:
-            return 0  # Avoid division by zero if there are no differences
-        return 60 / np.mean(time_diffs)  # Convert to BPM
+    def rebuild_animations(self) -> None:
+        # Called after calibration changed
+        idx = self.anim_list.index(self.current_anim)
+        self.break_anim = CIRCLE_BREAK_ANIMATION(self.get_calib())
+        self.anim_list = self._build_animations()
+        self._activate(self.anim_list[idx])
 
-    def randomAnimation(self):
-        self.current_anim = random.choice(
-            [x for x in self.anim_list if x != self.current_anim] or self.anim_list
-        )
-        # Select a different color mode appropriate for the new animation
-        self.color_mode = self._select_color_mode_for_anim(self.current_anim)
+    def _activate(self, anim: AMHAnimation) -> None:
+        self.current_anim = anim
         self.beats_since_anim_change = 0
-        self.update_anim_color_mode()
-        self.device.current_anim = self.current_anim.__class__.__name__
-        # self.device.showed_props_update()
-        frm = self.current_anim.next(
-            self.latest_audio_data,
-            False,
-            time.time_ns() / 1e9 - self.last_tick,
-        )
-        self.last_tick = time.time_ns() / 1e9
-        self.updateFromFrame(frm)
+        self.color_mode = random.choice(self.color_mode_list)
 
-    def handlePacket(self, packet: PacketData):
+        if isinstance(anim, HasPalette):
+            anim.setRGB(self.color_mode)
 
-        if packet.packet_type == PacketType.FLICKER:
-            if packet.packet_status == PacketStatus.ON:
-                # Trigger a strobe/flicker effect.
-                # Duration is set high (e.g., 60s) because we stop it manually on OFF
-                self.device.sendCommand(FlickerCommand(RGB(255, 255, 255), 60000))
-                return
-            else:
-                self.device.sendCommands([RGB(0, 0, 0)])
+        transformer = random.choice([t for t in TRANSFORMERS if t.filter()(anim)])()
+        anim.setTransformer(transformer)
 
+        if isinstance(anim, ColorOnTick):
+            anim.change_color_on_tick = isinstance(transformer, RedLowsModulator)
+
+        self.device.current_anim = type(anim).__name__
+
+    def randomAnimation(self) -> None:
+        candidates = [a for a in self.anim_list if a is not self.current_anim]
+        self._activate(random.choice(candidates or self.anim_list))
+        self._send(self._advance(self.current_anim, beat=True), force=True)
+
+    # packets
+
+    def handlePacket(self, packet: PacketData) -> None:
+
+        if self._handle_flicker(packet):
+            return
         if self.blackout:
             self.device.sendCommand(RGB(0, 0, 0))
             return
 
         if packet.audio_data:
             self.latest_audio_data = packet.audio_data
-        if self.beats_since_anim_change > 20 and not self.disable_anim_change:
+
+        if (
+            self.beats_since_anim_change > self.ANIM_CHANGE_AFTER_BEATS
+            and not self.disable_anim_change
+        ):
             self.randomAnimation()
 
-        match packet.packet_type:
-            case PacketType.NEW_MUSIC:
-                self.handleNewMusic(packet)
-            case PacketType.BREAK:
-                self.handleBreak(packet)
+        if packet.packet_type == PacketType.NEW_MUSIC:
+            self._on_new_music(packet)
+        elif packet.packet_type == PacketType.BREAK:
+            self._on_break(packet)
+
         if self.breaking or self.waiting_music:
-            self.tickFillingAnim()
+            self._send(self._advance(self.break_anim, beat=False))
             return
-        self.tickCurrentAnim()
 
+        if not self._holding():
+            self._send(self._advance(self.current_anim, beat=False))
         if packet.packet_type == PacketType.BEAT:
-            self.handleBeat(packet)
-        # Change animation after 14 beats
+            self._on_beat(packet)
 
-    def updateFromFrame(self, frame: MHAnimationFrame):
-        if self.next_frame_time > time.time_ns() or frame["duration"] == -1:
-            return
-        self.next_frame_time = time.time_ns() + self.frame_time
-        self.avg_fps.append(time.time_ns())
-        color = frame["rgb"]
-        """
-        self.device.sendCommand(color)
-        self.device.sendCommand(frame["baseServo"])
-        self.device.sendCommand(frame["topServo"])
-        """
-        self.device.sendCommands([color, frame["baseServo"], frame["topServo"]])
-
-    def calcAverageFPS(self):
-        if len(self.avg_fps) < 2:
-            return 0.0  # Not enough data to calculate FPS
-        # Calculate time differences between consecutive frames (in seconds)
-        time_diffs = np.diff(self.avg_fps) / 1e9
-        # Calculate average FPS
-        return float(1 / np.mean(time_diffs))
-
-    def tickFillingAnim(self):
-        self.updateFromFrame(
-            self.break_anim.next(
-                self.latest_audio_data,
-                True,
-                time.time_ns() / 1e9 - self.last_tick,
-            )
-        )
-        self.last_tick = time.time_ns() / 1e9
-
-    def tickCurrentAnim(self):
-        if time.time_ns() < self.next_beat_cool:
-            # Skip tick
+    def _handle_flicker(self, packet: PacketData) -> bool:
+        # Returns if packet was handled
+        if packet.packet_type != PacketType.FLICKER:
             return False
-        self.updateFromFrame(
-            self.current_anim.next(
-                self.latest_audio_data,
-                True,
-                time.time_ns() / 1e9 - self.last_tick,
-            )
-        )
-        self.last_tick = time.time_ns() / 1e9
+        if packet.packet_status == PacketStatus.ON:
+            # Flicker for 60s (stopped manually)
+            self.device.sendCommand(FlickerCommand(RGB(255, 255, 255), 60_000))
+            return True
+        self.device.sendCommands([RGB(0, 0, 0)])
+        self._active_oneshot = None
+        return False
 
-    def handleNewMusic(self, packet: PacketData):
+    def _on_new_music(self, packet: PacketData) -> None:
         if packet.packet_status == PacketStatus.ON:
             self.waiting_music = True
             self.breaking = False
-            self.cooldown_time = 0
-            self.beats_time.clear()
+            self.beats.clear()
         else:
             self.waiting_music = False
 
-    def handleBreak(self, packet: PacketData):
-        current_time = time.time_ns()
-        if packet.packet_type == PacketType.BREAK:
-            if packet.packet_status == PacketStatus.OFF:
-                self.breaking = False
-                self.beats_time.extend(
-                    [x + current_time - self.breaking_since for x in self.beats_time]
-                )
-                added_time_t = min((current_time - self.breaking_since) / 1e9 / 15, 1.0)
-                added_time = (
-                    self.BREAK_ADDED_TIME_CURVE(added_time_t)
-                    * self.BREAK_ADDED_TIME_MAX
-                )
-                self.randomAnimation()
-                # Block tick and flicker only if the break was long enough
-                if self.breaking_since > 1e9:
-                    self.next_beat_cool = (
-                        current_time + added_time * 1e9
-                    )  # Set next cooldown to 2 seconds
-                    self.device.sendCommand(
-                        FlickerCommand(RGB(255, 255, 255), (2 + added_time) * 1000)
-                    )
-            else:
-                self.breaking_since = current_time
-                self.breaking = True
-
-    def handleBeat(self, packet: PacketData):
-        # Throttle FPS logging to every 2 seconds
-        current_time = time.time_ns()
-        if current_time - self.last_fps_log_time > 2 * 1e9:
-            from lightshow.gui.main_window import UIManager
-
-            # Store FPS in a way that can be accessed for display
-            fps_value = self.calcAverageFPS()
-            self.current_fps = fps_value
-            self.last_fps_log_time = current_time
-            UIManager.get().stats_panel.update_fps(fps_value)
-
+    def _on_break(self, packet: PacketData) -> None:
+        now = now_ns()
         if packet.packet_status == PacketStatus.ON:
-            self.beats_time.append(time.time_ns())
-            if time.time_ns() < self.next_beat_cool:
-                # Skip beat
-                return False
-            self.beats_since_anim_change += 1
-            self.next_beat_cool += self.cooldown_time
-            frame = self.current_anim.next(
-                self.latest_audio_data,
-                False,
-                time.time_ns() / 1e9 - self.last_tick,
+            self._break_started_ns = now
+            self.breaking = True
+            return
+
+        self.breaking = False
+        duration_ns = now - self._break_started_ns
+        self.beats.shift(duration_ns)
+
+        ramp = min(duration_ns / NS_PER_S / self.BREAK_RAMP_S, 1.0)
+        extra_s = self.BREAK_ADDED_TIME_CURVE(ramp) * self.BREAK_ADDED_TIME_MAX
+
+        self.randomAnimation()
+        if duration_ns > self.BREAK_FLASH_MIN_NS:
+            self._hold_until_ns = now + int(extra_s * NS_PER_S)
+            self.device.sendCommand(
+                FlickerCommand(RGB(255, 255, 255), (2 + extra_s) * 1000)
             )
-            self.last_tick = time.time_ns() / 1e9
-            self.updateFromFrame(frame)
-            # bpm = self.calcBPM()
-            # print(f"bpm: {bpm}")
+
+    def _on_beat(self, packet: PacketData) -> None:
+        self._report_fps()
+        if packet.packet_status == PacketStatus.OFF:
+            return
+        self.beats.record()
+        if self._holding() or not self.beats.accept():
+            return
+        self.beats_since_anim_change += 1
+        self._send(self._advance(self.current_anim, beat=True), force=True)
+
+    # helpers
+    @property
+    def filling(self) -> bool:
+        return self.breaking or self.waiting_music
+
+    def _holding(self) -> bool:
+        return now_ns() < self._hold_until_ns
+
+    def _advance(self, anim: AMHAnimation, beat: bool) -> MHAnimationFrame:
+        now = now_ns()
+        dt = (now - self._last_tick_ns) / NS_PER_S
+        self._last_tick_ns = now
+        return anim.next(self.latest_audio_data, not beat, dt)
+
+    def _send(self, frame: MHAnimationFrame, force: bool = False) -> None:
+        # Send a frame, force ignores the limiter
+        if frame["duration"] == -1:
+            return
+        if not self.limiter.try_acquire(force):
+            return
+
+        color = frame["rgb"]
+        if isinstance(color, (FadeCommand, FlickerCommand)):
+            # One-shot: send each object once, even if the animation keeps returning it
+            if color is self._active_oneshot:
+                color_cmds = []
+            else:
+                self._active_oneshot = color
+                color_cmds = [color]
+        else:
+            color_cmds = [color]
+
+        self.device.sendCommands([*color_cmds, frame["baseServo"], frame["topServo"]])
+
+    def _report_fps(self) -> None:
+        now = now_ns()
+        if now - self._last_fps_report_ns < self.FPS_REPORT_EVERY_NS:
+            return
+        from lightshow.gui.main_window import UIManager
+
+        self.current_fps = self.limiter.fps
+        self._last_fps_report_ns = now
+        UIManager.get().stats_panel.update_fps(self.current_fps)
