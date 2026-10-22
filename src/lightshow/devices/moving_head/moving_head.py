@@ -66,18 +66,11 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
         self.socket = None
         self.packetIndex = 0
 
-        self.device_name = ""  # Eg "Living Room Moving Head"
-
         self.manual = False
         self.auto_tick = False
         self.current_anim = ""
+
         self.controller = MovingHeadController(self)
-        self.base_offset = 0
-        self.base_range = (0, 180)
-        self.base_servo_range = f"({self.base_range[0]},{self.base_range[1]})"
-        self.top_offset = 0
-        self.top_range = (0, 180)
-        self.top_servo_range = f"({self.top_range[0]},{self.top_range[1]})"
 
         # Packet queue for async processing
         self._packet_queue = []
@@ -103,7 +96,6 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
                 self.addr = (self.config.ip, 1234)
                 self.packetIndex = 0
                 self.udp_address = f"{self.config.ip}:1234"
-                # self.showed_props_update()
                 self.logger.info(f"Successfully tested connection to {self.config.ip}")
             else:
                 raise ConnectionError("Not received resetIndex, ip problem?")
