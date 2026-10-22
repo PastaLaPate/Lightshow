@@ -4,6 +4,8 @@ version = "0.32.1"
 description = ""
 readme = "README.md"
 requires-python = ">=3.14"
+license = "AGPL-3.0-or-later"
+license-files = ["LICENSE"]
 dependencies = [
   "dbus-next>=0.2.3",
   "distro>=1.9.0",
