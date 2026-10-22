@@ -12,6 +12,7 @@ from lightshow.devices.device import (
     OutputDevice,
 )
 from lightshow.devices.fields import (
+    BoolField,
     IntField,
     StrField,
     ValidationScheme,
@@ -24,6 +25,7 @@ from lightshow.gui.utils import ui_signals
 
 
 class MovingHeadSettings(BaseDeviceSettings):
+    # Connection
     ip: str = StrField(
         "IP",
         "",
@@ -36,12 +38,22 @@ class MovingHeadSettings(BaseDeviceSettings):
         8080,
         connected_readonly=True,
     )
-
     udp_port: int = IntField(
         "UDP Port",
         1234,
         connected_readonly=True,
     )
+
+    # Ranges
+    min_base_angle: int = IntField("Min Base Angle", 0, min=0, max=180)
+    max_base_angle: int = IntField("Max Base Angle", 180, min=0, max=180)
+
+    min_top_angle: int = IntField("Min Top Angle", 0, min=0, max=180)
+    max_top_angle: int = IntField("Max Top Angle", 180, min=0, max=180)
+
+    # Invert
+    invert_base_angle: bool = BoolField("Invert Base Angle", False)
+    invert_top_angle: bool = BoolField("Invert Top Angle", False)
 
 
 class MovingHeadRuntime(BaseModel):
@@ -166,6 +178,7 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
             )
 
     def on_config_changed(self, field: str):
+        # TODO: Transmit to controller if angles changed
         pass
 
     def sendCommand(self, command: Command):

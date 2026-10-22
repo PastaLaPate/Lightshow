@@ -14,6 +14,7 @@ from lightshow.devices.moving_head.moving_head_colors import (
     ColorTransformer,
     DEFAULT_RGBs,
 )
+from lightshow.devices.types import FixtureCalibration
 
 
 def QUART_OUT(t):
@@ -56,8 +57,9 @@ class MHAnimationFrame(TypedDict):
 
 
 class AMHAnimation(AAnimation):
-    def __init__(self):
+    def __init__(self, calibration: FixtureCalibration):
         super().__init__()
+        self.calibration = calibration
         self.transformer = None
         self.color_mode = DEFAULT_RGBs
 

@@ -11,115 +11,109 @@ from lightshow.devices.moving_head.moving_head_animations import (
     TopServoCommand,
 )
 from lightshow.devices.moving_head.moving_head_colors import COLOR_MODE
+from lightshow.devices.types import FixtureCalibration, ServoAngles
 
 
 class RegularPolygonAnimation(AMHAnimation):
     def __init__(
         self,
+        calibration: FixtureCalibration,
         rgb: COLOR_MODE,
-        points_num=4,
-        topRange=(0, 90),
-        baseRange=(0, 90),
-        angle_offset_cycle=15,
+        points_num: int = 4,
+        angle_offset: float = 15,
+        angle_offset_step: float = 0,
+        scale: float = 1.0,
+        center: tuple[float, float] = (0.0, 0.0),
     ):
-        super().__init__()
+        """
+        Args:
+            points_num: number of polygon vertices.
+            angle_offset: starting rotation of the polygon, in degrees.
+            angle_offset_step: degrees added to the rotation after each full
+                cycle (0 = the polygon never rotates).
+            scale: polygon radius in normalized space (1.0 = full range).
+            center: polygon center in normalized space, (x=base, y=top).
+        """
+        super().__init__(calibration)
         self.setRGB(rgb)
 
-        self.cached_rgb = RGB(0, 0, 0)
-        self.cached_poses = (TopServoCommand(0), BaseServoCommand(0))
-
-        self.cycle_progress = 0
         self.points_num = points_num
+        self.angle_offset = angle_offset
+        self.angle_offset_step = angle_offset_step
+        self.scale = scale
+        self.center = center
 
-        self.baseRange = baseRange
-        self.topRange = topRange
-        self.angle_offset = 0
-        self.angle_offset_cycle = angle_offset_cycle
+        self.cached_rgb = RGB(0, 0, 0)
+        self.cached_poses = (
+            ServoCommand("top", angle=0),
+            ServoCommand("base", angle=0),
+        )
 
-        self.calculateServoPoses(self.angle_offset)
+        self.poses: list[ServoAngles] = []
+        self.index = -1  # first step lands on pose 0
+        self.steps_done = 0
+
+        self.calculateServoPoses()
 
     def setRGB(self, color_mode: COLOR_MODE):
         self.color_mode = color_mode
         self.rgb = cycle(color_mode) if isinstance(color_mode, list) else color_mode
 
+    def calculateServoPoses(self):
+        step = 2 * math.pi / self.points_num
+        offset = math.radians(self.angle_offset)
+        cx, cy = self.center
+
+        self.poses = []
+        for i in range(self.points_num):
+            x = cx + self.scale * math.cos(offset + step * i)
+            y = cy + self.scale * math.sin(offset + step * i)
+            self.poses.append(self.calibration.to_servo(x, y))
+
     def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
         if isTick:
-            return (
-                MHAnimationFrame(
+            if self.transformer and self.transformer.reactive():
+                return MHAnimationFrame(
                     duration=0,
                     rgb=self.apply_transformer(self.cached_rgb, audio_data),
                     topServo=self.cached_poses[0],
                     baseServo=self.cached_poses[1],
                 )
-                if self.transformer and self.transformer.reactive()
-                else MHAnimationFrame(
-                    duration=-1,
-                    rgb=RGB(0, 0, 0),
-                    topServo=TopServoCommand(0),
-                    baseServo=BaseServoCommand(0),
-                )
+            return MHAnimationFrame(
+                duration=-1,
+                rgb=RGB(0, 0, 0),
+                topServo=TopServoCommand(0),
+                baseServo=BaseServoCommand(0),
             )
-        self.cycle_progress += 1
-        if self.cycle_progress == min(
-            len(self.topServoPositions), len(self.baseServoPositions)
-        ):
-            self.angle_offset += self.angle_offset_cycle
-            if random.uniform(0, 1) < 1 / 2:
-                self.reverse()
-                self.cycle_progress = 0
-            self.calculateServoPoses(self.angle_offset)
+
+        # Advance one vertex in the current direction
+        direction = -1 if self.reversed else 1
+        self.index = (self.index + direction) % len(self.poses)
+        pose = self.poses[self.index]
+
         color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
-        tcolor = self.apply_transformer(color, audio_data)
         self.cached_rgb = color
-        self.cached_poses = (next(self.topServo), next(self.baseServo))
+        self.cached_poses = (
+            ServoCommand("top", angle=pose.top),
+            ServoCommand("base", angle=pose.base),
+        )
+
+        # End of a full lap: maybe flip direction, optionally rotate the polygon
+        self.steps_done += 1
+        if self.steps_done >= len(self.poses):
+            self.steps_done = 0
+            if random.random() < 0.5:
+                self.reverse()
+            if self.angle_offset_step:
+                self.angle_offset += self.angle_offset_step
+                self.calculateServoPoses()
+
         return MHAnimationFrame(
             duration=0,
-            rgb=tcolor,
+            rgb=self.apply_transformer(color, audio_data),
             topServo=self.cached_poses[0],
             baseServo=self.cached_poses[1],
         )
 
-    def calculateServoPoses(self, angle_offset=0):
-        angle_step = 360 / self.points_num
-        angle_step = math.radians(angle_step)
-        self.topServoPositions: list[int] = [
-            int(
-                self.topRange[0]
-                + (math.cos(angle_step * i + angle_offset) + 1)
-                / 2
-                * (self.topRange[1] - self.topRange[0])
-            )
-            for i in range(self.points_num)
-        ]
-        self.baseServoPositions: list[int] = [
-            int(
-                self.baseRange[0]
-                + (math.sin(angle_step * i + angle_offset) + 1)
-                / 2
-                * (self.baseRange[1] - self.baseRange[0])
-            )
-            for i in range(self.points_num)
-        ]
-
-        self.topServo = cycle(
-            [ServoCommand("top", angle=x) for x in self.topServoPositions]
-        )
-        self.baseServo = cycle(
-            [ServoCommand("base", angle=x) for x in self.baseServoPositions]
-        )
-
     def reverse(self):
         super().reverse()
-        self.topServo = cycle(
-            [ServoCommand("top", angle=x) for x in reversed(self.topServoPositions)]
-            if not self.reversed
-            else [ServoCommand("top", angle=x) for x in self.topServoPositions]
-        )
-        self.baseServo = cycle(
-            [ServoCommand("base", angle=x) for x in reversed(self.baseServoPositions)]
-            if not self.reversed
-            else [ServoCommand("base", angle=x) for x in self.baseServoPositions]
-        )
-
-        next(self.topServo)
-        next(self.baseServo)

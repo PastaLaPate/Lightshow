@@ -1,46 +1,53 @@
+from collections.abc import Callable
+
 import numpy as np
 
+from lightshow.devices.animations import RGB
 from lightshow.devices.moving_head.animations.circle_animation import (
     CircleAnimation,
 )
+from lightshow.devices.types import FixtureCalibration
+
+_LEMNISCATE_MAX_Y = np.sqrt(2) / 4
 
 
 class BernoulliLemniscateAnimation(CircleAnimation):
     def __init__(
         self,
-        rgb,
-        speed=0.5,
-        base_angle_offset=0,
+        calibration: FixtureCalibration,
+        rgb: list[RGB] | Callable[[], RGB],
+        speed: float = 0.5,
+        scale: float = 1.0,
+        center: tuple[float, float] = (0.0, 0.0),
+        phase: float = 0.0,
+        fill_y: bool = True,
     ):
-        super().__init__(rgb, speed, base_angle_offset)
-        self.boost_speed = 2
-        self.boost_time = 0.4
-        self.topAngleRange = (10, 40)
-
-    def nextCurve(self, t):
         """
-        Calculates the servo angles for a Lemniscate of Bernoulli curve.
-        The parametric equations are:
-        x(t) = a * cos(t) / (1 + sin^2(t))
-        y(t) = a * sin(t)cos(t) / (1 + sin^2(t))
+        Args:
+            speed: laps per second.
+            scale: overall size in normalized space (1.0 = full range on x).
+            center: center of the figure-eight, (x=base, y=top).
+            phase: starting offset as a fraction of a lap (0..1).
+            fill_y: if True, stretch the curve so it also spans the full
+                y range (a fatter figure-eight). If False, keep the true
+                lemniscate proportions (about 1 : 0.35), which looks flatter
+                but is geometrically correct.
         """
-        # Parametric values for the lemniscate (with a=1)
-        x_lemniscate = np.cos(t) / (1 + np.sin(t) ** 2)
-        y_lemniscate = (np.sin(t) * np.cos(t)) / (1 + np.sin(t) ** 2)
+        super().__init__(calibration, rgb, speed, scale, center, phase)
+        self.fill_y = fill_y
 
-        # Normalize x from its native range [-1, 1] to [0, 1]
-        base_progress = (x_lemniscate + 1) / 2
+    def nextCurve(self, t: float) -> tuple[float, float]:
+        """
+        Lemniscate of Bernoulli (a = 1), returned in normalized space:
+            x(t) = cos(t) / (1 + sin^2(t))                 in [-1, 1]
+            y(t) = sin(t) * cos(t) / (1 + sin^2(t))        in [-sqrt(2)/4, sqrt(2)/4]
+        """
+        denom = 1 + np.sin(t) ** 2
+        x = np.cos(t) / denom
+        y = (np.sin(t) * np.cos(t)) / denom
 
-        # Normalize y from its native range [-sqrt(2)/4, sqrt(2)/4] to [0, 1]
-        max_y_val = np.sqrt(2) / 4
-        top_progress = (y_lemniscate + max_y_val) / (2 * max_y_val)
+        if self.fill_y:
+            y = y / _LEMNISCATE_MAX_Y  # -> [-1, 1]
 
-        # Scale the normalized [0, 1] progress to the specified servo angle ranges
-        base = self.baseAngleRange[0] + self.baseAngleRange[1] * base_progress
-        top = self.topAngleRange[0] + self.topAngleRange[1] * top_progress
-
-        return (base, top)
-
-    def reverse(self):
-        # DO NOT REVERSE
-        pass
+        cx, cy = self.center
+        return (cx + self.scale * x, cy + self.scale * y)

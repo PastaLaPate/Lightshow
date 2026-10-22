@@ -11,46 +11,50 @@ from lightshow.devices.moving_head.moving_head_animations import (
     MHAnimationFrame,
     ServoCommand,
 )
+from lightshow.devices.types import FixtureCalibration
 
 
 class CircleAnimation(AMHAnimation):
     def __init__(
         self,
+        calibration: FixtureCalibration,
         rgb: list[RGB] | Callable[[], RGB],
-        speed=0.5,
-        base_angle_offset=0,
+        speed: float = 0.5,
+        scale: float = 1.0,
+        center: tuple[float, float] = (0.0, 0.0),
+        phase: float = 0.0,
     ):
-        super().__init__()
+        """
+        Args:
+            speed: laps per second.
+            scale: circle radius in normalized space (1.0 = full range).
+            center: circle center in normalized space, (x=base, y=top).
+            phase: starting offset as a fraction of a lap (0..1).
+        """
+        super().__init__(calibration)
 
         self.setRGB(rgb)
 
         self.change_color_on_tick = False
-        self.cached_color = RGB(0, 0, 0)  # In case if we move but dont change color
+        self.cached_color = RGB(0, 0, 0)  # In case we move but don't change color
 
         self.progress_speed = speed
-
-        self.baseAngleRange = (0, 120)
-        self.topAngleRange = (0, 70)
-        self.base_angle_offset = base_angle_offset
+        self.scale = scale
+        self.center = center
 
         self.boost_speed = 2
         self.boost_time = 0.4  # seconds
         self.boost_progress = 1
-        # easeInOutQuart
-        self.boost_curve = lambda t: 1 - t  # (
-        #    8 * (t**4) if t < 0.5 else 1 - ((-2 * t + 2) ** 4) / 2
-        # )
+        self.boost_curve = lambda t: 1 - t
 
-        self.circle_progress = 0
+        self.circle_progress = phase % 1
         self.color_cooldown = 0
 
     def setRGB(self, color_mode: list[RGB] | Callable[[], RGB]):
         self.color_mode = color_mode
         self.rgb = cycle(color_mode) if isinstance(color_mode, list) else color_mode
 
-    # dt in seconds
     def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
-        # Handle tick-based color switching
         if not isTick:
             self.boost_progress = 0
             if random.uniform(0, 1) < 1 / 12:
@@ -60,7 +64,7 @@ class CircleAnimation(AMHAnimation):
                 rgb = self.apply_transformer(rgb, audio_data)
                 self.cached_color = rgb
 
-                self.color_cooldown = time.time_ns() + 0.2 * 1e9
+            self.color_cooldown = time.time_ns() + 0.2 * 1e9
 
         else:
             if self.change_color_on_tick and time.time_ns() >= self.color_cooldown:
@@ -68,49 +72,27 @@ class CircleAnimation(AMHAnimation):
                 rgb = self.apply_transformer(rgb, audio_data)
                 self.cached_color = rgb
 
-        # ---- BOOST HANDLING (now dt-based) ----
+        velocity = self.progress_speed
         if self.boost_progress < 1:
-            # how much of the boost we progress this frame
-            self.boost_progress += dt / self.boost_time
-            self.boost_progress = min(self.boost_progress, 1)
+            self.boost_progress = min(self.boost_progress + dt / self.boost_time, 1)
+            velocity += self.boost_curve(self.boost_progress) * self.boost_speed
 
-            # apply easing * dt
-            self.circle_progress += (
-                self.boost_curve(self.boost_progress) * self.boost_speed * dt
-            )
+        direction = -1 if self.reversed else 1
+        self.circle_progress = (self.circle_progress + direction * velocity * dt) % 1
 
-        # ---- NORMAL MOVEMENT (dt-based) ----
-        self.circle_progress += self.progress_speed * dt
-        self.circle_progress %= 1
-
-        # ---- ANGLES ----
-        angle = self.circle_progress * 2 * np.pi
-        if self.reversed:
-            angle = -angle
-
-        base, top = self.nextCurve(angle)
+        x, y = self.nextCurve(self.circle_progress * 2 * np.pi)
+        angles = self.calibration.to_servo(x, y)
 
         return MHAnimationFrame(
             duration=0,
             rgb=self.cached_color,
-            topServo=ServoCommand(servo="top", angle=int(top)),
-            baseServo=ServoCommand(
-                servo="base", angle=int(base + self.base_angle_offset)
-            ),
+            topServo=ServoCommand(servo="top", angle=angles.top),
+            baseServo=ServoCommand(servo="base", angle=angles.base),
         )
 
-    def nextCurve(self, t: float) -> tuple[int, int]:
-        base = (
-            self.baseAngleRange[0]
-            + self.baseAngleRange[1] / 2
-            + self.baseAngleRange[1] / 2 * np.cos(t)
-        )  # Max 0° to 90°
-        top = (
-            self.topAngleRange[0]
-            + self.topAngleRange[1] / 2
-            + self.topAngleRange[1] / 2 * np.sin(t)
-        )  # Max 30 to 75
-        return (base, top)
+    def nextCurve(self, t: float) -> tuple[float, float]:
+        cx, cy = self.center
+        return (cx + self.scale * np.cos(t), cy + self.scale * np.sin(t))
 
     def nextRGB(self) -> RGB:
         return next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()

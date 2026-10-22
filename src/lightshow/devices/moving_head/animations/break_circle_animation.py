@@ -3,19 +3,21 @@ from lightshow.devices.animations.aanimation import RGB
 from lightshow.devices.moving_head.moving_head_animations import (
     MHAnimationFrame,
 )
+from lightshow.devices.types import FixtureCalibration
 
 from .circle_animation import CircleAnimation
 
 
 class BreakCircleAnimation(CircleAnimation):
-    def __init__(self, base_angle_offset=0):
-        super().__init__([RGB(255, 255, 255)], 0.35, base_angle_offset)
+    def __init__(self, calibration: FixtureCalibration, hue_speed: float = 0.5):
+        """hue_speed: full rainbow cycles per second (0.5 = one cycle every 2 s)."""
+        super().__init__(calibration, rgb=[RGB(255, 255, 255)], speed=0.35)
         self.change_color_on_tick = True
         self.hue = 0.0
+        self.hue_speed = hue_speed
 
     def next(self, audio_data, isTick=True, dt=0.0) -> MHAnimationFrame:
-        self.hue += 2 / 255
-        self.hue %= 1
+        self.hue = (self.hue + self.hue_speed * dt) % 1
         return super().next(audio_data, True, dt)
 
     def nextRGB(self):

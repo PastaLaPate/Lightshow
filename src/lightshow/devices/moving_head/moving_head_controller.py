@@ -30,17 +30,23 @@ from lightshow.devices.moving_head.moving_head_colors import (
     RedLowsModulator,
     random_rainbow_color,
 )
-from lightshow.devices.types import PacketStatus, PacketType
+from lightshow.devices.types import FixtureCalibration, PacketStatus, PacketType
 
 if typing.TYPE_CHECKING:
     from lightshow.devices.moving_head.moving_head import MovingHead
 
-TRIANGLE_ANIMATION = RegularPolygonAnimation(DEFAULT_RGBs, 3, (0, 60), (45, 135))
-SQUARE_ANIMATION = RegularPolygonAnimation(DEFAULT_RGBs, 4, (0, 60), (45, 135))
-CIRCLE_ANIMATION = CircleAnimation(DEFAULT_RGBs, 0.3, 45)
-LEMNISCATE_ANIMATION = BernoulliLemniscateAnimation(DEFAULT_RGBs, 0.3, 45)
-CIRCLE_BREAK_ANIMATION = BreakCircleAnimation(45)
-BOUNCE_ANIMATION = BounceAnimation(DEFAULT_RGBs)
+TRIANGLE_ANIMATION = lambda calib: RegularPolygonAnimation(
+    calib, rgb=DEFAULT_RGBs, points_num=3
+)
+SQUARE_ANIMATION = lambda calib: RegularPolygonAnimation(
+    calib, rgb=DEFAULT_RGBs, points_num=4
+)
+CIRCLE_ANIMATION = lambda calib: CircleAnimation(calib, rgb=DEFAULT_RGBs, speed=0.3)
+LEMNISCATE_ANIMATION = lambda calib: BernoulliLemniscateAnimation(
+    calib, rgb=DEFAULT_RGBs, speed=0.3
+)
+CIRCLE_BREAK_ANIMATION = lambda calib: BreakCircleAnimation(calib, hue_speed=0.5)
+BOUNCE_ANIMATION = lambda calib: BounceAnimation(calib, rgb=DEFAULT_RGBs)
 
 
 class MovingHeadController:
@@ -83,16 +89,18 @@ class MovingHeadController:
 
         self.latest_audio_data = AudioData(np.zeros(20000))
 
+        self.break_anim = CIRCLE_BREAK_ANIMATION(self.get_calib())
+
         self.init_lists()
         self.init_state()
 
     def init_lists(self):
         self.anim_list: list[AMHAnimation] = [
-            TRIANGLE_ANIMATION,
-            CIRCLE_ANIMATION,
-            LEMNISCATE_ANIMATION,
-            SQUARE_ANIMATION,
-            BOUNCE_ANIMATION,
+            TRIANGLE_ANIMATION(self.get_calib()),
+            CIRCLE_ANIMATION(self.get_calib()),
+            LEMNISCATE_ANIMATION(self.get_calib()),
+            SQUARE_ANIMATION(self.get_calib()),
+            BOUNCE_ANIMATION(self.get_calib()),
         ]
         self.color_mode_list = [
             RAINBOW_KICK_COLORS,
@@ -115,6 +123,16 @@ class MovingHeadController:
     def _select_color_mode_for_anim(self, anim):
         """Select appropriate color mode for the given animation."""
         return random.choice(self.color_mode_list)
+
+    def get_calib(self) -> FixtureCalibration:
+        config = self.device.config
+        return FixtureCalibration(
+            base_range=(config.min_base_angle, config.max_base_angle),
+            top_range=(config.min_top_angle, config.max_top_angle),
+            invert_base=config.invert_base_angle,
+            invert_top=config.invert_top_angle,
+            servo_limits=(0, 180),
+        )
 
     def update_anim_color_mode(self):
         if isinstance(
@@ -223,7 +241,7 @@ class MovingHeadController:
 
     def tickFillingAnim(self):
         self.updateFromFrame(
-            CIRCLE_BREAK_ANIMATION.next(
+            self.break_anim.next(
                 self.latest_audio_data,
                 True,
                 time.time_ns() / 1e9 - self.last_tick,
