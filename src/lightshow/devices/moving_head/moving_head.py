@@ -61,13 +61,9 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
 
     def __init__(self, config):
         super().__init__(config)
-        self.id = str(id(self))
         self.logger = Logger(f"MovingHead{{{self.id}}}")
 
         self.socket = None
-        self.ip = "192.168.1.XX"  # ESP32 IP
-        self.udp_address = f"{self.ip}:1234"
-        self.addr = (self.ip, 1234)
         self.packetIndex = 0
 
         self.device_name = ""  # Eg "Living Room Moving Head"
@@ -89,8 +85,14 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
         self._packet_thread = None
         self._packet_thread_running = False
 
-    def test_connection(self):
-        result = requests.post(f"http://{self.ip}:81/resetIndexCounter")
+    def test_connection(self) -> bool:
+        try:
+            # TODO: move device connection to a bg thread or something
+            result = requests.post(
+                f"http://{self.config.ip}:81/resetIndexCounter", timeout=2
+            )
+        except requests.RequestException:
+            return False
         return result.status_code == 200
 
     def connect_socket(self):
@@ -99,18 +101,18 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
             if self.test_connection():
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 self.socket.settimeout(1)
-                self.addr = (self.ip, 1234)
+                self.addr = (self.config.ip, 1234)
                 self.packetIndex = 0
-                self.udp_address = f"{self.ip}:1234"
+                self.udp_address = f"{self.config.ip}:1234"
                 # self.showed_props_update()
-                self.logger.info(f"Successfully tested connection to {self.ip}")
+                self.logger.info(f"Successfully tested connection to {self.config.ip}")
             else:
                 raise ConnectionError("Not received resetIndex, ip problem?")
         except ConnectionError as e:
-            self.logger.error(f"Error connecting to {self.ip}: {e}")
+            self.logger.error(f"Error connecting to {self.config.ip}: {e}")
             ui_signals.dialogs.show_error.emit(
                 "Connection Error",
-                f"Failed to connect to {self.ip}. Please check the IP address and ensure the device is powered on. Error details: {traceback.format_exc()}",
+                f"Failed to connect to {self.config.ip}. Please check the IP address and ensure the device is powered on. Error details: {traceback.format_exc()}",
             )
             self.socket = None
 
@@ -177,8 +179,11 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
             self.logger.error(f"Error sending message : {e}")
             ui_signals.dialogs.show_error.emit(
                 "Connection Error",
-                f"Failed to send message to {self.ip}. Error details: {traceback.format_exc()}",
+                f"Failed to send message to {self.config.ip}. Error details: {traceback.format_exc()}",
             )
+
+    def on_config_changed(self, field: str):
+        pass
 
     def sendCommand(self, command: Command):
         # print(command.toMHCommand())

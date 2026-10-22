@@ -16,6 +16,9 @@ class DeviceController(QObject):
         ui_signals.devices_req.set_field.connect(self.handle_set_field)
         ui_signals.devices_req.delete.connect(self.handle_delete_device)
 
+        ui_signals.devices_req.connect_.connect(self.handle_connect_device)
+        ui_signals.devices_req.disconnect_.connect(self.handle_disconnect_device)
+
         # global_config.device_store.device_added.connect(ui_signals.new_device) Handled via handle_create_device, to attribute a name
         global_config.device_store.device_renamed.connect(ui_signals.devices.renamed)
         global_config.device_store.device_changed.connect(self.send_field_set)
@@ -38,12 +41,12 @@ class DeviceController(QObject):
         with global_history.transaction(f"Rename device {id} to {new_name}"):
             global_config.device_store.rename_device(id, new_name)
 
-    def handle_set_field(self, id: str, name: str, value: Any):
-        if not self.id_exists(id) or name == "":
+    def handle_set_field(self, id: str, field: str, value: Any):
+        if not self.id_exists(id) or field == "":
             return
 
-        with global_history.transaction(f"Set {id}'s {name} to {value}"):
-            global_config.device_store.update(id, name, value)
+        with global_history.transaction(f"Set {id}'s {field} to {value}"):
+            global_config.device_store.update(id, field, value)
 
     def handle_delete_device(self, id: str):
         if not self.id_exists(id):
@@ -52,6 +55,14 @@ class DeviceController(QObject):
         with global_history.transaction(f"Delete device {id}"):
             global_config.device_store.delete_device(id)
             ui_signals.devices.selected.emit(None)
+
+    def handle_connect_device(self, id: str):
+        successful, error = global_config.device_store.connect_device(id)
+        if not successful:
+            ui_signals.dialogs.show_error.emit("Unable to connect to device", error)
+
+    def handle_disconnect_device(self, id: str):
+        global_config.device_store.disconnect_device(id)
 
     def send_field_set(self, id: str, field: str):
         ui_signals.devices_req.set_field.emit(

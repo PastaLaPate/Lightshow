@@ -314,11 +314,11 @@ class UIManager(QMainWindow):
             except Exception as e:  # noqa
                 self.logger.error(f"Visualization update error: {e}")
 
-    def _show_error_dialog(self, title, message):
+    def _show_error_dialog(self, title: str, message: str):
         """Show error dialog."""
         QMessageBox.critical(self, title, message)
 
-    def _show_info_dialog(self, title, message):
+    def _show_info_dialog(self, title: str, message: str):
         """Show info dialog."""
         QMessageBox.information(self, title, message)
 

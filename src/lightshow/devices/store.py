@@ -29,7 +29,7 @@ class DeviceEntry:
     def device(self) -> Device:
         if self._device:
             return self._device
-        logger.debug(f"Created {self.config.name} ({self.type_name.value})'s instance.")
+        logger.debug(f"Creating {self.config.name} ({self.type_name})'s instance.")
         device_type = DEVICE_CLASSES[self.type_name]
         self._device = device_type(self.config)
         self.status = DeviceStatus.DISCONNECTED
@@ -100,7 +100,7 @@ class DeviceStore(QObject):
         self.device_added.emit(device_id)
         self._save_timer.start()
 
-    def _restore_device(self, device_id: str, entry: DeviceEntry):
+    def _restore_device(self, device_id: str, entry: DeviceEntry) -> None:
         self._entries[device_id] = entry
         self.device_added.emit(device_id)
         self._save_timer.start()
@@ -134,7 +134,7 @@ class DeviceStore(QObject):
         )
         return device_id
 
-    def delete_device(self, device_id: str):
+    def delete_device(self, device_id: str) -> None:
         entry = self._entries[device_id]
         self._raw_delete_device(device_id)
         global_history.record(
@@ -142,7 +142,7 @@ class DeviceStore(QObject):
             redo=lambda: self._raw_delete_device(device_id),
         )
 
-    def rename_device(self, device_id: str, new_name: str):
+    def rename_device(self, device_id: str, new_name: str) -> None:
         old_name = self._entries[device_id].config.name
         self._raw_rename(device_id, new_name)
         global_history.record(
@@ -192,7 +192,7 @@ class DeviceStore(QObject):
         )
         return True, ""
 
-    def disconnect_device(self, device_id: str):
+    def disconnect_device(self, device_id: str) -> None:
         e = self._entries[device_id]
         if e._device is not None:
             e.device.disconnect()

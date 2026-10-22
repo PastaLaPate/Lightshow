@@ -14,7 +14,8 @@ from PySide6.QtWidgets import (
 from lightshow.core.config import global_config
 from lightshow.devices.device import Device
 from lightshow.devices.registry import DEVICE_CLASSES
-from lightshow.devices.store import DeviceEntry, DeviceStatus
+from lightshow.devices.status import DeviceStatus
+from lightshow.devices.store import DeviceEntry
 from lightshow.gui.components.badge import Badge
 from lightshow.gui.components.editable_label import EditableLabel
 from lightshow.gui.components.status_circle import StatusCircle
@@ -110,6 +111,7 @@ class DeviceDetailsPanel(BasePanel):
         self.device_types: list[type[Device]] = device_types
         self.stacked_layout: QStackedLayout | None = None
         self.current_device: str | None = None
+        self.current_status: DeviceStatus = DeviceStatus.DISCONNECTED
 
         self._connect_button_messages_dict: dict[DeviceStatus, str] = {
             DeviceStatus.DISCONNECTED: "Connect to device",
@@ -145,6 +147,7 @@ class DeviceDetailsPanel(BasePanel):
         self.device_props.field_changed.connect(self._on_field_changed)
 
         self.connect_btn = QPushButton()
+        self.connect_btn.clicked.connect(self.connect_device)
 
         props_layout.addWidget(self.device_header)
         props_layout.addWidget(self.device_props)
@@ -163,12 +166,21 @@ class DeviceDetailsPanel(BasePanel):
         layout.addLayout(self.stacked_layout)
 
     def update_status(self, new_status: DeviceStatus):
+        self.current_status = new_status
         self.connect_btn.setText(self._connect_button_messages_dict[new_status])
         self.connect_btn.setEnabled(new_status != DeviceStatus.CONNECTING)
+        self.device_props.set_connected(new_status != DeviceStatus.DISCONNECTED)
 
     def rename_device(self, new_name: str):
         if self.current_device is not None:
             ui_signals.devices_req.rename.emit(self.current_device, new_name)
+
+    def connect_device(self):
+        match self.current_status:
+            case DeviceStatus.DISCONNECTED:
+                ui_signals.devices_req.connect_.emit(self.current_device)
+            case DeviceStatus.CONNECTED:
+                ui_signals.devices_req.disconnect_.emit(self.current_device)
 
     def set_field(self, id: str, name: str, value: Any):
         if self.current_device != id:

@@ -3,6 +3,7 @@ from typing import get_args, get_origin
 
 from pydantic import BaseModel
 
+from lightshow.core.debug import who_called_me
 from lightshow.core.logger import Logger
 from lightshow.devices.types import BaseDeviceSettings, DeviceTypeName, PacketData
 
@@ -47,6 +48,12 @@ class Device[T: BaseDeviceSettings, R: BaseModel](ABC):
         return
 
     @abstractmethod
+    def init_device(
+        self,
+    ) -> bool:  # Returns if the device was successfully initialized
+        ...
+
+    @abstractmethod
     def disconnect(self):
         self.ready = False
 
@@ -56,12 +63,6 @@ class Device[T: BaseDeviceSettings, R: BaseModel](ABC):
 
     @abstractmethod
     def on_config_changed(self, field: str): ...
-
-    @abstractmethod
-    def init_device(
-        self,
-    ) -> bool:  # Returns if the device was successfully initialized
-        ...
 
     @property
     def id(self) -> str:
@@ -78,6 +79,7 @@ class Device[T: BaseDeviceSettings, R: BaseModel](ABC):
     @id.setter
     def id(self, id: str) -> None:
         logger.warning("Editing a device's id. [%s]", id)
+        who_called_me()
         self.config.id = id
 
     def hsv_to_rgb(self, h: float, s: float, v: float, a: float) -> tuple:

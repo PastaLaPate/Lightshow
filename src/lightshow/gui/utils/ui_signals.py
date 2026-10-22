@@ -11,6 +11,9 @@ class DeviceRequests(QObject):
     delete = Signal(str)  # id
     set_field = Signal(str, str, object)  # id, name, value
 
+    connect_ = Signal(str)
+    disconnect_ = Signal(str)
+
 
 class DeviceEvents(QObject):
     created = Signal(str)  # id
