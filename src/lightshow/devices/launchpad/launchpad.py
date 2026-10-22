@@ -38,6 +38,7 @@ from lightshow.devices.types import (
     PacketStatus,
     PacketType,
 )
+from lightshow.gui.utils import ui_signals
 
 
 # Index in panel pixels
@@ -346,17 +347,12 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
     DEVICE_TYPE_NAME = DeviceTypeName.LAUNCHPAD_X
 
     def __init__(self, config):
-        from lightshow.gui.main_window import UIManager
 
         super().__init__(config)
         self.in_port: mido.ports.BaseInput | None = None
         self.out_port: mido.ports.BaseOutput | None = None
         self.device_name = "Not Connected"
-        # ui_signals.finish_connection.connect(self._on_device_connected)
-        UIManager.get().device_details.register(
-            "connect_clicked",
-            self._connect_device_callback,  # TODO: Okay, okay this shit needs to be changed
-        )
+
         # State Management
         self.used_panels: dict[int, None | str] = {  # panel_id: device_id using it
             0: None,
@@ -371,17 +367,23 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
             3: None,
         }
 
+        ui_signals.devices.status_changed.connect(self._on_device_status_changed)
+
         # Single Thread Effect Management
         self.active_effects: dict[int, str] = {}  # button_note: effect_type
         self.running = False
         self._effect_thread: threading.Thread | None = None
 
-    def _on_device_connected(self, device_id: str):
+    def _on_device_status_changed(self, device_id: str, new_status: DeviceStatus):
         # Assign the device a panel if one is available
+        if new_status != DeviceStatus.CONNECTED:
+            return
+
         if not isinstance(
             config.global_config.device_store.get(device_id)._device, MovingHead
         ):  # Use _device to avoid creating if not instanced
             return
+
         for panel_id, d_id in self.used_panels.items():
             if d_id is None:
                 self.used_panels[panel_id] = device_id
@@ -468,8 +470,7 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
             self.out_port.send(mido.Message("sysex", data=[0, 32, 41, 2, 12, 14, 1]))
 
             self.start_effect_engine()  # Start the single shared thread
-            for device_id in config.global_config.device_store.all():
-                self._on_device_connected(device_id)
+            # TODO: search for existing connected moving head
             return True
         except Exception as e:  # noqa
             print(f"Error: {e}")
@@ -531,8 +532,4 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
             else:
                 self.handle_release(message.note)  # type: ignore
 
-    def save(self):
-        return self.DEVICE_TYPE_NAME, {}
-
-    def load(self, data):
-        return True
+    def on_config_changed(self, field: str): ...

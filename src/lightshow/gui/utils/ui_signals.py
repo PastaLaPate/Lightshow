@@ -22,7 +22,6 @@ class DeviceEvents(QObject):
     field_set = Signal(str, str, object)  # id, name, value
     status_changed = Signal(str, DeviceStatus)  # id, new_status
     selected = Signal(object)
-    connection_status_changed = Signal(str)  # new_status
 
 
 class AudioRequests(QObject):
