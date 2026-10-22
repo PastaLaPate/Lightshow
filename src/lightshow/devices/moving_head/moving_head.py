@@ -4,7 +4,6 @@ import traceback
 
 import requests
 from pydantic import BaseModel
-from PySide6.QtWidgets import QFileDialog
 
 from lightshow.core.logger import Logger
 from lightshow.devices.animations.aanimation import RGB, Command
@@ -13,11 +12,9 @@ from lightshow.devices.device import (
     OutputDevice,
 )
 from lightshow.devices.fields import (
-    FileSelectorField,
     IntField,
     StrField,
     ValidationScheme,
-    WidgetType,
 )
 from lightshow.devices.moving_head.moving_head_controller import (
     MovingHeadController,
@@ -34,20 +31,15 @@ class MovingHeadSettings(BaseDeviceSettings):
         validation_scheme=ValidationScheme.IP,
         connected_readonly=True,
     )
-    port: int = IntField(
-        "Port",
-        3000,
+    http_port: int = IntField(
+        "HTTP Port",
+        8080,
         connected_readonly=True,
     )
-    color_test: str = StrField(
-        "Color",
-        widget=WidgetType.ColorPicker,
-        connected_readonly=True,
-    )
-    file_test: str = FileSelectorField(
-        "File",
-        filters=[],
-        file_mode=QFileDialog.FileMode.Directory,
+
+    udp_port: int = IntField(
+        "UDP Port",
+        1234,
         connected_readonly=True,
     )
 
@@ -81,7 +73,8 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
     def test_connection(self) -> bool:
         try:
             result = requests.post(
-                f"http://{self.config.ip}:81/resetIndexCounter", timeout=5
+                f"http://{self.config.ip}:{self.config.http_port}/resetIndexCounter",
+                timeout=5,
             )
         except requests.RequestException:
             return False
@@ -93,9 +86,8 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
             if self.test_connection():
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 self.socket.settimeout(1)
-                self.addr = (self.config.ip, 1234)
+                self.addr = (self.config.ip, self.config.udp_port)
                 self.packetIndex = 0
-                self.udp_address = f"{self.config.ip}:1234"
                 self.logger.info(f"Successfully tested connection to {self.config.ip}")
             else:
                 raise ConnectionError("Not received resetIndex, ip problem?")
