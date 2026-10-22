@@ -14,6 +14,7 @@ from lightshow.devices.registry import DEVICE_CLASSES
 from lightshow.devices.status import DeviceStatus
 from lightshow.devices.types import BaseDeviceSettings, DeviceConfigType, DeviceTypeName
 from lightshow.document.history import global_history
+from lightshow.gui.utils.async_tasks import JobData, TaskContext, TaskRunner
 
 logger = Logger("DeviceStore")
 
@@ -170,27 +171,39 @@ class DeviceStore(QObject):
         self._entries[device_id].status = status
         self.device_status_changed.emit(device_id, status)
 
-    def connect_device(self, device_id: str) -> tuple[bool, str]:
+    def connect_device(
+        self, device_id: str, on_result: Callable[[bool, str], None] | None = None
+    ) -> None:
         """Connects a device.
 
         Args:
             device_id (str): the device's id to connect, must be in entries.
-
-        Returns:
-            tuple[bool, str]: True and "" if connected with no error, else False and error string. Does not ensure the device's ready.
+            on_result (str): Ok, error_msg.
         """
-        e: DeviceEntry = self._entries[device_id]
-        self._set_status(device_id, DeviceStatus.CONNECTING)
-        try:
-            e.device.connect(fatal_non_discovery=True)
-        except ConnectionError as error:
-            logger.error("Connection failed for %s: %s", device_id, error)
-            return False, f"Connection failed for {device_id}: {error}"
-        ok = e.device.ready
-        self._set_status(
-            device_id, DeviceStatus.CONNECTED if ok else DeviceStatus.DISCONNECTED
-        )
-        return True, ""
+        entry: DeviceEntry = self._entries[device_id]
+
+        def work(ctx: TaskContext):
+            ctx.progress("Connecting...")
+            entry.device.connect(fatal_non_discovery=True)
+            return entry.device.ready
+
+        def done(ready: bool):
+            self._set_status(
+                device_id,
+                DeviceStatus.CONNECTED if ready else DeviceStatus.DISCONNECTED,
+            )
+            if on_result:
+                on_result(ready, "" if ready else "Device did not become ready")
+
+        def error(exc: Exception):
+            self._set_status(device_id, DeviceStatus.DISCONNECTED)
+            if on_result:
+                on_result(False, f"Connection failed for {device_id}: {exc}")
+
+        if TaskRunner.get().submit(
+            JobData(work, device_id, on_done=done, on_error=error),
+        ):
+            self._set_status(device_id, DeviceStatus.CONNECTING)
 
     def disconnect_device(self, device_id: str) -> None:
         e = self._entries[device_id]

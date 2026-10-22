@@ -11,6 +11,7 @@ from lightshow.gui.utils import ui_signals
 class DeviceController(QObject):
     def __init__(self) -> None:
         super().__init__(None)
+
         ui_signals.devices_req.create.connect(self.handle_create_device)
         ui_signals.devices_req.rename.connect(self.handle_rename_device)
         ui_signals.devices_req.set_field.connect(self.handle_set_field)
@@ -23,6 +24,9 @@ class DeviceController(QObject):
         global_config.device_store.device_renamed.connect(ui_signals.devices.renamed)
         global_config.device_store.device_changed.connect(self.send_field_set)
         global_config.device_store.device_removed.connect(ui_signals.devices.deleted)
+        global_config.device_store.device_status_changed.connect(
+            ui_signals.devices.status_changed
+        )
 
     def handle_create_device(self, device_type: DeviceTypeName, name: str | None):
         with global_history.transaction(
@@ -57,9 +61,11 @@ class DeviceController(QObject):
             ui_signals.devices.selected.emit(None)
 
     def handle_connect_device(self, id: str):
-        successful, error = global_config.device_store.connect_device(id)
-        if not successful:
-            ui_signals.dialogs.show_error.emit("Unable to connect to device", error)
+        def on_result(ok: bool, err: str) -> None:
+            if not ok:
+                ui_signals.dialogs.show_error.emit("Unable to connect to device", err)
+
+        global_config.device_store.connect_device(id, on_result)
 
     def handle_disconnect_device(self, id: str):
         global_config.device_store.disconnect_device(id)

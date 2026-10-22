@@ -27,6 +27,7 @@ from lightshow.gui.input.shortcuts import ShortcutMap, Shortcuts
 from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.gui.panels.stats import StatsPanel
+from lightshow.gui.utils.async_tasks import TaskRunner
 from lightshow.gui.utils.ui_signals import ui_signals
 
 
@@ -42,6 +43,8 @@ class UIManager(QMainWindow):
         self.listener = audio_listener
         self.audio_handler = audio_handler
         self.device_types: list[type[Device]] = DEVICE_TYPES
+
+        TaskRunner.init_singleton()
 
         # Initialize panels
         self.audio_panel = AudioPanel(audio_listener, audio_handler)

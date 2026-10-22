@@ -87,9 +87,8 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
 
     def test_connection(self) -> bool:
         try:
-            # TODO: move device connection to a bg thread or something
             result = requests.post(
-                f"http://{self.config.ip}:81/resetIndexCounter", timeout=2
+                f"http://{self.config.ip}:81/resetIndexCounter", timeout=5
             )
         except requests.RequestException:
             return False
