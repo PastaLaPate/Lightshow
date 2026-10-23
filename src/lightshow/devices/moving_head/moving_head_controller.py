@@ -336,8 +336,8 @@ class MovingHeadController:
         now = now_ns()
         if now - self._last_fps_report_ns < self.FPS_REPORT_EVERY_NS:
             return
-        from lightshow.gui.main_window import UIManager
 
         self.current_fps = self.limiter.fps
         self._last_fps_report_ns = now
-        UIManager.get().stats_panel.update_fps(self.current_fps)
+        # UIManager.get().stats_panel.update_fps(self.current_fps)
+        self.device.runtime.fps = int(self.current_fps)

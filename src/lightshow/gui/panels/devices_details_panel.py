@@ -139,8 +139,6 @@ class DeviceRuntimeProps(QWidget):
     def track_device(self, device_id: str):
         if device_id == self._current_device:
             return
-        for unsuscriber in self._unsubscribers:
-            unsuscriber()
         self.clear()
         device_entry = global_config.device_store.get(device_id)
         if (
@@ -222,11 +220,14 @@ class DeviceDetailsPanel(BasePanel):
         self.device_props = DeviceProps()
         self.device_props.field_changed.connect(self._on_field_changed)
 
+        self.device_runtime = DeviceRuntimeProps()
+
         self.connect_btn = QPushButton()
         self.connect_btn.clicked.connect(self.connect_device)
 
         props_layout.addWidget(self.device_header)
         props_layout.addWidget(self.device_props)
+        props_layout.addWidget(self.device_runtime)
         props_layout.addStretch()
         props_layout.addWidget(self.connect_btn)
 
@@ -273,6 +274,10 @@ class DeviceDetailsPanel(BasePanel):
         if device_id == self.current_device:
             self.device_header.set_status(new_status)
             self.update_status(new_status)
+            if new_status == DeviceStatus.CONNECTED:
+                self.device_runtime.track_device(device_id)
+            else:
+                self.device_runtime.clear()
 
     def _on_field_changed(self, name: str, value: Any):
         if self.current_device is not None:
@@ -289,5 +294,10 @@ class DeviceDetailsPanel(BasePanel):
             self.device_header.set_status(entry.status)
             self.device_props.render_device(entry)
             self.update_status(entry.status)
+
+            if entry.status == DeviceStatus.CONNECTED:
+                self.device_runtime.track_device(device_id)
+            else:
+                self.device_runtime.clear()
         else:
             self.stacked_layout.setCurrentIndex(1)

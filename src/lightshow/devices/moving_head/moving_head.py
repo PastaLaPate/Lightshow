@@ -59,8 +59,8 @@ class MovingHeadSettings(BaseDeviceSettings):
 
 
 class MovingHeadRuntime(ObservableModel):
-    current_animation: str
-    fps: int
+    current_animation: str = ""
+    fps: int = 0
 
 
 class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
