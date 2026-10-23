@@ -63,6 +63,7 @@ class FieldExtras(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     label: str
+    category: str = "General"  # Category/SubCategory
     widget: WidgetType | None = None  # if None, guess it from python's type
     connected_readonly: bool = False
 
@@ -86,6 +87,7 @@ def _field(default: Any, extras: FieldExtras, **constraints) -> FieldInfo:
 
 def IntField(
     label: str,
+    category: str = "General",
     default: int = 0,
     min: int | None = None,
     max: int | None = None,
@@ -98,7 +100,11 @@ def IntField(
     return _field(
         default,
         FieldExtras(
-            label=label, widget=widget, connected_readonly=connected_readonly, step=step
+            label=label,
+            category=category,
+            widget=widget,
+            connected_readonly=connected_readonly,
+            step=step,
         ),
         ge=min,
         le=max,
@@ -107,6 +113,7 @@ def IntField(
 
 def FloatField(
     label: str,
+    category: str = "General",
     default: float = 0,
     min: float | None = None,
     max: float | None = None,
@@ -119,7 +126,11 @@ def FloatField(
     return _field(
         default,
         FieldExtras(
-            label=label, widget=widget, connected_readonly=connected_readonly, step=step
+            label=label,
+            category=category,
+            widget=widget,
+            connected_readonly=connected_readonly,
+            step=step,
         ),
         ge=min,
         le=max,
@@ -128,18 +139,25 @@ def FloatField(
 
 def BoolField(
     label: str,
+    category: str = "General",
     default: bool = False,
     widget: Literal[WidgetType.Checkbox] = WidgetType.Checkbox,
     connected_readonly: bool = False,
 ):
     return _field(
         default,
-        FieldExtras(label=label, widget=widget, connected_readonly=connected_readonly),
+        FieldExtras(
+            label=label,
+            category=category,
+            widget=widget,
+            connected_readonly=connected_readonly,
+        ),
     )
 
 
 def StrField(
     label: str,
+    category: str = "General",
     default: str = "",
     max_length: int | None = None,
     placeholder: str | None = None,
@@ -153,6 +171,7 @@ def StrField(
         default,
         FieldExtras(
             label=label,
+            category=category,
             widget=widget,
             connected_readonly=connected_readonly,
             placeholder=placeholder,
@@ -164,6 +183,7 @@ def StrField(
 
 def FileSelectorField(
     label: str,
+    category: str = "General",
     default: str = "",
     title: str | None = None,
     file_mode: QFileDialog.FileMode = QFileDialog.FileMode.AnyFile,
@@ -176,6 +196,7 @@ def FileSelectorField(
         default,
         FieldExtras(
             label=label,
+            category=category,
             widget=WidgetType.FileSelector,
             connected_readonly=connected_readonly,
             file_selector_title=title,

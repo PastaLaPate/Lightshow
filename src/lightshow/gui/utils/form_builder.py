@@ -19,17 +19,51 @@ else:
 
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
-from PySide6.QtCore import QSignalBlocker, Signal
+from PySide6.QtCore import QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDoubleSpinBox,
     QFormLayout,
+    QFrame,
+    QSizePolicy,
     QSpinBox,
+    QToolButton,
+    QVBoxLayout,
     QWidget,
 )
 
 from lightshow.devices.fields import FieldExtras, WidgetType
 from lightshow.gui.components.numeric_slider_spinbox import NumericSliderSpinBox
+
+SECTION_QSS = """
+#rootForm {
+    background: #1a1a1a;
+    border-radius: 8px;
+}
+#sectionHeader {
+    border: none; text-align: left; padding: 4px 6px; font-weight: 600;
+    color: #d0d0d0;
+    background: #2b2b2b;
+    border-radius: 4px;
+}
+#sectionHeader[level="0"] { background: #303030; }
+#sectionHeader:hover { background: #363636; }
+#sectionContent { border: none; background: transparent; }
+
+QLabel { color: #b5b5b5; background: transparent; }
+
+QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
+    background: #0f0f0f;
+    color: #d0d0d0;
+    border: 1px solid #3a3a3a;
+    border-radius: 3px;
+    padding: 2px 4px;
+    selection-background-color: #0070e0;
+}
+QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
+    border-color: #0070e0;
+}
+"""
 
 
 @dataclass
@@ -292,22 +326,82 @@ class FormField:
     set_value: Callable[[Any], None]
 
 
+class CollapsibleSection(QWidget):
+    toggled = Signal(bool)
+
+    def __init__(self, title: str, level: int = 0, expanded: bool = True, parent=None):
+        super().__init__(parent)
+
+        self.setObjectName("section")
+
+        self.header = QToolButton()
+        self.header.setObjectName("sectionHeader")
+        self.header.setText(title)
+        self.header.setCheckable(True)
+        self.header.setChecked(expanded)
+        self.header.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.header.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        self.header.setProperty("level", level)
+        self.header.toggled.connect(self._on_toggled)
+
+        self.content = QFrame()
+        self.content.setObjectName("sectionContent")
+
+        body = QVBoxLayout(self.content)
+        body.setContentsMargins(12 if level else 6, 4, 4, 4)
+        body.setSpacing(2)
+
+        self.form = QFormLayout()  # section's fields
+        self.form.setContentsMargins(0, 0, 0, 0)
+        body.addLayout(self.form)
+
+        self.children_layout = QVBoxLayout()
+        self.children_layout.setContentsMargins(0, 0, 0, 0)
+        body.addLayout(self.children_layout)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        root.addWidget(self.header)
+        root.addWidget(self.content)
+
+        self._on_toggled(expanded)
+
+    def _on_toggled(self, expanded: bool):
+        self.header.setArrowType(
+            Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow
+        )
+        self.content.setVisible(expanded)
+        self.toggled.emit(expanded)
+
+
 class ModelForm(QWidget):
     field_changed = Signal(str, object)
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setObjectName("rootForm")
+
         self.registry = FieldFactoryRegistry()
         self.fields: dict[str, FormField] = {}
+        self._sections: dict[tuple[str, ...], CollapsibleSection] = {}
+        self._expanded: dict[
+            tuple[str, ...], bool
+        ] = {}  # Save if the device gets re-selected
 
-        self.form_layout = QFormLayout()
-        self.setLayout(self.form_layout)
+        self.setStyleSheet(SECTION_QSS)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
-    def construct[T: BaseModel](self, model: type[T], instance: T | None):
-        self.fields.clear()
+        self._outer = QVBoxLayout(self)
+        self._outer.setContentsMargins(8, 8, 8, 8)
 
-        while self.form_layout.rowCount() > 0:
-            self.form_layout.removeRow(0)
+        self._content: QWidget | None = None
+        self._root_layout: QVBoxLayout | None = None
+
+    def construct[T: BaseModel](self, model: type[T], instance: T | None) -> None:
+        self._reset()
 
         specs = inspect_model(model, instance)
         for spec in specs:
@@ -320,16 +414,54 @@ class ModelForm(QWidget):
                 partial(factory.set_locked, w),
                 partial(factory.set_value, w),
             )
-            self.form_layout.addRow(spec.extras.label, w)
+            cat = spec.extras.category
+            path = tuple(p.strip() for p in cat.split("/"))
+            self._section(path).form.addRow(spec.extras.label, w)
+        if self._root_layout is not None:
+            self._root_layout.addStretch(1)
 
-    def set_connected(self, connected: bool):
+    def _reset(self) -> None:
+        self.fields.clear()
+        self._sections.clear()
+
+        if self._content is not None:
+            self._content.setParent(None)
+            self._content.deleteLater()
+
+        self._content = QWidget()
+        self._root_layout = QVBoxLayout(self._content)
+        self._root_layout.setContentsMargins(0, 0, 0, 0)
+        self._root_layout.setSpacing(2)
+
+        self._outer.addWidget(self._content)
+
+    def _section(self, path: tuple[str, ...]) -> CollapsibleSection:
+        if path in self._sections:
+            return self._sections[path]
+
+        parent_layout = (
+            self._section(path[:-1]).children_layout
+            if len(path) > 1
+            else self._root_layout
+        )  # Recursively find parent
+        if parent_layout is None:
+            raise RuntimeError("Wasnt initialized.")
+        sec = CollapsibleSection(
+            path[-1], level=len(path) - 1, expanded=self._expanded.get(path, True)
+        )
+        sec.toggled.connect(lambda e, p=path: self._expanded.__setitem__(p, e))
+        parent_layout.addWidget(sec)
+        self._sections[path] = sec
+        return sec
+
+    def set_connected(self, connected: bool) -> None:
         for f in self.fields.values():
             if f.spec.connected_readonly:
                 f.lock(connected)
 
-    def set_field(self, name: str, value: Any):
+    def set_field(self, name: str, value: Any) -> None:
         self.fields[name].set_value(value)
 
-    def _on_field_changed(self, name: str, value: Any):
+    def _on_field_changed(self, name: str, value: Any) -> None:
         self.set_field(name, value)
         self.field_changed.emit(name, value)

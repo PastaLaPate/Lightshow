@@ -30,32 +30,47 @@ class MovingHeadSettings(BaseDeviceSettings):
     # Connection
     ip: str = StrField(
         "IP",
-        "",
+        "Connectivity",
+        default="",
         placeholder="0.0.0.0",
         validation_scheme=ValidationScheme.IP,
         connected_readonly=True,
     )
     http_port: int = IntField(
         "HTTP Port",
-        8080,
+        "Connectivity",
+        default=8080,
         connected_readonly=True,
     )
     udp_port: int = IntField(
         "UDP Port",
-        1234,
+        "Connectivity",
+        default=1234,
         connected_readonly=True,
     )
 
     # Ranges
-    min_base_angle: int = IntField("Min Base Angle", 0, min=0, max=180)
-    max_base_angle: int = IntField("Max Base Angle", 180, min=0, max=180)
+    min_base_angle: int = IntField(
+        "Min Base Angle", category="Angles/Base", default=0, min=0, max=180
+    )
+    max_base_angle: int = IntField(
+        "Max Base Angle", category="Angles/Base", default=180, min=0, max=180
+    )
 
-    min_top_angle: int = IntField("Min Top Angle", 0, min=0, max=180)
-    max_top_angle: int = IntField("Max Top Angle", 180, min=0, max=180)
+    min_top_angle: int = IntField(
+        "Min Top Angle", category="Angles/Top", default=0, min=0, max=180
+    )
+    max_top_angle: int = IntField(
+        "Max Top Angle", category="Angles/Top", default=180, min=0, max=180
+    )
 
     # Invert
-    invert_base_angle: bool = BoolField("Invert Base Angle", False)
-    invert_top_angle: bool = BoolField("Invert Top Angle", False)
+    invert_base_angle: bool = BoolField(
+        "Invert Base Angle", category="Angles/Invertions", default=False
+    )
+    invert_top_angle: bool = BoolField(
+        "Invert Top Angle", category="Angles/Invertions", default=False
+    )
 
 
 class MovingHeadRuntime(ObservableModel):

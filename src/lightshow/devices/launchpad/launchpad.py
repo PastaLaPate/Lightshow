@@ -354,6 +354,7 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
     DEVICE_TYPE_NAME = DeviceTypeName.LAUNCHPAD_X
 
     def __init__(self, config):
+        from lightshow.core.config import global_config
 
         super().__init__(config)
         self.in_port: mido.ports.BaseInput | None = None
@@ -379,6 +380,10 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
         self.active_effects: dict[int, str] = {}  # button_note: effect_type
         self.running = False
         self._effect_thread: threading.Thread | None = None
+
+        # TODO: Maybe create methods like _assign_panel or smth like that to avoid having to proxy by _on_device_status_changed
+        for id, device_entry in global_config.device_store.all().items():
+            self._on_device_status_changed(id, device_entry.status)
 
     def _on_device_status_changed(self, device_id: str, new_status: DeviceStatus):
         # Assign the device a panel if one is available
