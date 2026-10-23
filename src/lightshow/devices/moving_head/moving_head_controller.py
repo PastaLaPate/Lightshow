@@ -211,6 +211,9 @@ class MovingHeadController:
         self.set_transformer(previous.transformer or BlankTransformer())
         self.device.current_anim = type(self.current_anim).__name__
 
+    def reverse_animation(self) -> None:
+        self.current_anim.reverse()
+
     # packets
 
     def handlePacket(self, packet: PacketData) -> None:

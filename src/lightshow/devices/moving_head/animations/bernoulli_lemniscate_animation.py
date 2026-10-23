@@ -12,6 +12,7 @@ _LEMNISCATE_MAX_Y = np.sqrt(2) / 4
 
 
 class BernoulliLemniscateAnimation(CircleAnimation):
+    # fix absurd speed
     def __init__(
         self,
         calibration: FixtureCalibration,
@@ -36,18 +37,10 @@ class BernoulliLemniscateAnimation(CircleAnimation):
         super().__init__(calibration, rgb, speed, scale, center, phase)
         self.fill_y = fill_y
 
-    def nextCurve(self, t: float) -> tuple[float, float]:
-        """
-        Lemniscate of Bernoulli (a = 1), returned in normalized space:
-            x(t) = cos(t) / (1 + sin^2(t))                 in [-1, 1]
-            y(t) = sin(t) * cos(t) / (1 + sin^2(t))        in [-sqrt(2)/4, sqrt(2)/4]
-        """
+    def shape(self, t: float) -> tuple[float, float]:
         denom = 1 + np.sin(t) ** 2
-        x = np.cos(t) / denom
-        y = (np.sin(t) * np.cos(t)) / denom
-
+        x = np.cos(t) / denom  # [-1, 1]
+        y = (np.sin(t) * np.cos(t)) / denom  # [-0.354, 0.354]
         if self.fill_y:
-            y = y / _LEMNISCATE_MAX_Y  # -> [-1, 1]
-
-        cx, cy = self.center
-        return (cx + self.scale * x, cy + self.scale * y)
+            y /= _LEMNISCATE_MAX_Y  # -> [-1, 1]
+        return (x, y)

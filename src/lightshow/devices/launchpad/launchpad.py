@@ -46,7 +46,7 @@ from lightshow.gui.utils import ui_signals
 class Buttons:
     # Row 1 (Top / Indices 12-15)
     COLORS_MODES: int = 12
-    Temp: int = 13
+    REVERSE_ANIM: int = 13
     FLASH_WHITE: int = 14
     FADE_BLACK: int = 15
 
@@ -212,6 +212,10 @@ class MovingHeadPanelSlot(PanelSlot):
             self.ctrl.set_palette(None if isinstance(value, int) else value)
             self.update_state()
 
+        elif key == Buttons.REVERSE_ANIM:
+            self.ctrl.reverse_animation()
+            self.update_state()
+
         elif key in self.TRANSFORMER_BUTTONS:
             self.ctrl.toggle_transformer(self.TRANSFORMER_BUTTONS[key])
 
@@ -328,6 +332,12 @@ class MovingHeadPanelSlot(PanelSlot):
             self.set_color(Buttons.COLORS_MODES, COLOR_MODES_COLORS[self.color_mode])
         else:
             self.set_color(Buttons.COLORS_MODES, Colors.WHITE, mode="pulse")
+        self.set_color(
+            Buttons.REVERSE_ANIM,
+            Colors.BRIGHT_GREEN
+            if not self.ctrl.current_anim.reversed
+            else Colors.BRIGHT_RED,
+        )
         self.set_color(Buttons.FLASH_WHITE, Colors.WHITE)
         self.set_color(Buttons.FADE_BLACK, Colors.GRAY, mode="pulse")
 
