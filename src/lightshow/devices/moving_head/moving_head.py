@@ -3,9 +3,9 @@ import threading
 import traceback
 
 import requests
-from pydantic import BaseModel
 
 from lightshow.core.logger import Logger
+from lightshow.core.observable_model import ObservableModel
 from lightshow.devices.animations.aanimation import RGB, Command
 from lightshow.devices.device import (
     BaseDeviceSettings,
@@ -56,7 +56,7 @@ class MovingHeadSettings(BaseDeviceSettings):
     invert_top_angle: bool = BoolField("Invert Top Angle", False)
 
 
-class MovingHeadRuntime(BaseModel):
+class MovingHeadRuntime(ObservableModel):
     pass
 
 

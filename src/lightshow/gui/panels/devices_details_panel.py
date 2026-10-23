@@ -1,8 +1,10 @@
+from collections.abc import Callable
 from typing import Any
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
+    QFormLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -101,6 +103,42 @@ class DeviceProps(QWidget):
 
     def render_device(self, entry: DeviceEntry):
         self.form.construct(DEVICE_CLASSES[entry.type_name].CONFIG_SCHEMA, entry.config)
+
+
+class DeviceRuntimeProps(QWidget):
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
+
+        self._current_device: str | None = None
+
+        self._layout = QFormLayout()
+        self.setLayout(self._layout)
+
+        self._fields: dict[str, QLabel] = {}
+
+        self.listeners_unsuscribers: list[Callable[[], None]] = []
+
+    def clear(self):
+        self._fields.clear()
+        while self._layout.rowCount() > 0:
+            self._layout.removeRow(0)
+
+    def track_device(self, device_id: str):
+        if device_id == self._current_device:
+            return
+        for unsuscriber in self.listeners_unsuscribers:
+            unsuscriber()
+        self.clear()
+        device_entry = global_config.device_store.get(device_id)
+        if (
+            device_entry.status != DeviceStatus.CONNECTED
+            or device_entry._device is None
+        ):  # Use _device to avoid instantiating it, double connection check
+            return
+        device = device_entry.device
+        if device.RUNTIME_SCHEMA is not None and device.runtime is not None:
+            rt_config = device.runtime
+            # TODO: Create fields + listeners
 
 
 class DeviceDetailsPanel(BasePanel):

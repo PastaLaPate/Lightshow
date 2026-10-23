@@ -1,16 +1,15 @@
 from abc import ABC, abstractmethod
 from typing import get_args, get_origin
 
-from pydantic import BaseModel
-
 from lightshow.core.debug import who_called_me
 from lightshow.core.logger import Logger
+from lightshow.core.observable_model import ObservableModel
 from lightshow.devices.types import BaseDeviceSettings, DeviceTypeName, PacketData
 
 logger = Logger("BaseDevice")
 
 
-class Device[T: BaseDeviceSettings, R: BaseModel](ABC):
+class Device[T: BaseDeviceSettings, R: ObservableModel](ABC):
     DEVICE_TYPE_NAME: DeviceTypeName
 
     CONFIG_SCHEMA: type[T]
@@ -115,11 +114,11 @@ class Device[T: BaseDeviceSettings, R: BaseModel](ABC):
         return self.name or "Device"
 
 
-class OutputDevice[T: BaseDeviceSettings, R: BaseModel](Device[T, R]):
+class OutputDevice[T: BaseDeviceSettings, R: ObservableModel](Device[T, R]):
     @abstractmethod
     def on(self, packet: PacketData):
         pass
 
 
-class InputDevice[T: BaseDeviceSettings, R: BaseModel](Device[T, R]):
+class InputDevice[T: BaseDeviceSettings, R: ObservableModel](Device[T, R]):
     pass

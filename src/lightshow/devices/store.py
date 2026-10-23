@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from lightshow.core.logger import Logger
+from lightshow.core.observable_model import ObservableModel
 from lightshow.devices.device import Device
 from lightshow.devices.registry import DEVICE_CLASSES
 from lightshow.devices.status import DeviceStatus
@@ -27,7 +28,7 @@ class DeviceEntry:
     status: DeviceStatus = DeviceStatus.DISCONNECTED
 
     @property
-    def device(self) -> Device:
+    def device(self) -> Device[BaseDeviceSettings, ObservableModel]:
         if self._device:
             return self._device
         logger.debug(f"Creating {self.config.name} ({self.type_name})'s instance.")

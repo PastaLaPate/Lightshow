@@ -7,9 +7,9 @@ from itertools import cycle
 from typing import ClassVar, Literal
 
 import mido
-from pydantic import BaseModel
 
 from lightshow.core import config
+from lightshow.core.observable_model import ObservableModel
 from lightshow.devices.device import InputDevice
 from lightshow.devices.moving_head.moving_head import MovingHead
 from lightshow.devices.moving_head.moving_head_animation_factories import (
@@ -346,7 +346,7 @@ class LaunchpadSettings(BaseDeviceSettings):
     pass
 
 
-class LaunchpadRuntime(BaseModel):
+class LaunchpadRuntime(ObservableModel):
     pass
 
 
