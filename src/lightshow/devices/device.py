@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import get_args, get_origin
+from typing import Any, cast, get_args, get_origin
 
 from lightshow.core.debug import who_called_me
 from lightshow.core.logger import Logger
@@ -9,15 +9,21 @@ from lightshow.devices.types import BaseDeviceSettings, DeviceTypeName, PacketDa
 logger = Logger("BaseDevice")
 
 
-class Device[T: BaseDeviceSettings, R: ObservableModel](ABC):
+class NoRuntime(ObservableModel):
+    pass
+
+
+class Device[T: BaseDeviceSettings, R: ObservableModel = NoRuntime](ABC):
     DEVICE_TYPE_NAME: DeviceTypeName
 
     CONFIG_SCHEMA: type[T]
-    RUNTIME_SCHEMA: type[R] | None = None
+    RUNTIME_SCHEMA: type[R]
 
     def __init_subclass__(cls, **kw):
         # Avoids having to redefine CONFIG_SCHEMA and RUNTIME_SCHEMA that are already set by the generics
         super().__init_subclass__(**kw)
+        if "RUNTIME_SCHEMA" not in cls.__dict__:
+            cls.RUNTIME_SCHEMA = cast(Any, NoRuntime)
         for base in cls.__dict__.get("__orig_bases__", ()):
             origin, args = get_origin(base), get_args(base)
             if not (isinstance(origin, type) and issubclass(origin, Device)):
@@ -32,7 +38,7 @@ class Device[T: BaseDeviceSettings, R: ObservableModel](ABC):
 
         self.ready = False
         self.config = config
-        self.runtime = self.RUNTIME_SCHEMA() if self.RUNTIME_SCHEMA else None
+        self.runtime = self.RUNTIME_SCHEMA()
 
     def connect(self, fatal_non_discovery=True):
         success = self.scan_for_device()

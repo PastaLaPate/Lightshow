@@ -24,7 +24,7 @@ logger = Logger("DeviceStore")
 class DeviceEntry:
     type_name: DeviceTypeName
     config: BaseDeviceSettings
-    _device: Device | None = None
+    _device: Device[BaseDeviceSettings, ObservableModel] | None = None
     status: DeviceStatus = DeviceStatus.DISCONNECTED
 
     @property
@@ -59,7 +59,9 @@ class DeviceStore(QObject):
     def get(self, device_id: str) -> DeviceEntry:
         return self._entries[device_id]
 
-    def get_instance(self, device_id: str) -> Device:
+    def get_instance(
+        self, device_id: str
+    ) -> Device[BaseDeviceSettings, ObservableModel]:
         return self._entries[device_id].device
 
     def all(self) -> dict[str, DeviceEntry]:
@@ -77,7 +79,7 @@ class DeviceStore(QObject):
                 self._quarantine[device_id] = item
                 continue
             try:
-                schema: BaseDeviceSettings = cls.CONFIG_SCHEMA
+                schema: type[BaseDeviceSettings] = cls.CONFIG_SCHEMA
                 cfg = schema.model_validate({**item.get("props", {}), "id": device_id})
             except ValidationError as e:
                 logger.error(

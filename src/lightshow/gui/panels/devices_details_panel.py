@@ -106,6 +106,8 @@ class DeviceProps(QWidget):
 
 
 class DeviceRuntimeProps(QWidget):
+    _change_field = Signal(str, object)
+
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
 
@@ -115,18 +117,29 @@ class DeviceRuntimeProps(QWidget):
         self.setLayout(self._layout)
 
         self._fields: dict[str, QLabel] = {}
+        self._unsubscribers: list[Callable[[], None]] = []
 
-        self.listeners_unsuscribers: list[Callable[[], None]] = []
+        self._change_field.connect(self._on_field_changed)
+
+        unsubs = self._unsubscribers
+        self.destroyed.connect(lambda *_: [u() for u in unsubs])
 
     def clear(self):
+        [
+            unsubscribe() for unsubscribe in self._unsubscribers
+        ]  # List comprehension not because we should but because we can
+        self._unsubscribers.clear()
+
         self._fields.clear()
         while self._layout.rowCount() > 0:
             self._layout.removeRow(0)
 
+        self._current_device = None
+
     def track_device(self, device_id: str):
         if device_id == self._current_device:
             return
-        for unsuscriber in self.listeners_unsuscribers:
+        for unsuscriber in self._unsubscribers:
             unsuscriber()
         self.clear()
         device_entry = global_config.device_store.get(device_id)
@@ -136,9 +149,34 @@ class DeviceRuntimeProps(QWidget):
         ):  # Use _device to avoid instantiating it, double connection check
             return
         device = device_entry.device
-        if device.RUNTIME_SCHEMA is not None and device.runtime is not None:
-            rt_config = device.runtime
-            # TODO: Create fields + listeners
+        if device.RUNTIME_SCHEMA is None or device.runtime is None:
+            return
+
+        runtime = device.runtime
+        self._current_device = device_id
+
+        for name in device.RUNTIME_SCHEMA.model_fields:
+            label = QLabel(self._format(getattr(runtime, name)))
+            label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            self._layout.addRow(name, label)
+            self._fields[name] = label
+
+        self._unsubscribers.append(
+            runtime.subscribe(
+                lambda field, _old, new: self._change_field.emit(field, new)
+            )
+        )
+
+    def _on_field_changed(self, field: str, value: Any):
+        label = self._fields.get(field)
+        if label is not None:
+            label.setText(self._format(value))
+
+    @staticmethod
+    def _format(value: Any) -> str:
+        if isinstance(value, float):
+            return f"{value:.3f}"
+        return str(value)
 
 
 class DeviceDetailsPanel(BasePanel):

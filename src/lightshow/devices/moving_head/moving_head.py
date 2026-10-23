@@ -23,6 +23,8 @@ from lightshow.devices.moving_head.moving_head_controller import (
 from lightshow.devices.types import DeviceTypeName, PacketStatus, PacketType
 from lightshow.gui.utils import ui_signals
 
+# TODO: Sync with other Device -> Mirror & Flip + Upload Firmware + Set GPIO
+
 
 class MovingHeadSettings(BaseDeviceSettings):
     # Connection
@@ -57,7 +59,8 @@ class MovingHeadSettings(BaseDeviceSettings):
 
 
 class MovingHeadRuntime(ObservableModel):
-    pass
+    current_animation: str
+    fps: int
 
 
 class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
@@ -72,7 +75,6 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
 
         self.manual = False
         self.auto_tick = False
-        self.current_anim = ""
 
         self.controller = MovingHeadController(self)
 

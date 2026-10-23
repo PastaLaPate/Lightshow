@@ -178,7 +178,7 @@ class MovingHeadController:
         self.set_transformer(
             random.choice([t for t in TRANSFORMERS if t.filter()(anim)])()
         )
-        self.device.current_anim = type(anim).__name__
+        self.device.runtime.current_animation = type(anim).__name__
 
     # public api
     def set_palette(self, color_mode: COLOR_MODE | None = None) -> None:
@@ -209,7 +209,7 @@ class MovingHeadController:
         self.beats_since_anim_change = 0
         self.set_palette(self.color_mode)
         self.set_transformer(previous.transformer or BlankTransformer())
-        self.device.current_anim = type(self.current_anim).__name__
+        self.device.runtime.current_animation = type(self.current_anim).__name__
 
     def reverse_animation(self) -> None:
         self.current_anim.reverse()
