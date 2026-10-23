@@ -342,9 +342,6 @@ class MovingHeadPanelSlot(PanelSlot):
         self.set_color(Buttons.FADE_BLACK, Colors.GRAY, mode="pulse")
 
 
-# TODO: Cleanup this shit, what happens if a moving head disconnects while it has a panel ??
-
-
 class LaunchpadSettings(BaseDeviceSettings):
     pass
 
@@ -361,7 +358,6 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
         super().__init__(config)
         self.in_port: mido.ports.BaseInput | None = None
         self.out_port: mido.ports.BaseOutput | None = None
-        self.device_name = "Not Connected"
 
         # State Management
         self.used_panels: dict[int, None | str] = {  # panel_id: device_id using it
@@ -386,7 +382,13 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
 
     def _on_device_status_changed(self, device_id: str, new_status: DeviceStatus):
         # Assign the device a panel if one is available
-        if new_status != DeviceStatus.CONNECTED:
+        if new_status == DeviceStatus.DISCONNECTED:
+            if device_id in self.used_panels.values():
+                panel_id = list(self.used_panels.values()).index(device_id)
+                self.used_panels[panel_id] = None
+                self.panels_slots[panel_id] = None
+            return
+        elif new_status == DeviceStatus.CONNECTING:
             return
 
         if not isinstance(
@@ -401,18 +403,6 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
                 self.panels_slots[panel_id] = slot
                 slot.update_state()
                 break
-
-    def _connect_device_callback(self, device_id: str):
-        if (
-            device_id in config.global_config.device_store.all()
-            and config.global_config.device_store.get(device_id).status
-            == DeviceStatus.CONNECTED
-        ):  # = On device disconnect
-            for panel_id, d_id in self.used_panels.items():
-                if d_id == device_id:
-                    self.used_panels[panel_id] = None
-                    self.panels_slots[panel_id] = None
-                    break
 
     def start_effect_engine(self):
         self.running = True

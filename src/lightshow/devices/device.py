@@ -38,13 +38,15 @@ class Device[T: BaseDeviceSettings, R: BaseModel](ABC):
     def connect(self, fatal_non_discovery=True):
         success = self.scan_for_device()
         if not success and fatal_non_discovery:
+            self.ready = False
             raise ConnectionError("No device was found")
         elif not success:
+            self.ready = False
             return
         success = self.init_device()
+        self.ready = success
         if not success and fatal_non_discovery:
             raise ConnectionRefusedError("The device could not be found")
-        self.ready = success
         return
 
     @abstractmethod
