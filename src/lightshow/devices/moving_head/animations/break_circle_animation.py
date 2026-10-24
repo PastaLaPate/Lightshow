@@ -1,9 +1,6 @@
 from lightshow.core.colors import hsv_to_rgb
-from lightshow.devices.animations.aanimation import RGB
-from lightshow.devices.moving_head.moving_head_animations import (
-    MHAnimationFrame,
-)
-from lightshow.devices.types import FixtureCalibration
+from lightshow.devices.moving_head.commands import RGB
+from lightshow.devices.moving_head.types import FixtureCalibration, MHAnimationFrame
 
 from .circle_animation import CircleAnimation
 

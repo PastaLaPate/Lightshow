@@ -1,7 +1,7 @@
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QLineEdit
 
-from lightshow.devices.fields import ValidationScheme
+from lightshow.core.fields import ValidationScheme
 from lightshow.gui.utils.field_validator import validate_value
 
 

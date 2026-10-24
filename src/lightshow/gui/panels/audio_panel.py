@@ -17,7 +17,7 @@ from lightshow.audio.streams import AAudioStreamHandler
 from lightshow.audio.types import AudioDevice
 from lightshow.core.config import _Settings, global_config
 from lightshow.core.logger import Logger
-from lightshow.gui.components.logs import Logs
+from lightshow.gui.panels.logs import Logs
 from lightshow.gui.theme import style
 from lightshow.gui.utils import ui_signals
 

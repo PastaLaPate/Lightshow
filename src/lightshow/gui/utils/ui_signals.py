@@ -1,8 +1,7 @@
 from PySide6.QtCore import QObject, Signal
 
 from lightshow.audio.types import AudioDevice
-from lightshow.devices.status import DeviceStatus
-from lightshow.devices.types import DeviceTypeName
+from lightshow.devices.types import DeviceStatus, DeviceTypeName
 
 
 class DeviceRequests(QObject):

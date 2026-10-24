@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from lightshow.gui.components.collabsible_section import CollapsibleSection
+from lightshow.gui.components.collapsible_section import CollapsibleSection
 from lightshow.gui.theme import style
 
 

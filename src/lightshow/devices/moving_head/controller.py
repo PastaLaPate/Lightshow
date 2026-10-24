@@ -5,12 +5,11 @@ from collections import deque
 
 import numpy as np
 
-from lightshow.audio.beat_tracker import BeatTracker
 from lightshow.audio.data import AudioData
 from lightshow.core.logger import Logger
-from lightshow.devices.animations import FadeCommand
-from lightshow.devices.animations.aanimation import RGB, FlickerCommand
+from lightshow.core.tempo import BeatTracker
 from lightshow.devices.device import PacketData
+from lightshow.devices.moving_head.animation_factories import AnimationFactory
 from lightshow.devices.moving_head.animations import (
     BernoulliLemniscateAnimation,
     BounceAnimation,
@@ -18,17 +17,7 @@ from lightshow.devices.moving_head.animations import (
     CircleAnimation,
     RegularPolygonAnimation,
 )
-from lightshow.devices.moving_head.moving_head_animation_factories import (
-    AnimationFactory,
-)
-from lightshow.devices.moving_head.moving_head_animations import (
-    QUART_OUT,
-    AMHAnimation,
-    ColorOnTick,
-    HasPalette,
-    MHAnimationFrame,
-)
-from lightshow.devices.moving_head.moving_head_colors import (
+from lightshow.devices.moving_head.colors import (
     COLOR_MODE,
     RAINBOW_KICK_COLORS,
     TRANSFORMERS,
@@ -37,10 +26,19 @@ from lightshow.devices.moving_head.moving_head_colors import (
     DEFAULT_RGBs,
     random_rainbow_color,
 )
-from lightshow.devices.types import FixtureCalibration, PacketStatus, PacketType
+from lightshow.devices.moving_head.commands import RGB, FadeCommand, FlickerCommand
+from lightshow.devices.moving_head.types import (
+    QUART_OUT,
+    AbstractMHAnimation,
+    ColorOnTick,
+    FixtureCalibration,
+    HasPalette,
+    MHAnimationFrame,
+)
+from lightshow.devices.types import PacketStatus, PacketType
 
 if typing.TYPE_CHECKING:
-    from lightshow.devices.moving_head.moving_head import MovingHead
+    from lightshow.devices.moving_head import MovingHead
 
 TRIANGLE_ANIMATION = lambda calib: RegularPolygonAnimation(
     calib, rgb=DEFAULT_RGBs, points_num=3
@@ -137,9 +135,9 @@ class MovingHeadController:
             random_rainbow_color,
         ]
         self.color_mode: COLOR_MODE = RAINBOW_KICK_COLORS
-        self.break_anim: AMHAnimation = CIRCLE_BREAK_ANIMATION(self.get_calib())
-        self.anim_list: list[AMHAnimation] = self._build_animations()
-        self.current_anim: AMHAnimation = random.choice(self.anim_list)
+        self.break_anim: AbstractMHAnimation = CIRCLE_BREAK_ANIMATION(self.get_calib())
+        self.anim_list: list[AbstractMHAnimation] = self._build_animations()
+        self.current_anim: AbstractMHAnimation = random.choice(self.anim_list)
         self._activate(self.current_anim)
 
     # animations
@@ -154,7 +152,7 @@ class MovingHeadController:
             servo_limits=(0, 180),
         )
 
-    def _build_animations(self) -> list[AMHAnimation]:
+    def _build_animations(self) -> list[AbstractMHAnimation]:
         calib = self.get_calib()
         return [factory(calib) for factory in DEFAULT_ANIMATIONS]
 
@@ -169,7 +167,7 @@ class MovingHeadController:
         self._activate(random.choice(candidates or self.anim_list))
         self._send(self._advance(self.current_anim, beat=True), force=True)
 
-    def _activate(self, anim: AMHAnimation) -> None:
+    def _activate(self, anim: AbstractMHAnimation) -> None:
         self.current_anim = anim
         self.beats_since_anim_change = 0
         self.set_palette(None)
@@ -304,7 +302,7 @@ class MovingHeadController:
     def _holding(self) -> bool:
         return now_ns() < self._hold_until_ns
 
-    def _advance(self, anim: AMHAnimation, beat: bool) -> MHAnimationFrame:
+    def _advance(self, anim: AbstractMHAnimation, beat: bool) -> MHAnimationFrame:
         now = now_ns()
         dt = (now - self._last_tick_ns) / NS_PER_S
         self._last_tick_ns = now

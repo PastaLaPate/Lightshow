@@ -40,8 +40,10 @@ cz_conventional_chore = "scripts.cz_conventional_chore:ConventionalChoreCz"
 [dependency-groups]
 dev = [
   "commitizen>=4.19.2",
+  "import-linter>=2.15",
   "isort>=9.0.1",
   "pre-commit>=4.7.0",
+  "rope>=1.15.0",
   "ruff>=0.17.1",
   "ty>=0.0.89",
 ]
@@ -57,6 +59,23 @@ version_scheme = "pep440"
 version_provider = "uv"
 update_changelog_on_bump = true
 major_version_zero = true
+
+[tool.importlinter]
+root_package = "lightshow"
+include_external_packages = true
+exclude_type_checking_imports = true
+
+[[tool.importlinter.contracts]]
+name = "Layered architecture"
+type = "layers"
+layers = [
+  "lightshow.__main__",
+  "lightshow.app",
+  "lightshow.gui",
+  "lightshow.devices",
+  "lightshow.audio | lightshow.media | lightshow.document",
+  "lightshow.core",
+]
 
 [tool.setuptools]
 py-modules = []

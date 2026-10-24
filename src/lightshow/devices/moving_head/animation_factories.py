@@ -8,11 +8,10 @@ from lightshow.devices.moving_head.animations import (
     CircleAnimation,
     RegularPolygonAnimation,
 )
-from lightshow.devices.moving_head.moving_head_animations import AMHAnimation
-from lightshow.devices.moving_head.moving_head_colors import DEFAULT_RGBs
-from lightshow.devices.types import FixtureCalibration
+from lightshow.devices.moving_head.colors import DEFAULT_RGBs
+from lightshow.devices.moving_head.types import AbstractMHAnimation, FixtureCalibration
 
-AnimationFactory = Callable[[FixtureCalibration], AMHAnimation]
+AnimationFactory = Callable[[FixtureCalibration], AbstractMHAnimation]
 
 
 TRIANGLE_ANIMATION: AnimationFactory = partial(

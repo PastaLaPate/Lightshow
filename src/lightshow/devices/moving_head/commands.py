@@ -1,7 +1,8 @@
-from abc import ABC, abstractmethod
-from typing import Any
+from __future__ import annotations
 
-from lightshow.audio.data import AudioData
+from abc import ABC, abstractmethod
+
+from lightshow.devices.moving_head.types import ServoType
 
 
 class Command(ABC):
@@ -13,6 +14,8 @@ class Command(ABC):
     def toUDP_MH_Command(self) -> str:
         pass
 
+
+# TODO: remove like toMH and rename like to serialize...
 
 """
 
@@ -126,15 +129,26 @@ class FadeCommand(Command):
         )
 
 
-class AAnimation(ABC):
-    def __init__(self):
-        self.reversed = False
+class ServoCommand(Command):
+    servo: ServoType
+    angle: int
 
-    # dt: time since last frame in s
-    @abstractmethod
-    def next(self, audio_data: AudioData, isTick: bool = False, dt: float = 0) -> Any:
-        pass
+    def __init__(self, servo: ServoType, angle: int):
+        self.servo = servo
+        self.angle = angle
 
-    @abstractmethod
-    def reverse(self):
-        self.reversed = not self.reversed
+    def toMHCommand(self):
+        return {"servo": [{"servo": self.servo, "angle": self.angle}]}
+
+    def toUDP_MH_Command(self) -> str:
+        return ("tS" if self.servo == "top" else "bS") + f"={self.angle}"
+
+
+class BaseServoCommand(ServoCommand):
+    def __init__(self, angle: int):
+        super().__init__("base", angle)
+
+
+class TopServoCommand(ServoCommand):
+    def __init__(self, angle: int):
+        super().__init__("top", angle)

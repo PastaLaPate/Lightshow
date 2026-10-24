@@ -11,11 +11,14 @@ import mido
 from lightshow.core import config
 from lightshow.core.observable_model import ObservableModel
 from lightshow.devices.device import InputDevice
-from lightshow.devices.moving_head.moving_head import MovingHead
-from lightshow.devices.moving_head.moving_head_animation_factories import (
+from lightshow.devices.moving_head import MovingHead, MovingHeadController
+from lightshow.devices.moving_head.animation_factories import (
+    CIRCLE_ANIMATION,
+    LEMNISCATE_ANIMATION,
+    SQUARE_ANIMATION,
     AnimationFactory,
 )
-from lightshow.devices.moving_head.moving_head_colors import (
+from lightshow.devices.moving_head.colors import (
     BLUE_COLORS,
     RED_COLORS,
     ColorTransformer,
@@ -24,15 +27,9 @@ from lightshow.devices.moving_head.moving_head_colors import (
     ToBlackTransformer,
     random_rainbow_color,
 )
-from lightshow.devices.moving_head.moving_head_controller import (
-    CIRCLE_ANIMATION,
-    LEMNISCATE_ANIMATION,
-    SQUARE_ANIMATION,
-    MovingHeadController,
-)
-from lightshow.devices.status import DeviceStatus
 from lightshow.devices.types import (
     BaseDeviceSettings,
+    DeviceStatus,
     DeviceTypeName,
     PacketData,
     PacketStatus,

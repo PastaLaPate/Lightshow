@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from lightshow.devices.fields import FileFilters
+from lightshow.core.fields import FileFilters
 
 
 class PathSelector(QWidget):

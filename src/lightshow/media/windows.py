@@ -1,5 +1,7 @@
 import os
 
+from lightshow.media.base import AbstractTrackTracker
+
 if not os.name == "nt":
     raise ImportError("This module is only for Windows.")
 
@@ -13,14 +15,13 @@ from winrt.windows.media.control import (
     GlobalSystemMediaTransportControlsSessionPlaybackStatus,
 )
 
-from lightshow.tracks_tracker.abstract_tracker import ATrackTracker
 from lightshow.tracks_tracker.types import PlaybackStatus, TrackInfo
 
 _loop: Final[asyncio.AbstractEventLoop] = asyncio.new_event_loop()
 threading.Thread(target=_loop.run_forever, daemon=True).start()
 
 
-class WindowsTracksInfoTracker(ATrackTracker):
+class WindowsTracksInfoTracker(AbstractTrackTracker):
     """Windows tracker using the GlobalSystemMediaTransportControls API."""
 
     def __init__(self) -> None:

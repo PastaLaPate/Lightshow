@@ -6,8 +6,8 @@ from collections.abc import Callable
 
 from lightshow.audio.data import AudioData
 from lightshow.core.colors import hsv_to_rgb
-from lightshow.devices.animations import AAnimation
-from lightshow.devices.animations.aanimation import RGB, FadeCommand, FlickerCommand
+from lightshow.devices.moving_head.commands import RGB, FadeCommand, FlickerCommand
+from lightshow.devices.types import AbstractAnimation
 
 COLOR_MODE = list[RGB] | Callable[[], RGB]
 
@@ -66,7 +66,7 @@ class ColorTransformer(ABC):
 
     @staticmethod
     @abstractmethod
-    def filter() -> Callable[[AAnimation], bool]:
+    def filter() -> Callable[[AbstractAnimation], bool]:
         pass
 
     @staticmethod
@@ -105,7 +105,7 @@ class RedLowsModulator(ColorTransformer):
         return True
 
     @staticmethod
-    def filter() -> Callable[[AAnimation], bool]:
+    def filter() -> Callable[[AbstractAnimation], bool]:
         return lambda x: True
 
     def next(self, color, audio_data):

@@ -26,7 +26,7 @@ from lightshow.devices.device import (
     OutputDevice,
     PacketData,
 )
-from lightshow.devices.moving_head.moving_head import MovingHead
+from lightshow.devices.moving_head import MovingHead
 from lightshow.devices.store import DeviceStatus
 from lightshow.devices.types import PacketStatus, PacketType
 from lightshow.gui.main_window import UIManager

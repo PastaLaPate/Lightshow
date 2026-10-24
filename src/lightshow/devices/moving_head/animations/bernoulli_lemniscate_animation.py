@@ -2,11 +2,11 @@ from collections.abc import Callable
 
 import numpy as np
 
-from lightshow.devices.animations import RGB
 from lightshow.devices.moving_head.animations.circle_animation import (
     CircleAnimation,
 )
-from lightshow.devices.types import FixtureCalibration
+from lightshow.devices.moving_head.commands import RGB
+from lightshow.devices.moving_head.types import FixtureCalibration
 
 _LEMNISCATE_MAX_Y = np.sqrt(2) / 4
 

@@ -8,7 +8,7 @@ from lightshow.media.types import (
 )
 
 
-class ATrackTracker(ABC):
+class AbstractTrackTracker(ABC):
     """Common interface shared across all platform implementations."""
 
     def __init__(self) -> None:

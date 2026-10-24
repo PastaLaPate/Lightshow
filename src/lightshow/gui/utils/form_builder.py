@@ -8,6 +8,7 @@ from typing import Annotated, Any, Union, get_args, get_origin
 
 from PySide6.QtGui import QColor
 
+from lightshow.core.fields import FieldExtras, WidgetType
 from lightshow.gui.components.color_picker import ColorPicker
 from lightshow.gui.components.path_selector import PathSelector
 from lightshow.gui.components.section_view import SectionedView
@@ -30,7 +31,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from lightshow.devices.fields import FieldExtras, WidgetType
 from lightshow.gui.components.numeric_slider_spinbox import NumericSliderSpinBox
 
 

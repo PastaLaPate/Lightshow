@@ -4,23 +4,21 @@ import traceback
 
 import requests
 
-from lightshow.core.logger import Logger
-from lightshow.core.observable_model import ObservableModel
-from lightshow.devices.animations.aanimation import RGB, Command
-from lightshow.devices.device import (
-    BaseDeviceSettings,
-    OutputDevice,
-)
-from lightshow.devices.fields import (
+from lightshow.core.fields import (
     BoolField,
     IntField,
     RuntimeField,
     StrField,
     ValidationScheme,
 )
-from lightshow.devices.moving_head.moving_head_controller import (
-    MovingHeadController,
+from lightshow.core.logger import Logger
+from lightshow.core.observable_model import ObservableModel
+from lightshow.devices.device import (
+    BaseDeviceSettings,
+    OutputDevice,
 )
+from lightshow.devices.moving_head import MovingHeadController
+from lightshow.devices.moving_head.commands import RGB, Command
 from lightshow.devices.types import DeviceTypeName, PacketStatus, PacketType
 from lightshow.gui.utils import ui_signals
 

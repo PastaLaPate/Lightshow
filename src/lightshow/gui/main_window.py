@@ -24,10 +24,10 @@ from lightshow.gui.controllers.audio_controller import AudioController
 from lightshow.gui.controllers.device_controller import DeviceController
 from lightshow.gui.dialogs.about_dialog import AboutDialog
 from lightshow.gui.dialogs.settings_dialog import SettingsDialog
-from lightshow.gui.input.shortcuts import ShortcutMap, Shortcuts
 from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.gui.panels.stats import StatsPanel
+from lightshow.gui.shortcuts import ShortcutMap, Shortcuts
 from lightshow.gui.theme import style
 from lightshow.gui.utils.async_tasks import TaskRunner
 from lightshow.gui.utils.ui_signals import ui_signals

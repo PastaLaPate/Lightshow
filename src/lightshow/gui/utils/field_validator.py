@@ -3,6 +3,8 @@ from typing import Annotated, Any
 
 from pydantic_extra_types import Color
 
+from lightshow.core.fields import ValidationScheme
+
 if sys.version_info >= (3, 15):
     from typing import TypeForm
 else:
@@ -16,8 +18,6 @@ from pydantic import (
     TypeAdapter,
     ValidationError,
 )
-
-from lightshow.devices.fields import ValidationScheme
 
 HexStr = Annotated[str, Field(pattern=r"^(?:0x)?[0-9a-fA-F]+$")]
 IPPortStr = Annotated[

@@ -15,8 +15,8 @@ from PySide6.QtWidgets import (
 from lightshow.core.config import global_config
 from lightshow.devices.device import Device
 from lightshow.devices.registry import DEVICE_CLASSES
-from lightshow.devices.status import DeviceStatus
 from lightshow.devices.store import DeviceEntry
+from lightshow.devices.types import DeviceStatus
 from lightshow.gui.components.badge import Badge
 from lightshow.gui.components.editable_label import EditableLabel
 from lightshow.gui.components.status_circle import StatusCircle

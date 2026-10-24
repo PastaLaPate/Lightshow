@@ -12,8 +12,12 @@ from lightshow.core.logger import Logger
 from lightshow.core.observable_model import ObservableModel
 from lightshow.devices.device import Device
 from lightshow.devices.registry import DEVICE_CLASSES
-from lightshow.devices.status import DeviceStatus
-from lightshow.devices.types import BaseDeviceSettings, DeviceConfigType, DeviceTypeName
+from lightshow.devices.types import (
+    BaseDeviceSettings,
+    DeviceConfigType,
+    DeviceStatus,
+    DeviceTypeName,
+)
 from lightshow.document.history import global_history
 from lightshow.gui.utils.async_tasks import JobData, TaskContext, TaskRunner
 

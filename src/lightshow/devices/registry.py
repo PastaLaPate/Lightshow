@@ -2,7 +2,7 @@ from typing import Any, Final
 
 from lightshow.core.observable_model import ObservableModel
 from lightshow.devices.device import Device
-from lightshow.devices.launchpad.launchpad import LaunchpadX
+from lightshow.devices.launchpadx import LaunchpadX
 from lightshow.devices.moving_head import MovingHead
 from lightshow.devices.types import BaseDeviceSettings, DeviceTypeName
 

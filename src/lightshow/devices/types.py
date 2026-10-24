@@ -1,8 +1,10 @@
-from dataclasses import dataclass
-from enum import Enum, StrEnum
-from typing import Any, NamedTuple, TypedDict
+from abc import ABC, abstractmethod
+from enum import Enum, IntEnum, StrEnum, auto
+from typing import Any, TypedDict
 
 from pydantic import BaseModel, ConfigDict
+
+from lightshow.audio.data import AudioData
 
 
 class DeviceTypeName(StrEnum):
@@ -28,6 +30,12 @@ class PacketType(Enum):
 class PacketStatus(Enum):
     ON = 0
     OFF = 1
+
+
+class DeviceStatus(IntEnum):
+    DISCONNECTED = auto()
+    CONNECTING = auto()
+    CONNECTED = auto()
 
 
 class PacketData:
@@ -57,55 +65,15 @@ class BaseDeviceSettings(BaseModel):
     name: str = "Device X"
 
 
-class ServoAngles(NamedTuple):
-    base: int
-    top: int
+class AbstractAnimation(ABC):
+    def __init__(self):
+        self.reversed = False
 
+    # dt: time since last frame in s
+    @abstractmethod
+    def next(self, audio_data: AudioData, isTick: bool = False, dt: float = 0) -> Any:
+        pass
 
-@dataclass
-class FixtureCalibration:
-    base_range: tuple[float, float] = (0, 120)
-    top_range: tuple[float, float] = (0, 70)
-    base_offset: float = 0
-    invert_base: bool = False
-    invert_top: bool = False
-    servo_limits: tuple[float, float] = (0, 180)
-
-    def to_servo(self, x: float, y: float) -> ServoAngles:
-        """Converts normalized angles to real ranged angles
-
-        Args:
-            x (float): [-1,1] Where -1 is lower bound and 1 upper bound. For base angle.
-            y (float): [-1,1] Where -1 is lower bound and 1 upper bound. For head angle.
-
-        Returns:
-            tuple[int, int]: _description_
-        """
-        x = max(-1, min(1, x))
-        y = max(-1, min(1, y))
-        if self.invert_base:
-            x = -x
-        if self.invert_top:
-            y = -y
-
-        lo, hi = self.base_range
-        base = lo + (x + 1) / 2 * (hi - lo) + self.base_offset
-        lo, hi = self.top_range
-        top = lo + (y + 1) / 2 * (hi - lo)
-
-        lim_lo, lim_hi = self.servo_limits
-        base = max(lim_lo, min(lim_hi, base))
-        top = max(lim_lo, min(lim_hi, top))
-        return ServoAngles(round(base), round(top))
-
-    def from_servo(self, base: float, top: float) -> tuple[float, float]:
-        """Inverse of to_servo: real angles -> normalized (x, y)."""
-        b_lo, b_hi = self.base_range
-        t_lo, t_hi = self.top_range
-        x = (base - self.base_offset - b_lo) / (b_hi - b_lo) * 2 - 1
-        y = (top - t_lo) / (t_hi - t_lo) * 2 - 1
-        if self.invert_base:
-            x = -x
-        if self.invert_top:
-            y = -y
-        return x, y
+    @abstractmethod
+    def reverse(self):
+        self.reversed = not self.reversed

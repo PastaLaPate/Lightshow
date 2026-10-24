@@ -1,19 +1,22 @@
 from collections.abc import Callable
 from itertools import cycle
 
-from lightshow.devices.animations import FlickerCommand
-from lightshow.devices.animations.aanimation import RGB, FadeCommand
-from lightshow.devices.moving_head.moving_head_animations import (
-    AMHAnimation,
+from lightshow.devices.moving_head.colors import COLOR_MODE
+from lightshow.devices.moving_head.commands import (
+    RGB,
     BaseServoCommand,
-    MHAnimationFrame,
+    FadeCommand,
+    FlickerCommand,
     TopServoCommand,
 )
-from lightshow.devices.moving_head.moving_head_colors import COLOR_MODE
-from lightshow.devices.types import FixtureCalibration
+from lightshow.devices.moving_head.types import (
+    AbstractMHAnimation,
+    FixtureCalibration,
+    MHAnimationFrame,
+)
 
 
-class BounceAnimation(AMHAnimation):
+class BounceAnimation(AbstractMHAnimation):
     NAME = "Bounce"
 
     def __init__(self, calibration: FixtureCalibration, rgb: COLOR_MODE):

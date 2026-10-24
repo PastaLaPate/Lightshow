@@ -1,5 +1,7 @@
 import os
 
+from lightshow.media.base import AbstractTrackTracker
+
 if not os.name == "posix":
     raise ImportError("This module is only for Linux.")
 
@@ -13,7 +15,6 @@ from dbus_next.constants import BusType
 from dbus_next.signature import Variant
 
 from lightshow.core.logger import Logger
-from lightshow.media.abstract_tracker import ATrackTracker
 from lightshow.media.types import PlaybackStatus, TrackInfo
 
 
@@ -89,7 +90,7 @@ def _playback_status_from_mpris(raw: str) -> PlaybackStatus:
     return mapping.get(raw, PlaybackStatus.STOPPED)
 
 
-class LinuxTracksInfoTracker(ATrackTracker):
+class LinuxTracksInfoTracker(AbstractTrackTracker):
     """Linux tracker using dbus/MPRIS2."""
 
     def __init__(self) -> None:

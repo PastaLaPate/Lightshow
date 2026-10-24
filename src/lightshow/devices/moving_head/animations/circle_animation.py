@@ -5,16 +5,21 @@ from itertools import cycle
 
 import numpy as np
 
-from lightshow.devices.animations import RGB
-from lightshow.devices.moving_head.moving_head_animations import (
-    AMHAnimation,
-    MHAnimationFrame,
-    ServoCommand,
+from lightshow.devices.moving_head.commands import (
+    RGB,
+    BaseServoCommand,
+    TopServoCommand,
 )
-from lightshow.devices.types import FixtureCalibration
+from lightshow.devices.moving_head.types import (
+    AbstractMHAnimation,
+    FixtureCalibration,
+    MHAnimationFrame,
+)
+
+# TODO: Redo this animations entirely
 
 
-class CircleAnimation(AMHAnimation):
+class CircleAnimation(AbstractMHAnimation):
     MAX_LAPS_PER_S = 2.0
     TEMPO_TIMEOUT = 2.5
 
@@ -108,8 +113,8 @@ class CircleAnimation(AMHAnimation):
         return MHAnimationFrame(
             duration=0,
             rgb=self.cached_color,
-            topServo=ServoCommand(servo="top", angle=angles.top),
-            baseServo=ServoCommand(servo="base", angle=angles.base),
+            topServo=TopServoCommand(angles.top),
+            baseServo=BaseServoCommand(angles.base),
         )
 
     def _register_beat(self):

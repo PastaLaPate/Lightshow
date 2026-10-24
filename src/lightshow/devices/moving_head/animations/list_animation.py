@@ -1,19 +1,21 @@
 import random
 from itertools import cycle
 
-from lightshow.devices.animations.aanimation import RGB
-from lightshow.devices.moving_head.moving_head_animations import (
-    AMHAnimation,
+from lightshow.devices.moving_head.colors import COLOR_MODE
+from lightshow.devices.moving_head.commands import (
+    RGB,
     BaseServoCommand,
-    MHAnimationFrame,
-    ServoCommand,
     TopServoCommand,
 )
-from lightshow.devices.moving_head.moving_head_colors import COLOR_MODE
-from lightshow.devices.types import FixtureCalibration, ServoAngles
+from lightshow.devices.moving_head.types import (
+    AbstractMHAnimation,
+    FixtureCalibration,
+    MHAnimationFrame,
+    ServoAngles,
+)
 
 
-class ListAnimation(AMHAnimation):
+class ListAnimation(AbstractMHAnimation):
     def __init__(
         self,
         calibration: FixtureCalibration,
@@ -76,8 +78,8 @@ class ListAnimation(AMHAnimation):
         color: RGB = next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
         self.cached_rgb = color
         self.cached_poses = (
-            ServoCommand("top", angle=pose.top),
-            ServoCommand("base", angle=pose.base),
+            TopServoCommand(angle=pose.top),
+            BaseServoCommand(angle=pose.base),
         )
 
         # End of a full pass: maybe flip direction

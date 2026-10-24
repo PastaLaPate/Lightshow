@@ -5,6 +5,8 @@ import numpy as np
 
 NS_PER_S = 1e9
 
+# TODO: Use median or smth
+
 
 def now_ns() -> int:
     return time.monotonic_ns()

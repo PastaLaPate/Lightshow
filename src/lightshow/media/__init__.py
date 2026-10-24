@@ -1,8 +1,8 @@
 import os
 
-from lightshow.media.abstract_tracker import ATrackTracker
+from lightshow.media.base import AbstractTrackTracker
 
-PlatformSpecificTracker: type[ATrackTracker]
+PlatformSpecificTracker: type[AbstractTrackTracker]
 if os.name == "nt":
     from lightshow.tracks_tracker.windows import WindowsTracksInfoTracker
 
@@ -13,6 +13,6 @@ elif os.name == "posix":
     PlatformSpecificTracker = LinuxTracksInfoTracker
 else:
     # Unknown platform, define a dummy tracker that does nothing
-    class PlatformSpecificTracker(ATrackTracker):
+    class PlatformSpecificTracker(AbstractTrackTracker):
         def start(self) -> None:
             pass
