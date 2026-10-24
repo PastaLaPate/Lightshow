@@ -4,7 +4,6 @@ from typing import Any
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
-    QFormLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -23,7 +22,7 @@ from lightshow.gui.components.editable_label import EditableLabel
 from lightshow.gui.components.status_circle import StatusCircle
 from lightshow.gui.theme import style
 from lightshow.gui.utils import ui_signals
-from lightshow.gui.utils.form_builder import ModelForm
+from lightshow.gui.utils.form_builder import ModelForm, RuntimeView
 
 from .base_panel import BasePanel
 
@@ -88,13 +87,13 @@ class DeviceProps(
 ):
     field_changed = Signal(str, object)
 
-    def __init__(self, parent: QWidget | None = None, cap_to: QWidget | None = None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.form = ModelForm(cap_to=cap_to)
+        self.form = ModelForm()
         self.form.field_changed.connect(self.field_changed)
 
         layout.addWidget(self.form)
@@ -115,15 +114,15 @@ class DeviceRuntimeProps(QWidget):
         super().__init__(parent)
 
         self._current_device: str | None = None
-
-        self._layout = QFormLayout()
-        self.setLayout(self._layout)
-
-        self._fields: dict[str, QLabel] = {}
         self._unsubscribers: list[Callable[[], None]] = []
 
-        self._change_field.connect(self._on_field_changed)
+        self.view = RuntimeView()
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self.view)
+        self.setVisible(False)
 
+        self._change_field.connect(self.view.set_value)
         unsubs = self._unsubscribers
         self.destroyed.connect(lambda *_: [u() for u in unsubs])
 
@@ -132,52 +131,29 @@ class DeviceRuntimeProps(QWidget):
             unsubscribe() for unsubscribe in self._unsubscribers
         ]  # List comprehension not because we should but because we can
         self._unsubscribers.clear()
-
-        self._fields.clear()
-        while self._layout.rowCount() > 0:
-            self._layout.removeRow(0)
-
+        self.view.clear()
         self._current_device = None
+        self.setVisible(False)
 
     def track_device(self, device_id: str):
         if device_id == self._current_device:
             return
         self.clear()
-        device_entry = global_config.device_store.get(device_id)
-        if (
-            device_entry.status != DeviceStatus.CONNECTED
-            or device_entry._device is None
-        ):  # Use _device to avoid instantiating it, double connection check
+        entry = global_config.device_store.get(device_id)
+        if entry.status != DeviceStatus.CONNECTED or entry._device is None:
             return
-        device = device_entry.device
+        device = entry.device
         if device.RUNTIME_SCHEMA is None or device.runtime is None:
             return
 
-        runtime = device.runtime
         self._current_device = device_id
-
-        for name in device.RUNTIME_SCHEMA.model_fields:
-            label = QLabel(self._format(getattr(runtime, name)))
-            label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-            self._layout.addRow(name, label)
-            self._fields[name] = label
-
+        self.view.build(device.RUNTIME_SCHEMA, device.runtime)
+        self.setVisible(True)
         self._unsubscribers.append(
-            runtime.subscribe(
+            device.runtime.subscribe(
                 lambda field, _old, new: self._change_field.emit(field, new)
             )
         )
-
-    def _on_field_changed(self, field: str, value: Any):
-        label = self._fields.get(field)
-        if label is not None:
-            label.setText(self._format(value))
-
-    @staticmethod
-    def _format(value: Any) -> str:
-        if isinstance(value, float):
-            return f"{value:.3f}"
-        return str(value)
 
 
 class DeviceDetailsPanel(BasePanel):
@@ -222,7 +198,7 @@ class DeviceDetailsPanel(BasePanel):
         self.device_header = DeviceHeader()
         self.device_header.device_renamed.connect(self.rename_device)
 
-        self.device_props = DeviceProps(cap_to=props_widget)
+        self.device_props = DeviceProps()
         self.device_props.field_changed.connect(self._on_field_changed)
 
         self.device_runtime = DeviceRuntimeProps()
@@ -233,7 +209,6 @@ class DeviceDetailsPanel(BasePanel):
         props_layout.addWidget(self.device_header)
         props_layout.addWidget(self.device_props)
         props_layout.addWidget(self.device_runtime)
-        props_layout.addStretch()
         props_layout.addWidget(self.connect_btn)
 
         props_widget.setLayout(props_layout)

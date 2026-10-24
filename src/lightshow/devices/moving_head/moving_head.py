@@ -14,6 +14,7 @@ from lightshow.devices.device import (
 from lightshow.devices.fields import (
     BoolField,
     IntField,
+    RuntimeField,
     StrField,
     ValidationScheme,
 )
@@ -74,8 +75,8 @@ class MovingHeadSettings(BaseDeviceSettings):
 
 
 class MovingHeadRuntime(ObservableModel):
-    current_animation: str = ""
-    fps: int = 0
+    current_animation: str = RuntimeField("", "Current Animation")
+    fps: int = RuntimeField(0, "FPS")
 
 
 class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):

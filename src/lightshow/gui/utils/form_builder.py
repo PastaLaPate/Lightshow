@@ -10,8 +10,9 @@ from PySide6.QtGui import QColor
 
 from lightshow.gui.components.color_picker import ColorPicker
 from lightshow.gui.components.path_selector import PathSelector
+from lightshow.gui.components.section_view import SectionedView
 from lightshow.gui.components.validating_lineedit import ValidatingLineEdit
-from lightshow.gui.theme import Theme, style
+from lightshow.gui.theme import style
 
 if sys.version_info >= (3, 15):
     from typing import TypeForm
@@ -20,17 +21,12 @@ else:
 
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
-from PySide6.QtCore import QEvent, QSignalBlocker, QSize, Qt, QTimer, Signal
+from PySide6.QtCore import QSignalBlocker, Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDoubleSpinBox,
-    QFormLayout,
-    QFrame,
-    QScrollArea,
-    QSizePolicy,
+    QLabel,
     QSpinBox,
-    QToolButton,
-    QVBoxLayout,
     QWidget,
 )
 
@@ -298,135 +294,13 @@ class FormField:
     set_value: Callable[[Any], None]
 
 
-class CollapsibleSection(QWidget):
-    toggled = Signal(bool)
-
-    def __init__(self, title: str, level: int = 0, expanded: bool = True, parent=None):
-        super().__init__(parent)
-
-        self.header = QToolButton()
-        style.mark(self.header, "section-header", level=level)
-        self.header.setText(title)
-        self.header.setCheckable(True)
-        self.header.setChecked(expanded)
-        self.header.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
-        self.header.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
-        self.header.setProperty("level", level)
-        self.header.toggled.connect(self._on_toggled)
-
-        self.content = QFrame()
-        style.mark(self.content, "section-content")
-
-        body = QVBoxLayout(self.content)
-        body.setContentsMargins(12 if level else 8, 6, 6, 6)
-        body.setSpacing(4)
-
-        self.form = QFormLayout()  # section's fields
-        self.form.setContentsMargins(0, 2, 0, 4)
-        self.form.setLabelAlignment(
-            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
-        )
-        self.form.setFieldGrowthPolicy(
-            QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
-        )
-        self._apply_metrics(style.theme)
-        body.addLayout(self.form)
-
-        self.children_layout = QVBoxLayout()
-        self.children_layout.setContentsMargins(0, 0, 0, 0)
-        body.addLayout(self.children_layout)
-
-        root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
-        root.setSpacing(0)
-        root.addWidget(self.header)
-        root.addWidget(self.content)
-
-        self._on_toggled(expanded)
-
-    def _on_toggled(self, expanded: bool):
-        self.header.setArrowType(
-            Qt.ArrowType.DownArrow if expanded else Qt.ArrowType.RightArrow
-        )
-        self.content.setVisible(expanded)
-        self.toggled.emit(expanded)
-
-    def _apply_metrics(self, t: Theme):
-        self.form.setHorizontalSpacing(t.form_h_spacing)
-        self.form.setVerticalSpacing(t.form_v_spacing)
-
-
-class ModelForm(QWidget):
+class ModelForm(SectionedView):
     field_changed = Signal(str, object)
 
-    def __init__(
-        self, parent=None, max_height_ratio: float = 0.5, cap_to: QWidget | None = None
-    ):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        style.mark(self, "panel")
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-
         self.registry = FieldFactoryRegistry()
         self.fields: dict[str, FormField] = {}
-        self._sections: dict[tuple[str, ...], CollapsibleSection] = {}
-        self._expanded: dict[
-            tuple[str, ...], bool
-        ] = {}  # Save if the device gets re-selected
-
-        self._ratio = max_height_ratio
-        self._cap_to = cap_to  # widget whose height defines "100%"; default: parent
-        self._ref: QWidget | None = None
-
-        self._content: QWidget | None = None
-        self._root_layout: QVBoxLayout | None = None
-
-        self._scroll = QScrollArea()
-        self._scroll.setWidgetResizable(True)
-        self._scroll.setFrameShape(QFrame.Shape.NoFrame)
-        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        self._scroll.viewport().setAutoFillBackground(False)
-
-        self._outer = QVBoxLayout(self)
-        self._outer.setContentsMargins(8, 8, 8, 8)
-        self._outer.addWidget(self._scroll)
-
-        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
-
-    def _cap(self) -> int:
-        return int(self._ref.height() * self._ratio) if self._ref else 16_777_215
-
-    def _apply_cap(self) -> None:
-        self.setMaximumHeight(self._cap())
-        self.updateGeometry()
-
-    def sizeHint(self) -> QSize:
-        if self._content is None:
-            return super().sizeHint()
-        m = self._outer.contentsMargins()
-        inner = self._content.sizeHint()
-        h = inner.height() + m.top() + m.bottom()
-        return QSize(inner.width() + m.left() + m.right(), min(h, self._cap()))
-
-    def showEvent(self, e) -> None:
-        super().showEvent(e)
-        ref = self._cap_to or self.parentWidget()
-        if ref is not None and ref is not self._ref:
-            if self._ref is not None:
-                self._ref.removeEventFilter(self)
-            self._ref = ref
-            ref.installEventFilter(self)
-        self._apply_cap()
-
-    def eventFilter(self, obj, ev) -> bool:
-        t = ev.type()
-        if obj is self._ref and t == QEvent.Type.Resize:
-            self._apply_cap()
-        elif obj is self._content and t == QEvent.Type.LayoutRequest:
-            # collapsing/expanding a section changes the hint; update after the layout settled
-            QTimer.singleShot(0, self.updateGeometry)
-        return super().eventFilter(obj, ev)
 
     def construct[T: BaseModel](self, model: type[T], instance: T | None) -> None:
         self._reset()
@@ -442,48 +316,12 @@ class ModelForm(QWidget):
                 partial(factory.set_locked, w),
                 partial(factory.set_value, w),
             )
-            cat = spec.extras.category
-            path = tuple(p.strip() for p in cat.split("/"))
-            self._section(path).form.addRow(spec.extras.label, w)
-        if self._root_layout is not None:
-            self._root_layout.addStretch(1)
-        self.updateGeometry()
+            self._add_row(spec.extras.category, spec.extras.label, w)
+        self._finish()
 
     def _reset(self) -> None:
         self.fields.clear()
-        self._sections.clear()
-
-        if self._content is not None:
-            self._content.setParent(None)
-            self._content.deleteLater()
-
-        self._content = QWidget()
-        self._root_layout = QVBoxLayout(self._content)
-        self._root_layout.setContentsMargins(0, 0, 4, 0)
-        self._root_layout.setSpacing(2)
-
-        self._scroll.setWidget(self._content)
-        self._content.setAutoFillBackground(False)
-        self._content.installEventFilter(self)
-
-    def _section(self, path: tuple[str, ...]) -> CollapsibleSection:
-        if path in self._sections:
-            return self._sections[path]
-
-        parent_layout = (
-            self._section(path[:-1]).children_layout
-            if len(path) > 1
-            else self._root_layout
-        )  # Recursively find parent
-        if parent_layout is None:
-            raise RuntimeError("Wasnt initialized.")
-        sec = CollapsibleSection(
-            path[-1], level=len(path) - 1, expanded=self._expanded.get(path, True)
-        )
-        sec.toggled.connect(lambda e, p=path: self._expanded.__setitem__(p, e))
-        parent_layout.addWidget(sec)
-        self._sections[path] = sec
-        return sec
+        super()._reset()
 
     def set_connected(self, connected: bool) -> None:
         for f in self.fields.values():
@@ -496,3 +334,33 @@ class ModelForm(QWidget):
     def _on_field_changed(self, name: str, value: Any) -> None:
         self.set_field(name, value)
         self.field_changed.emit(name, value)
+
+
+class RuntimeView(SectionedView):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._labels: dict[str, QLabel] = {}
+
+    def build[T: BaseModel](self, schema: type[T], runtime: T) -> None:
+        self._reset()
+        self._labels.clear()
+        for spec in inspect_model(schema, runtime):
+            lbl = QLabel(self._format(spec.value))
+            style.mark(lbl, "value")
+            lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+            self._labels[spec.name] = lbl
+            self._add_row(spec.extras.category, spec.extras.label, lbl)
+        self._finish()
+
+    def clear(self) -> None:
+        self._reset()
+        self._labels.clear()
+
+    def set_value(self, name: str, value: Any) -> None:
+        lbl = self._labels.get(name)
+        if lbl is not None:
+            lbl.setText(self._format(value))
+
+    @staticmethod
+    def _format(value: Any) -> str:
+        return f"{value:.3f}" if isinstance(value, float) else str(value)

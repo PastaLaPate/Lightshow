@@ -85,6 +85,10 @@ def _field(default: Any, extras: FieldExtras, **constraints) -> FieldInfo:
     )
 
 
+def RuntimeField(default: Any, label: str, category: str = "Runtime"):
+    return _field(default, FieldExtras(label=label, category=category))
+
+
 def IntField(
     label: str,
     category: str = "General",
