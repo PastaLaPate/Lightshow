@@ -11,6 +11,7 @@ import mido
 from lightshow.core import config
 from lightshow.core.observable_model import ObservableModel
 from lightshow.devices.device import InputDevice
+from lightshow.devices.events import device_events
 from lightshow.devices.moving_head import MovingHead, MovingHeadController
 from lightshow.devices.moving_head.animation_factories import (
     CIRCLE_ANIMATION,
@@ -35,7 +36,6 @@ from lightshow.devices.types import (
     PacketStatus,
     PacketType,
 )
-from lightshow.gui.utils import ui_signals
 
 
 # Index in panel pixels
@@ -372,7 +372,7 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
             3: None,
         }
 
-        ui_signals.devices.status_changed.connect(self._on_device_status_changed)
+        device_events.status_changed.connect(self._on_device_status_changed)
 
         # Single Thread Effect Management
         self.active_effects: dict[int, str] = {}  # button_note: effect_type

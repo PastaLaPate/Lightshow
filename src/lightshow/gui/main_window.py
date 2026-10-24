@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
 
 from lightshow.audio.streams import LoopbackAudioStreamHandler
 from lightshow.core.config import SETTINGS_CATEGORIES, _Settings, global_config
+from lightshow.core.events import notifications
 from lightshow.core.logger import Logger
 from lightshow.devices.device import Device
 from lightshow.devices.registry import DEVICE_TYPES
@@ -78,8 +79,8 @@ class UIManager(QMainWindow):
         )
 
         ui_signals.settings.changed.connect(self._apply_settings)
-        ui_signals.dialogs.show_error.connect(self._show_error_dialog)
-        ui_signals.dialogs.show_info.connect(self._show_info_dialog)
+        notifications.error.connect(self._show_error_dialog)
+        notifications.info.connect(self._show_info_dialog)
 
         # Setup UI
         self._setup_ui()

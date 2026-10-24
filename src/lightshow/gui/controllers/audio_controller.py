@@ -2,8 +2,10 @@ import traceback
 
 from PySide6.QtCore import QObject
 
+from lightshow.audio.events import audio_events
 from lightshow.audio.types import AAudioStreamHandler, AudioDevice
 from lightshow.core.config import global_config
+from lightshow.core.events import notifications
 from lightshow.gui.utils import ui_signals
 
 
@@ -26,11 +28,11 @@ class AudioController(
             self.audio_handler.reinit_stream()
             self.listener.clear_state()
         except Exception as e:  # noqa
-            ui_signals.dialogs.show_error.emit(
+            notifications.error.emit(
                 "Streaming Error",
                 f"Failed to start audio stream:\n\n{traceback.format_exc()}",
             )
-            ui_signals.audio.streaming_status_changed.emit(False)
+            audio_events.streaming_status_changed.emit(False)
 
     def _on_stop_stream(self):
         """Stop audio stream."""

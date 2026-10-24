@@ -66,15 +66,19 @@ include_external_packages = true
 exclude_type_checking_imports = true
 
 [[tool.importlinter.contracts]]
-name = "Layered architecture"
-type = "layers"
-layers = [
-  "lightshow.__main__",
-  "lightshow.app",
-  "lightshow.gui",
+name = "No Qt outside gui (except signals)"
+type = "forbidden"
+source_modules = [
   "lightshow.devices",
-  "lightshow.audio | lightshow.media | lightshow.document",
-  "lightshow.core",
+  "lightshow.audio",
+  "lightshow.media",
+  "lightshow.document",
+]
+forbidden_modules = ["PySide6"]
+allow_indirect_imports = true
+ignore_imports = [
+  "lightshow.audio.events -> PySide6",
+  "lightshow.devices.events -> PySide6",
 ]
 
 [tool.setuptools]

@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 from lightshow.core.config import global_config
 from lightshow.core.logger import Logger
 from lightshow.devices.device import Device
+from lightshow.devices.events import device_events
 from lightshow.devices.types import DeviceTypeName
 from lightshow.gui.theme import style
 from lightshow.gui.utils import ui_signals
@@ -49,9 +50,9 @@ class DevicesPanel(BasePanel):
         self.device_listbox: DeviceListWidget | None = None
         self.device_type_combo: QComboBox | None = None
 
-        ui_signals.devices.created.connect(self._device_created)
-        ui_signals.devices.renamed.connect(self._device_renamed)
-        ui_signals.devices.deleted.connect(self.refresh_list)
+        device_events.created.connect(self._device_created)
+        device_events.renamed.connect(self._device_renamed)
+        device_events.deleted.connect(self.refresh_list)
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the devices panel UI elements."""
@@ -111,7 +112,7 @@ class DevicesPanel(BasePanel):
             return
         current_item = self.device_listbox.currentItem()
         if current_item:
-            ui_signals.devices.selected.emit(
+            ui_signals.selection.device.emit(
                 current_item.data(Qt.ItemDataRole.UserRole)
             )
 

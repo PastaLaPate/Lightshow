@@ -11,8 +11,8 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.audio.data import AudioData
 from lightshow.core.config import OPENGL_AVAILABLE
+from lightshow.core.events import notifications
 from lightshow.core.logger import Logger
-from lightshow.gui.utils import ui_signals
 
 _logger = Logger.for_class("Audio Visualization")
 
@@ -188,7 +188,7 @@ class SpikeDetectorVisualizer(QWidget):
             except Empty:
                 break
             except Exception:  # noqa
-                ui_signals.dialogs.show_error.emit(
+                notifications.error.emit(
                     "UI Error",
                     f"Error when updating spike detector visualizer: \n {traceback.format_exc()}",
                 )
@@ -249,7 +249,7 @@ class SpikeDetectorVisualizer(QWidget):
 
             self.global_index += 1
         except Exception:  # noqa
-            ui_signals.dialogs.show_error.emit(
+            notifications.error.emit(
                 "UI Error",
                 f"Error when updating spike detector visualizer: \n {traceback.format_exc()}",
             )

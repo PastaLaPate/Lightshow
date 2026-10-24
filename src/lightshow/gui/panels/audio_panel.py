@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from lightshow.audio.events import audio_events
 from lightshow.audio.streams import AAudioStreamHandler
 from lightshow.audio.types import AudioDevice
 from lightshow.core.config import _Settings, global_config
@@ -56,9 +57,7 @@ class AudioPanel(BasePanel):
         self.spectrumWidget = QWidget()
         self.logs = Logs()
 
-        ui_signals.audio.streaming_status_changed.connect(
-            self._on_stream_status_changed
-        )
+        audio_events.streaming_status_changed.connect(self._on_stream_status_changed)
         ui_signals.settings.changed.connect(self._on_settings_changed)
 
         self.fetch_audio_devices()

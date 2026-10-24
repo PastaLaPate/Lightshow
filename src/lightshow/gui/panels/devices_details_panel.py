@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
 
 from lightshow.core.config import global_config
 from lightshow.devices.device import Device
+from lightshow.devices.events import device_events
 from lightshow.devices.registry import DEVICE_CLASSES
 from lightshow.devices.store import DeviceEntry
 from lightshow.devices.types import DeviceStatus
@@ -176,10 +177,10 @@ class DeviceDetailsPanel(BasePanel):
             DeviceStatus.CONNECTED: "Disconnect from device",
         }
 
-        ui_signals.devices.selected.connect(self._on_device_selected)
-        ui_signals.devices.renamed.connect(self._on_device_renamed)
-        ui_signals.devices.status_changed.connect(self._on_device_status_changed)
-        ui_signals.devices.field_set.connect(self.set_field)
+        ui_signals.selection.device.connect(self._on_device_selected)
+        device_events.renamed.connect(self._on_device_renamed)
+        device_events.status_changed.connect(self._on_device_status_changed)
+        device_events.field_set.connect(self.set_field)
 
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the device details panel UI elements."""

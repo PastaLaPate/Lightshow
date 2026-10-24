@@ -6,8 +6,8 @@ from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 from lightshow.audio.types import AudioData
+from lightshow.core.events import notifications
 from lightshow.core.logger import Logger
-from lightshow.gui.utils import ui_signals
 
 _logger = Logger.for_class("Audio Visualization")
 
@@ -183,7 +183,7 @@ class FrequenciesVisualizer(QWidget):
         except Exception:  # noqa
             if not self._error_shown:  # don't spam a dialog at 60 Hz
                 self._error_shown = True
-                ui_signals.dialogs.show_error.emit(
+                notifications.error.emit(
                     "UI Error",
                     f"Error when updating frequencies visualizer: \n {traceback.format_exc()}",
                 )
