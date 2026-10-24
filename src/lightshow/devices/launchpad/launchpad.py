@@ -351,6 +351,7 @@ class LaunchpadRuntime(ObservableModel):
 
 
 class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
+    BADGE_COLOR = "#a3089e"
     DEVICE_TYPE_NAME = DeviceTypeName.LAUNCHPAD_X
 
     def __init__(self, config):

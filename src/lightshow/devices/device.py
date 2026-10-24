@@ -14,14 +14,18 @@ class NoRuntime(ObservableModel):
 
 
 class Device[T: BaseDeviceSettings, R: ObservableModel = NoRuntime](ABC):
+    BADGE_COLOR: str
+
     DEVICE_TYPE_NAME: DeviceTypeName
 
     CONFIG_SCHEMA: type[T]
     RUNTIME_SCHEMA: type[R]
 
-    def __init_subclass__(cls, **kw):
+    def __init_subclass__(cls, *, abstract: bool = False, **kw):
         # Avoids having to redefine CONFIG_SCHEMA and RUNTIME_SCHEMA that are already set by the generics
         super().__init_subclass__(**kw)
+        if not abstract and not hasattr(cls, "BADGE_COLOR"):
+            raise TypeError(f"{cls.__name__} must define BADGE_COLOR")
         if "RUNTIME_SCHEMA" not in cls.__dict__:
             cls.RUNTIME_SCHEMA = cast(Any, NoRuntime)
         for base in cls.__dict__.get("__orig_bases__", ()):
@@ -120,11 +124,15 @@ class Device[T: BaseDeviceSettings, R: ObservableModel = NoRuntime](ABC):
         return self.name or "Device"
 
 
-class OutputDevice[T: BaseDeviceSettings, R: ObservableModel](Device[T, R]):
+class OutputDevice[T: BaseDeviceSettings, R: ObservableModel](
+    Device[T, R], abstract=True
+):
     @abstractmethod
     def on(self, packet: PacketData):
         pass
 
 
-class InputDevice[T: BaseDeviceSettings, R: ObservableModel](Device[T, R]):
+class InputDevice[T: BaseDeviceSettings, R: ObservableModel](
+    Device[T, R], abstract=True
+):
     pass

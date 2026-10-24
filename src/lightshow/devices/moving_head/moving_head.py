@@ -80,6 +80,7 @@ class MovingHeadRuntime(ObservableModel):
 
 
 class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
+    BADGE_COLOR = "#af0101"
     DEVICE_TYPE_NAME = DeviceTypeName.MOVING_HEAD
 
     def __init__(self, config):
