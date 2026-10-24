@@ -166,8 +166,7 @@ class DevicesPanel(BasePanel):
         """Duplicate an existing device with a new unique ID."""
         if device_id not in global_config.device_store.all():
             return
-
-        # source_config = global_config.devices[device_id]
+        ui_signals.devices_req.duplicate.emit(device_id)
 
     def _show_selected_context_menu(self, pos):
         """Show right-click context menu on a list item."""
@@ -184,7 +183,7 @@ class DevicesPanel(BasePanel):
         duplicate_action.triggered.connect(
             lambda: self._duplicate_device(item.data(Qt.ItemDataRole.UserRole))
         )
-        # menu.addAction(duplicate_action)
+        menu.addAction(duplicate_action)
 
         delete_action = QAction("Delete", self.device_listbox)
         delete_action.triggered.connect(self._delete_selected_device)

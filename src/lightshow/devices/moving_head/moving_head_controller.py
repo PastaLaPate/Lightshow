@@ -102,8 +102,6 @@ class MovingHeadController:
     BREAK_FLASH_MIN_NS = NS_PER_S
     FPS_REPORT_EVERY_NS = 2 * NS_PER_S
 
-    # TODO: Add runtime schema things -> FPS tracker, current anim etc
-
     def __init__(self, device: MovingHead):
         from lightshow.core.config import _Settings, global_config
 

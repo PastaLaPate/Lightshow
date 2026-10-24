@@ -342,14 +342,6 @@ SETTINGS_CATEGORIES: list[SettingListItem] = [
 # ──────────────────────────────────────────────────────────────────────────────
 
 
-def resource_path(relative_path: str) -> str:
-    try:
-        base_path = sys._MEIPASS  # type: ignore
-    except AttributeError:
-        base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
-
-
 VERSION = version("lightshow")
 PYTHON_VERSION = ".".join(map(str, sys.version_info[:3]))
 if platform.system() == "Windows":

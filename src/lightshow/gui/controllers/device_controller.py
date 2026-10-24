@@ -13,6 +13,7 @@ class DeviceController(QObject):
         super().__init__(None)
 
         ui_signals.devices_req.create.connect(self.handle_create_device)
+        ui_signals.devices_req.duplicate.connect(self.handle_duplicate_device)
         ui_signals.devices_req.rename.connect(self.handle_rename_device)
         ui_signals.devices_req.set_field.connect(self.handle_set_field)
         ui_signals.devices_req.delete.connect(self.handle_delete_device)
@@ -32,11 +33,22 @@ class DeviceController(QObject):
         with global_history.transaction(
             f"Create and rename device of type {device_type}"
         ):
-            id = global_config.device_store.new_device(device_type)
+            new_device_id = global_config.device_store.new_device(device_type)
             global_config.device_store.rename_device(
-                id, name or f"Device {len(global_config.device_store.all()) + 1}"
+                new_device_id,
+                name or f"Device {len(global_config.device_store.all()) + 1}",
             )
-            ui_signals.devices.created.emit(id)
+            ui_signals.devices.created.emit(new_device_id)
+
+    def handle_duplicate_device(self, device_id: str):
+        store = global_config.device_store
+        with global_history.transaction(f"Duplicate {device_id}"):
+            src = store.get(device_id)
+            data = src.config.model_dump()
+            data.pop("id")  # Avoid duplicating ids
+            data["name"] = f"{src.config.name} (copy)"
+            new_device_id = store.new_device(src.type_name, config_data=data)
+            ui_signals.devices.created.emit(new_device_id)
 
     def handle_rename_device(self, id: str, new_name: str):
         if not self.id_exists(id) or new_name == "":

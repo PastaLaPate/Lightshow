@@ -5,6 +5,8 @@ from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication, QWidget
 
+from lightshow.core.consts import resource_path
+
 
 @dataclass(frozen=True)
 class Theme:
@@ -67,150 +69,12 @@ LIGHT = Theme(
 )
 
 # Big ass QSS
-_QSS = Template("""
-QMainWindow, QDialog { background: $window; }
 
-/* tabs */
-QTabWidget::pane {
-    background: $panel; border: 1px solid $header; border-radius: ${radius_small}px;
-}
-QTabBar::tab {
-    background: $header; color: $text_dim;
-    padding: 5px 12px; border: none;
-    border-top-left-radius: ${radius_small}px; border-top-right-radius: ${radius_small}px;
-    margin-right: 2px;
-}
-QTabBar::tab:selected { background: $panel; color: $text; }
-QTabBar::tab:hover:!selected { background: $header_hover; }
+theme_template_file = resource_path("src/lightshow/gui/assets/theme.qss")
+with open(theme_template_file, mode="r") as f:
+    theme_text = f.read()
 
-
-/* lists / trees */
-QListView, QTreeView, QTableView {
-    background: $panel; color: $text; border: 1px solid $header;
-    border-radius: ${radius_small}px; outline: none;
-}
-QListView::item, QTreeView::item { padding: 3px 6px; }
-QListView::item:hover, QTreeView::item:hover { background: $header; }
-QListView::item:selected, QTreeView::item:selected {
-    background: $accent; color: $accent_text;
-}
-
-/* UE-style spinboxes: no buttons */
-QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
-    width: 0; border: none;
-}
-
-
-/* checkboxes */
-QCheckBox::indicator {
-    width: 14px; height: 14px;
-    background: $input_bg; border: 1px solid $input_border;
-    border-radius: ${radius_small}px;
-}
-QCheckBox::indicator:hover   { border-color: $accent; }
-QCheckBox::indicator:checked { background: $accent; border-color: $accent; }
-
-/* separators */
-QFrame[frameShape="4"], QFrame[frameShape="5"] { color: $header; }
-
-/* menus */
-QMenuBar { background: $window; color: $text; }
-QMenuBar::item:selected, QMenu::item:selected { background: $accent; color: $accent_text; }
-QMenu { background: $header; color: $text; border: 1px solid $input_border; padding: 4px; }
-QMenu::item { padding: 4px 18px; border-radius: ${radius_small}px; }
-
-
-/* semantic roles */
-QLabel[role="heading"] { font-size: 14px; font-weight: 600; color: $text; }
-QLabel[role="badge"] {
-    background: $header_top; color: $text; border-radius: 9px; padding: 1px 8px;
-    font-weight: 600;
-}
-QTextEdit[role="console"], QPlainTextEdit[role="console"] {
-    background: $panel;
-    color: $text;
-    border: 1px solid $header;
-    font-family: "JetBrains Mono", monospace;
-    font-size: 13px;
-}
-
-/* ---------- panels ---------- */
-QWidget[role="panel"] {
-    background: $panel;
-    border-radius: ${radius}px;
-}
-QWidget[role="section-content"] {
-    background: transparent;
-    border: none;
-}
-
-/* ---------- collapsible headers ---------- */
-QToolButton[role="section-header"] {
-    border: none;
-    border-radius: ${radius_small}px;
-    padding: 4px 6px;
-    text-align: left;
-    font-weight: 600;
-    color: $text;
-    background: $header;
-}
-QToolButton[role="section-header"][level="0"] { background: $header_top; }
-QToolButton[role="section-header"]:hover      { background: $header_hover; }
-
-/* ---------- inputs ---------- */
-QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QPlainTextEdit, QTextEdit {
-    background: $input_bg;
-    color: $text;
-    border: 1px solid $input_border;
-    border-radius: ${radius_small}px;
-    padding: 2px 4px;
-    selection-background-color: $accent;
-    selection-color: $accent_text;
-    padding: ${input_pad_v}px ${input_pad_h}px;
-    min-height: ${row_min_height}px;
-}
-QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus,
-QComboBox:focus, QPlainTextEdit:focus, QTextEdit:focus {
-    border-color: $accent;
-}
-QLineEdit:disabled, QSpinBox:disabled, QDoubleSpinBox:disabled, QComboBox:disabled {
-    color: $text_disabled;
-    border-color: $header;
-}
-QLineEdit:read-only { color: $text_dim; }
-
-/* ---------- buttons ---------- */
-QPushButton {
-    background: $header_top;
-    color: $text;
-    border: 1px solid $input_border;
-    border-radius: ${radius_small}px;
-    padding: 4px 12px;
-}
-QPushButton:hover    { background: $header_hover; }
-QPushButton:pressed  { background: $accent; color: $accent_text; }
-QPushButton:disabled { color: $text_disabled; }
-QPushButton[role="primary"] { background: $accent; color: $accent_text; border-color: $accent; }
-
-/* ---------- misc ---------- */
-QLabel { background: transparent; }
-QLabel[role="dim"] { color: $text_dim; }
-QScrollArea { border: none; background: transparent; }
-QToolTip {
-    background: $header_top; color: $text;
-    border: 1px solid $input_border; padding: 3px;
-}
-
-/* ---------- scrollbars ---------- */
-QScrollBar:vertical   { background: transparent; width: 10px; margin: 0; }
-QScrollBar:horizontal { background: transparent; height: 10px; margin: 0; }
-QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
-    background: $header_hover; border-radius: 4px; min-height: 24px; min-width: 24px;
-}
-QScrollBar::handle:hover { background: $input_border; }
-QScrollBar::add-line, QScrollBar::sub-line,
-QScrollBar::add-page, QScrollBar::sub-page { background: none; border: none; width: 0; height: 0; }
-""")
+_QSS = Template(theme_text)
 
 
 class StyleManager(QObject):

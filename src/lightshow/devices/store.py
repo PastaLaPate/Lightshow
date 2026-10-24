@@ -97,9 +97,11 @@ class DeviceStore(QObject):
         }
         return out | self._quarantine
 
-    def _raw_create_device(self, type_name: DeviceTypeName, device_id: str) -> None:
+    def _raw_create_device(
+        self, type_name: DeviceTypeName, device_id: str, config_data: dict | None = None
+    ) -> None:
         cls = DEVICE_CLASSES[type_name]
-        cfg: BaseDeviceSettings = cls.CONFIG_SCHEMA(id=device_id)
+        cfg = cls.CONFIG_SCHEMA.model_validate({**(config_data or {}), "id": device_id})
         self._entries[device_id] = DeviceEntry(type_name, cfg)
         self.device_added.emit(device_id)
         self._save_timer.start()
@@ -128,10 +130,13 @@ class DeviceStore(QObject):
         self.device_renamed.emit(device_id, value)
 
     def new_device(
-        self, type_name: DeviceTypeName, device_id: str | None = None
+        self,
+        type_name: DeviceTypeName,
+        device_id: str | None = None,
+        config_data: dict | None = None,
     ) -> str:
         device_id = device_id or uuid4().hex
-        self._raw_create_device(type_name, device_id)
+        self._raw_create_device(type_name, device_id, config_data)
         global_history.record(
             undo=lambda: self._raw_delete_device(device_id),
             redo=lambda: self._raw_create_device(type_name, device_id),

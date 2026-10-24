@@ -382,33 +382,28 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
         self.running = False
         self._effect_thread: threading.Thread | None = None
 
-        # TODO: Maybe create methods like _assign_panel or smth like that to avoid having to proxy by _on_device_status_changed
         for id, device_entry in global_config.device_store.all().items():
-            self._on_device_status_changed(id, device_entry.status)
+            if (
+                device_entry.type_name == DeviceTypeName.MOVING_HEAD
+                and device_entry.status == DeviceStatus.CONNECTED
+            ):
+                self._assign_panel(id)
 
     def _on_device_status_changed(self, device_id: str, new_status: DeviceStatus):
         # Assign the device a panel if one is available
-        if new_status == DeviceStatus.DISCONNECTED:
+        if (
+            new_status == DeviceStatus.DISCONNECTED
+            or new_status == DeviceStatus.CONNECTING
+        ):
             if device_id in self.used_panels.values():
-                panel_id = list(self.used_panels.values()).index(device_id)
-                self.used_panels[panel_id] = None
-                self.panels_slots[panel_id] = None
-            return
-        elif new_status == DeviceStatus.CONNECTING:
+                self._unassign_panel(device_id)
             return
 
         if not isinstance(
             config.global_config.device_store.get(device_id)._device, MovingHead
         ):  # Use _device to avoid creating if not instanced
             return
-
-        for panel_id, d_id in self.used_panels.items():
-            if d_id is None:
-                self.used_panels[panel_id] = device_id
-                slot = MovingHeadPanelSlot(self, device_id, panel_id)
-                self.panels_slots[panel_id] = slot
-                slot.update_state()
-                break
+        self._assign_panel(device_id)
 
     def start_effect_engine(self):
         self.running = True
@@ -452,6 +447,21 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
         color = sequence[(tick // 8) % len(sequence)]
         self.set_color(button, color)
 
+    def _assign_panel(self, device_id: str):
+        for panel_id, d_id in self.used_panels.items():
+            if d_id is None:
+                self.used_panels[panel_id] = device_id
+                slot = MovingHeadPanelSlot(self, device_id, panel_id)
+                self.panels_slots[panel_id] = slot
+                slot.update_state()
+                break
+
+    def _unassign_panel(self, device_id: str):
+        if device_id in self.used_panels.values():
+            panel_id = list(self.used_panels.values()).index(device_id)
+            self.used_panels[panel_id] = None
+            self.panels_slots[panel_id] = None
+
     def handle_press(self, note: int):
         for panel_slot in self.panels_slots.values():
             if panel_slot and panel_slot.contains(note):
@@ -476,7 +486,6 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
             self.out_port.send(mido.Message("sysex", data=[0, 32, 41, 2, 12, 14, 1]))
 
             self.start_effect_engine()  # Start the single shared thread
-            # TODO: search for existing connected moving head
             return True
         except Exception as e:  # noqa
             print(f"Error: {e}")

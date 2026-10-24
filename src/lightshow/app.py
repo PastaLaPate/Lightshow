@@ -18,8 +18,8 @@ from lightshow.core.config import (
     OS,
     PYTHON_VERSION,
     VERSION,
-    resource_path,
 )
+from lightshow.core.consts import resource_path
 from lightshow.core.logger import Logger
 from lightshow.core.update_checker import is_update_available
 from lightshow.devices.device import (
@@ -286,7 +286,7 @@ def main() -> None:
             "pastalapate.lightshow"
         )
 
-    ICON_PATH = resource_path("lightshow/gui/assets/lightshow_icon.png")
+    ICON_PATH = resource_path("src/lightshow/gui/assets/lightshow_icon.png")
     icon = QIcon(ICON_PATH)
     app.setWindowIcon(icon)
 

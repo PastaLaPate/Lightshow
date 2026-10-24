@@ -7,6 +7,7 @@ from lightshow.devices.types import DeviceTypeName
 
 class DeviceRequests(QObject):
     create = Signal(DeviceTypeName, object)  # type, name | None
+    duplicate = Signal(str)  # device_id to dup
     rename = Signal(str, str)  # id, new_name
     delete = Signal(str)  # id
     set_field = Signal(str, str, object)  # id, name, value
