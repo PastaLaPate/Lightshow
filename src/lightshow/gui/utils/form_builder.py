@@ -11,7 +11,7 @@ from PySide6.QtGui import QColor
 from lightshow.gui.components.color_picker import ColorPicker
 from lightshow.gui.components.path_selector import PathSelector
 from lightshow.gui.components.validating_lineedit import ValidatingLineEdit
-from lightshow.gui.theme import style
+from lightshow.gui.theme import Theme, style
 
 if sys.version_info >= (3, 15):
     from typing import TypeForm
@@ -20,12 +20,13 @@ else:
 
 from pydantic import BaseModel
 from pydantic_core import PydanticUndefined
-from PySide6.QtCore import QSignalBlocker, Qt, Signal
+from PySide6.QtCore import QEvent, QSignalBlocker, QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDoubleSpinBox,
     QFormLayout,
     QFrame,
+    QScrollArea,
     QSizePolicy,
     QSpinBox,
     QToolButton,
@@ -319,11 +320,18 @@ class CollapsibleSection(QWidget):
         style.mark(self.content, "section-content")
 
         body = QVBoxLayout(self.content)
-        body.setContentsMargins(12 if level else 6, 4, 4, 4)
-        body.setSpacing(2)
+        body.setContentsMargins(12 if level else 8, 6, 6, 6)
+        body.setSpacing(4)
 
         self.form = QFormLayout()  # section's fields
-        self.form.setContentsMargins(0, 0, 0, 0)
+        self.form.setContentsMargins(0, 2, 0, 4)
+        self.form.setLabelAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter
+        )
+        self.form.setFieldGrowthPolicy(
+            QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow
+        )
+        self._apply_metrics(style.theme)
         body.addLayout(self.form)
 
         self.children_layout = QVBoxLayout()
@@ -345,13 +353,20 @@ class CollapsibleSection(QWidget):
         self.content.setVisible(expanded)
         self.toggled.emit(expanded)
 
+    def _apply_metrics(self, t: Theme):
+        self.form.setHorizontalSpacing(t.form_h_spacing)
+        self.form.setVerticalSpacing(t.form_v_spacing)
+
 
 class ModelForm(QWidget):
     field_changed = Signal(str, object)
 
-    def __init__(self, parent=None):
+    def __init__(
+        self, parent=None, max_height_ratio: float = 0.5, cap_to: QWidget | None = None
+    ):
         super().__init__(parent)
         style.mark(self, "panel")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self.registry = FieldFactoryRegistry()
         self.fields: dict[str, FormField] = {}
@@ -360,13 +375,58 @@ class ModelForm(QWidget):
             tuple[str, ...], bool
         ] = {}  # Save if the device gets re-selected
 
-        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
-
-        self._outer = QVBoxLayout(self)
-        self._outer.setContentsMargins(8, 8, 8, 8)
+        self._ratio = max_height_ratio
+        self._cap_to = cap_to  # widget whose height defines "100%"; default: parent
+        self._ref: QWidget | None = None
 
         self._content: QWidget | None = None
         self._root_layout: QVBoxLayout | None = None
+
+        self._scroll = QScrollArea()
+        self._scroll.setWidgetResizable(True)
+        self._scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._scroll.viewport().setAutoFillBackground(False)
+
+        self._outer = QVBoxLayout(self)
+        self._outer.setContentsMargins(8, 8, 8, 8)
+        self._outer.addWidget(self._scroll)
+
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+
+    def _cap(self) -> int:
+        return int(self._ref.height() * self._ratio) if self._ref else 16_777_215
+
+    def _apply_cap(self) -> None:
+        self.setMaximumHeight(self._cap())
+        self.updateGeometry()
+
+    def sizeHint(self) -> QSize:
+        if self._content is None:
+            return super().sizeHint()
+        m = self._outer.contentsMargins()
+        inner = self._content.sizeHint()
+        h = inner.height() + m.top() + m.bottom()
+        return QSize(inner.width() + m.left() + m.right(), min(h, self._cap()))
+
+    def showEvent(self, e) -> None:
+        super().showEvent(e)
+        ref = self._cap_to or self.parentWidget()
+        if ref is not None and ref is not self._ref:
+            if self._ref is not None:
+                self._ref.removeEventFilter(self)
+            self._ref = ref
+            ref.installEventFilter(self)
+        self._apply_cap()
+
+    def eventFilter(self, obj, ev) -> bool:
+        t = ev.type()
+        if obj is self._ref and t == QEvent.Type.Resize:
+            self._apply_cap()
+        elif obj is self._content and t == QEvent.Type.LayoutRequest:
+            # collapsing/expanding a section changes the hint; update after the layout settled
+            QTimer.singleShot(0, self.updateGeometry)
+        return super().eventFilter(obj, ev)
 
     def construct[T: BaseModel](self, model: type[T], instance: T | None) -> None:
         self._reset()
@@ -387,6 +447,7 @@ class ModelForm(QWidget):
             self._section(path).form.addRow(spec.extras.label, w)
         if self._root_layout is not None:
             self._root_layout.addStretch(1)
+        self.updateGeometry()
 
     def _reset(self) -> None:
         self.fields.clear()
@@ -398,10 +459,12 @@ class ModelForm(QWidget):
 
         self._content = QWidget()
         self._root_layout = QVBoxLayout(self._content)
-        self._root_layout.setContentsMargins(0, 0, 0, 0)
+        self._root_layout.setContentsMargins(0, 0, 4, 0)
         self._root_layout.setSpacing(2)
 
-        self._outer.addWidget(self._content)
+        self._scroll.setWidget(self._content)
+        self._content.setAutoFillBackground(False)
+        self._content.installEventFilter(self)
 
     def _section(self, path: tuple[str, ...]) -> CollapsibleSection:
         if path in self._sections:

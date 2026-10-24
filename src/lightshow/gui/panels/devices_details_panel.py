@@ -42,8 +42,8 @@ class DeviceHeader(QWidget):
         self.status_circle = StatusCircle()
         self.status_circle.setFixedHeight(16)
 
-        self.device_name = EditableLabel("Test")
-        self.device_name.setStyleSheet("font-size: 16px; font-weight: bold;")
+        self.device_name = EditableLabel("")
+        style.mark(self.device_name, "heading")
         self.device_name.text_changed.connect(self.device_renamed)
 
         self.device_type = Badge("Moving Head", QColor(100, 100, 100))
@@ -83,16 +83,18 @@ class DeviceHeader(QWidget):
         self.device_type.setText(device_type)
 
 
-class DeviceProps(QWidget):
+class DeviceProps(
+    QWidget,
+):
     field_changed = Signal(str, object)
 
-    def __init__(self, parent: QWidget | None = None):
+    def __init__(self, parent: QWidget | None = None, cap_to: QWidget | None = None):
         super().__init__(parent)
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.form = ModelForm()
+        self.form = ModelForm(cap_to=cap_to)
         self.form.field_changed.connect(self.field_changed)
 
         layout.addWidget(self.form)
@@ -201,8 +203,8 @@ class DeviceDetailsPanel(BasePanel):
         ui_signals.devices.field_set.connect(self.set_field)
 
     def create_qt_ui(self, layout: QVBoxLayout):
-        style.mark(self, "panel")
         """Create the device details panel UI elements."""
+        style.mark(self, "panel")
         # Title
         title_label = QLabel("Device Details")
         style.mark(title_label, "heading")
@@ -220,7 +222,7 @@ class DeviceDetailsPanel(BasePanel):
         self.device_header = DeviceHeader()
         self.device_header.device_renamed.connect(self.rename_device)
 
-        self.device_props = DeviceProps()
+        self.device_props = DeviceProps(cap_to=props_widget)
         self.device_props.field_changed.connect(self._on_field_changed)
 
         self.device_runtime = DeviceRuntimeProps()
@@ -237,13 +239,12 @@ class DeviceDetailsPanel(BasePanel):
         props_widget.setLayout(props_layout)
 
         self.stacked_layout = QStackedLayout()
-        self.stacked_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.stacked_layout.addWidget(props_widget)
         self.stacked_layout.addWidget(self.placeholder_label)
         self.stacked_layout.setCurrentIndex(1)
 
         layout.addWidget(title_label)
-        layout.addLayout(self.stacked_layout)
+        layout.addLayout(self.stacked_layout, 1)
 
     def update_status(self, new_status: DeviceStatus):
         self.current_status = new_status

@@ -28,6 +28,12 @@ class Theme:
     radius: int = 6
     radius_small: int = 3
     padding: int = 8
+    # form metrics
+    form_h_spacing: int = 12  # gap between label and field
+    form_v_spacing: int = 6  # gap between rows
+    input_pad_v: int = 4
+    input_pad_h: int = 6
+    row_min_height: int = 24
 
 
 UE_DARK = Theme(
@@ -160,6 +166,8 @@ QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox, QPlainTextEdit, QTextEdit {
     padding: 2px 4px;
     selection-background-color: $accent;
     selection-color: $accent_text;
+    padding: ${input_pad_v}px ${input_pad_h}px;
+    min-height: ${row_min_height}px;
 }
 QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus,
 QComboBox:focus, QPlainTextEdit:focus, QTextEdit:focus {
