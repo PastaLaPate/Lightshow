@@ -3,6 +3,7 @@ from PySide6.QtWidgets import QFrame, QPushButton, QTextEdit, QVBoxLayout
 
 from lightshow.core.logger import attach_log_widget
 from lightshow.gui.panels.base_panel import BasePanel
+from lightshow.gui.theme import style
 
 
 class Logs(BasePanel):
@@ -17,22 +18,13 @@ class Logs(BasePanel):
         frameLayout.setContentsMargins(0, 0, 0, 0)
 
         self.frame = QFrame()
-        self.frame.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame.setFrameShadow(QFrame.Shadow.Sunken)
+        self.frame.setFrameShape(QFrame.Shape.NoFrame)
         self.frame.setLayout(frameLayout)
 
         self.textBox = QTextEdit()
         self.textBox.setReadOnly(True)
         self.textBox.setFont(QFont("Jetbrains Mono"))
-        self.textBox.setStyleSheet(
-            """
-            QTextEdit {
-                background: #111;
-                color: #eee;
-                font-size: 14px;
-            }
-        """
-        )
+        style.mark(self.textBox, "console")
         attach_log_widget(self.textBox)
         frameLayout.addWidget(self.textBox)
 

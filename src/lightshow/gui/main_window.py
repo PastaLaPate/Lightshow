@@ -4,6 +4,7 @@ from typing import Any
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
+    QApplication,
     QHBoxLayout,
     QMainWindow,
     QMenuBar,
@@ -27,6 +28,7 @@ from lightshow.gui.input.shortcuts import ShortcutMap, Shortcuts
 from lightshow.gui.panels import AudioPanel, DeviceDetailsPanel, DevicesPanel
 from lightshow.gui.panels.manual_packets import ManualPacketsSenderPanel
 from lightshow.gui.panels.stats import StatsPanel
+from lightshow.gui.theme import style
 from lightshow.gui.utils.async_tasks import TaskRunner
 from lightshow.gui.utils.ui_signals import ui_signals
 
@@ -104,6 +106,11 @@ class UIManager(QMainWindow):
         """Set up the main UI layout."""
         self.setWindowTitle("Lightshow GUI")
         self.setGeometry(100, 100, 1280, 720)
+
+        app = QApplication.instance()
+        if not isinstance(app, QApplication):
+            raise TypeError("No running QApplication")
+        style.install(app, global_config.settings[_Settings.THEME])
 
         # Create central widget
         central_widget = QWidget()
@@ -215,6 +222,11 @@ class UIManager(QMainWindow):
         self.settings_dialog.exec()
 
     def _apply_settings(self, settings: dict[str, Any]) -> None:
+
+        if _Settings.THEME.id in settings:
+            new_theme = settings[_Settings.THEME.id]
+            style.set_theme(new_theme)
+
         global_config.apply(settings)
         global_config.save()
 

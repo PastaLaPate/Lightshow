@@ -18,6 +18,7 @@ from lightshow.core.config import global_config
 from lightshow.core.logger import Logger
 from lightshow.devices.device import Device
 from lightshow.devices.types import DeviceTypeName
+from lightshow.gui.theme import style
 from lightshow.gui.utils import ui_signals
 
 from .base_panel import BasePanel
@@ -55,7 +56,7 @@ class DevicesPanel(BasePanel):
     def create_qt_ui(self, layout: QVBoxLayout):
         """Create the devices panel UI elements."""
         title_label = QLabel("Devices")
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        style.mark(title_label, "heading")
         layout.addWidget(title_label)
 
         self.device_listbox = DeviceListWidget(self._delete_selected_device)

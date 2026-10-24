@@ -27,6 +27,7 @@ import distro
 from lightshow.audio.types import AudioDevice
 from lightshow.core.logger import Logger
 from lightshow.devices.types import DeviceConfigType
+from lightshow.gui.theme import style
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Generic Setting[T]
@@ -158,7 +159,18 @@ class _Settings:
                       config.settings[SETTINGS.SHOW_SPECTRUM]  → bool
     """
 
-    # ── UI › Layout ───────────────────────────────────────────────────────────
+    # ── UI > General ───────────────────────────────────────────────────────────
+
+    THEME: Setting[str] = Setting(
+        id="ui.general.show_spectrum",
+        name="Show Spectrum",
+        description="Show the spectrum visualization",
+        type=str,
+        default="ue-dark",
+        options=style.available,
+    )
+
+    # ── UI > Layout ───────────────────────────────────────────────────────────
 
     SHOW_SPECTRUM: Setting[bool] = Setting(
         id="ui.layout.show_spectrum",
@@ -176,7 +188,7 @@ class _Settings:
         default=True,
     )
 
-    # ── Audio › General ───────────────────────────────────────────────────────
+    # ── Audio > General ───────────────────────────────────────────────────────
 
     SENSITIVITY: Setting[float] = Setting(
         id="audio.general.sensitivity",
@@ -195,7 +207,7 @@ class _Settings:
         options=[256, 512, 1024, 2048, 4096],
     )
 
-    # ── Audio › Beat detection ────────────────────────────────────────────────
+    # ── Audio > Beat detection ────────────────────────────────────────────────
 
     BEAT_ALGORITHM: Setting[str] = Setting(
         id="audio.detection.beat_algorithm",
@@ -206,7 +218,7 @@ class _Settings:
         options=["Average Diff", "Percentile"],
     )
 
-    # ── Performance › General ─────────────────────────────────────────────────
+    # ── Performance > General ─────────────────────────────────────────────────
 
     MAX_FPS: Setting[int] = Setting(
         id="performance.general.max_fps",
@@ -268,7 +280,7 @@ SETTINGS_CATEGORIES: list[SettingListItem] = [
                 id="ui.general",
                 name="General",
                 description="General UI settings",
-                settings=[],  # empty tab kept for future use
+                settings=[SETTINGS.THEME],
             ),
             SettingTab(
                 id="ui.layout",

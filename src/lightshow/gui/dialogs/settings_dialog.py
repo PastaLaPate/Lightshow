@@ -23,11 +23,10 @@ from PySide6.QtWidgets import (
 )
 
 from lightshow.core.config import Setting, SettingListItem, SettingTab
-from lightshow.gui.panels.base_panel import BasePanel
 from lightshow.gui.utils import ui_signals
 
 
-class SettingsDialog(QDialog, BasePanel):
+class SettingsDialog(QDialog):
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Settings")

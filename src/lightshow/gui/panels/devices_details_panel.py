@@ -21,6 +21,7 @@ from lightshow.devices.store import DeviceEntry
 from lightshow.gui.components.badge import Badge
 from lightshow.gui.components.editable_label import EditableLabel
 from lightshow.gui.components.status_circle import StatusCircle
+from lightshow.gui.theme import style
 from lightshow.gui.utils import ui_signals
 from lightshow.gui.utils.form_builder import ModelForm
 
@@ -182,6 +183,7 @@ class DeviceDetailsPanel(BasePanel):
 
     def __init__(self, device_types: list[type[Device]]):
         super().__init__()
+
         self.device_types: list[type[Device]] = device_types
         self.stacked_layout: QStackedLayout | None = None
         self.current_device: str | None = None
@@ -199,10 +201,11 @@ class DeviceDetailsPanel(BasePanel):
         ui_signals.devices.field_set.connect(self.set_field)
 
     def create_qt_ui(self, layout: QVBoxLayout):
+        style.mark(self, "panel")
         """Create the device details panel UI elements."""
         # Title
         title_label = QLabel("Device Details")
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        style.mark(title_label, "heading")
         title_label.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         # Placeholder

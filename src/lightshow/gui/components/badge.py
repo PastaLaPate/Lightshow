@@ -2,6 +2,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QLabel
 
+from lightshow.gui.theme import style
+
 
 class Badge(QLabel):
     def __init__(
@@ -13,7 +15,12 @@ class Badge(QLabel):
 
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setMinimumSize(18, 18)
-        self.update_style()
+        style.mark(self, "badge")
+        self._apply_color()
+
+    def setText(self, text: str):
+        super().setText(text)
+        self._apply_color()
 
     @property
     def color(self) -> QColor:
@@ -22,18 +29,25 @@ class Badge(QLabel):
     @color.setter
     def color(self, color: QColor):
         self._color = color
-        self.update_style()
+        self._apply_color()
 
-    def update_style(self):
-        hex_color = self._color.name(QColor.NameFormat.HexRgb)
-        self.setStyleSheet(f"""
-            QLabel {{
-                background-color: {hex_color};
-                color: white;
-                border-radius: 9px;
-                font-weight: bold;
-                font-size: 12px;
-                padding-left: 6px;
-                padding-right: 6px;
-            }}
-        """)
+    def _apply_color(self):
+        is_dot = not self.text()
+        if is_dot:
+            self.setFixedSize(18, 18)
+        else:
+            self.setMinimumSize(18, 18)
+            self.setMaximumSize(16777215, 16777215)
+
+        parts = []
+        if self._color is not None:
+            lum = (
+                0.299 * self._color.red()
+                + 0.587 * self._color.green()
+                + 0.114 * self._color.blue()
+            )
+            parts.append(f"background-color: {self._color.name()};")
+            parts.append(f"color: {'#000' if lum > 160 else '#fff'};")
+        if is_dot:
+            parts.append("padding: 0;")
+        self.setStyleSheet(" ".join(parts))

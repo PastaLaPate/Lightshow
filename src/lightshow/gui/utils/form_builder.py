@@ -11,6 +11,7 @@ from PySide6.QtGui import QColor
 from lightshow.gui.components.color_picker import ColorPicker
 from lightshow.gui.components.path_selector import PathSelector
 from lightshow.gui.components.validating_lineedit import ValidatingLineEdit
+from lightshow.gui.theme import style
 
 if sys.version_info >= (3, 15):
     from typing import TypeForm
@@ -34,36 +35,6 @@ from PySide6.QtWidgets import (
 
 from lightshow.devices.fields import FieldExtras, WidgetType
 from lightshow.gui.components.numeric_slider_spinbox import NumericSliderSpinBox
-
-SECTION_QSS = """
-#rootForm {
-    background: #1a1a1a;
-    border-radius: 8px;
-}
-#sectionHeader {
-    border: none; text-align: left; padding: 4px 6px; font-weight: 600;
-    color: #d0d0d0;
-    background: #2b2b2b;
-    border-radius: 4px;
-}
-#sectionHeader[level="0"] { background: #303030; }
-#sectionHeader:hover { background: #363636; }
-#sectionContent { border: none; background: transparent; }
-
-QLabel { color: #b5b5b5; background: transparent; }
-
-QLineEdit, QSpinBox, QDoubleSpinBox, QComboBox {
-    background: #0f0f0f;
-    color: #d0d0d0;
-    border: 1px solid #3a3a3a;
-    border-radius: 3px;
-    padding: 2px 4px;
-    selection-background-color: #0070e0;
-}
-QLineEdit:focus, QSpinBox:focus, QDoubleSpinBox:focus, QComboBox:focus {
-    border-color: #0070e0;
-}
-"""
 
 
 @dataclass
@@ -332,10 +303,8 @@ class CollapsibleSection(QWidget):
     def __init__(self, title: str, level: int = 0, expanded: bool = True, parent=None):
         super().__init__(parent)
 
-        self.setObjectName("section")
-
         self.header = QToolButton()
-        self.header.setObjectName("sectionHeader")
+        style.mark(self.header, "section-header", level=level)
         self.header.setText(title)
         self.header.setCheckable(True)
         self.header.setChecked(expanded)
@@ -347,7 +316,7 @@ class CollapsibleSection(QWidget):
         self.header.toggled.connect(self._on_toggled)
 
         self.content = QFrame()
-        self.content.setObjectName("sectionContent")
+        style.mark(self.content, "section-content")
 
         body = QVBoxLayout(self.content)
         body.setContentsMargins(12 if level else 6, 4, 4, 4)
@@ -382,7 +351,7 @@ class ModelForm(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setObjectName("rootForm")
+        style.mark(self, "panel")
 
         self.registry = FieldFactoryRegistry()
         self.fields: dict[str, FormField] = {}
@@ -391,7 +360,6 @@ class ModelForm(QWidget):
             tuple[str, ...], bool
         ] = {}  # Save if the device gets re-selected
 
-        self.setStyleSheet(SECTION_QSS)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self._outer = QVBoxLayout(self)

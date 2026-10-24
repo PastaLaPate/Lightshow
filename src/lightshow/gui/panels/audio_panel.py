@@ -18,6 +18,7 @@ from lightshow.audio.types import AudioDevice
 from lightshow.core.config import _Settings, global_config
 from lightshow.core.logger import Logger
 from lightshow.gui.components.logs import Logs
+from lightshow.gui.theme import style
 from lightshow.gui.utils import ui_signals
 
 from .base_panel import BasePanel
@@ -91,7 +92,7 @@ class AudioPanel(BasePanel):
         topWidget = QWidget()
         self.topLayout = QVBoxLayout(topWidget)
         title_label = QLabel("Audio")
-        title_label.setStyleSheet("font-size: 16px; font-weight: bold;")
+        style.mark(title_label, "heading")
         self.topLayout.addWidget(title_label)
 
         # Control buttons and combo
