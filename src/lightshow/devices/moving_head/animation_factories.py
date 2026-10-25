@@ -20,11 +20,9 @@ TRIANGLE_ANIMATION: AnimationFactory = partial(
 SQUARE_ANIMATION: AnimationFactory = partial(
     RegularPolygonAnimation, rgb=DEFAULT_RGBs, points_num=4
 )
-CIRCLE_ANIMATION: AnimationFactory = partial(
-    CircleAnimation, rgb=DEFAULT_RGBs, speed=0.3
-)
+CIRCLE_ANIMATION: AnimationFactory = partial(CircleAnimation, rgb=DEFAULT_RGBs)
 LEMNISCATE_ANIMATION: AnimationFactory = partial(
-    BernoulliLemniscateAnimation, rgb=DEFAULT_RGBs, speed=0.3
+    BernoulliLemniscateAnimation, rgb=DEFAULT_RGBs
 )
 CIRCLE_BREAK_ANIMATION: AnimationFactory = partial(BreakCircleAnimation, hue_speed=0.5)
 BOUNCE_ANIMATION: AnimationFactory = partial(BounceAnimation, rgb=DEFAULT_RGBs)

@@ -46,9 +46,13 @@ TRIANGLE_ANIMATION = lambda calib: RegularPolygonAnimation(
 SQUARE_ANIMATION = lambda calib: RegularPolygonAnimation(
     calib, rgb=DEFAULT_RGBs, points_num=4
 )
-CIRCLE_ANIMATION = lambda calib: CircleAnimation(calib, rgb=DEFAULT_RGBs, speed=0.3)
+CIRCLE_ANIMATION = lambda calib: CircleAnimation(
+    calib,
+    rgb=DEFAULT_RGBs,
+)
 LEMNISCATE_ANIMATION = lambda calib: BernoulliLemniscateAnimation(
-    calib, rgb=DEFAULT_RGBs, speed=0.3
+    calib,
+    rgb=DEFAULT_RGBs,
 )
 CIRCLE_BREAK_ANIMATION = lambda calib: BreakCircleAnimation(calib, hue_speed=0.5)
 BOUNCE_ANIMATION = lambda calib: BounceAnimation(calib, rgb=DEFAULT_RGBs)

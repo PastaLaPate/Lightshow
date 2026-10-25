@@ -17,11 +17,13 @@ class BernoulliLemniscateAnimation(CircleAnimation):
         self,
         calibration: FixtureCalibration,
         rgb: list[RGB] | Callable[[], RGB],
-        speed: float = 0.5,
         scale: float = 1.0,
         center: tuple[float, float] = (0.0, 0.0),
         phase: float = 0.0,
-        fill_y: bool = True,
+        laps_per_beat: float = 1.0,
+        damping: float = 3.0,
+        max_servo_speed: float = 270.0,
+        fill_y: bool = False,
     ):
         """
         Args:
@@ -34,7 +36,16 @@ class BernoulliLemniscateAnimation(CircleAnimation):
                 lemniscate proportions (about 1 : 0.35), which looks flatter
                 but is geometrically correct.
         """
-        super().__init__(calibration, rgb, speed, scale, center, phase)
+        super().__init__(
+            calibration,
+            rgb,
+            scale,
+            center,
+            phase,
+            laps_per_beat,
+            damping,
+            max_servo_speed,
+        )
         self.fill_y = fill_y
 
     def shape(self, t: float) -> tuple[float, float]:

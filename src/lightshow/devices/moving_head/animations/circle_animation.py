@@ -27,41 +27,41 @@ class CircleAnimation(AbstractMHAnimation):
         self,
         calibration: FixtureCalibration,
         rgb: list[RGB] | Callable[[], RGB],
-        speed: float = 0.5,
         scale: float = 1.0,
         center: tuple[float, float] = (0.0, 0.0),
         phase: float = 0.0,
-        lap_per_beat: bool = True,
-        max_servo_speed: float = 270.0,
+        laps_per_beat: float = 0.8,
+        damping: float = 3.5,
+        min_speed: float = 0.15,
+        max_servo_speed: float = 600.0,
     ):
         """
         Args:
-            speed: laps per second.
             scale: circle radius in normalized space (1.0 = full range).
             center: circle center in normalized space, (x=base, y=top).
             phase: starting offset as a fraction of a lap (0..1).
-            lap_per_beat: do 1 lap each beat.
-            max_servo_speed: max servo angular speed in deg/s
+            laps_per_beat: how far each beat's kick coasts, in laps.
+            damping: velocity decay rate (1/s). Higher = snappier, shorter coast.
+            max_servo_speed: max servo angular speed in deg/s (clamps the kick).
         """
         super().__init__(calibration)
 
         self.setRGB(rgb)
 
         self.change_color_on_tick = False
-        self.cached_color = RGB(0, 0, 0)  # In case we move but don't change color
-
-        self.progress_speed = speed
-        self.scale = scale
-        self.center = center
-        self.lap_per_beat = lap_per_beat
-        self.max_servo_speed = max_servo_speed
-
-        self.circle_progress = phase % 1
+        self.cached_color = RGB(0, 0, 0)
         self.color_cooldown = 0
 
-        self._last_beat_t: float | None = None
-        self._beat_interval: float | None = None
-        self._speed = speed
+        self.scale = scale
+        self.center = center
+        self.laps_per_beat = laps_per_beat
+        self.damping = damping
+        self.min_speed = min_speed
+        self.max_servo_speed = max_servo_speed
+
+        self.circle_progress = phase % 1  # laps, wrapped to 0..1
+        self.speed = min_speed
+
         self._radius_deg = self._full_radius_deg() * scale
 
     def _full_radius_deg(self) -> float:
@@ -69,43 +69,33 @@ class CircleAnimation(AbstractMHAnimation):
         t_lo, t_hi = self.calibration.top_range
         return min(abs(b_hi - b_lo), abs(t_hi - t_lo)) / 2  # largest round circle
 
+    def _kick_speed(self) -> float:
+        """Speed so the coast above cruise covers ~laps_per_beat, clamped to the servos."""
+        laps = self.laps_per_beat + random.uniform(-0.1, 0.1)
+        v0 = self.min_speed + laps * self.damping
+        v_max = self.max_servo_speed / (2 * np.pi * max(self._radius_deg, 1e-3))
+        return min(v0, max(v_max, self.min_speed))
+
     def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
         dt = min(dt, 0.1)
-        if not isTick:
-            self._register_beat()
-            if random.uniform(0, 1) < 1 / 12:
+
+        if not isTick:  # beat
+            if random.random() < 1 / 12:
                 self.reverse()
+            self.speed = self._kick_speed()
             if not self.change_color_on_tick:
                 self.cached_color = self.apply_transformer(self.nextRGB(), audio_data)
             self.color_cooldown = time.time_ns() + 0.2 * 1e9
         elif self.change_color_on_tick and time.time_ns() >= self.color_cooldown:
             self.cached_color = self.apply_transformer(self.nextRGB(), audio_data)
 
-        if (
-            self._last_beat_t is not None
-            and time.monotonic() - self._last_beat_t > self.TEMPO_TIMEOUT
-        ):
-            self._beat_interval = None
-
-        if self.lap_per_beat and self._beat_interval:
-            target_speed = 1.0 / self._beat_interval
-            while target_speed > self.MAX_LAPS_PER_S:
-                target_speed /= 2
-        else:
-            target_speed = self.progress_speed
-
-        omega = 2 * np.pi * target_speed  # rad/s
-        target_radius = min(
-            self._full_radius_deg() * self.scale,
-            self.max_servo_speed / omega,
-        )
-
-        k = 1 - np.exp(-dt / 0.15) if dt > 0 else 0.0
-        self._speed += (target_speed - self._speed) * k
-        self._radius_deg += (target_radius - self._radius_deg) * k
-
-        direction = -1 if self.reversed else 1
-        self.circle_progress = (self.circle_progress + direction * self._speed * dt) % 1
+        if dt > 0:
+            decay = np.exp(-self.damping * dt)
+            excess = self.speed - self.min_speed
+            dist = self.min_speed * dt + excess * (1 - decay) / self.damping
+            direction = -1 if self.reversed else 1
+            self.circle_progress = (self.circle_progress + direction * dist) % 1
+            self.speed = self.min_speed + excess * decay
 
         x, y = self.nextCurve(self.circle_progress * 2 * np.pi)
         angles = self.calibration.to_servo(x, y)
@@ -116,18 +106,6 @@ class CircleAnimation(AbstractMHAnimation):
             topServo=TopServoCommand(angles.top),
             baseServo=BaseServoCommand(angles.base),
         )
-
-    def _register_beat(self):
-        now = time.monotonic()
-        if self._last_beat_t is not None:
-            gap = now - self._last_beat_t
-            if 0.25 < gap < 2.0:  # ignore double triggers and long pauses
-                self._beat_interval = (
-                    gap
-                    if self._beat_interval is None
-                    else 0.7 * self._beat_interval + 0.3 * gap
-                )
-        self._last_beat_t = now
 
     def shape(self, t: float) -> tuple[float, float]:
         """Unit shape, both axes in [-1, 1], same unit on both. Override per animation."""

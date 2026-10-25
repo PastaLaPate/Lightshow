@@ -8,7 +8,7 @@ from .circle_animation import CircleAnimation
 class BreakCircleAnimation(CircleAnimation):
     def __init__(self, calibration: FixtureCalibration, hue_speed: float = 0.5):
         """hue_speed: full rainbow cycles per second (0.5 = one cycle every 2 s)."""
-        super().__init__(calibration, rgb=[RGB(255, 255, 255)], speed=0.35)
+        super().__init__(calibration, rgb=[RGB(255, 255, 255)])
         self.change_color_on_tick = True
         self.hue = 0.0
         self.hue_speed = hue_speed
