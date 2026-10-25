@@ -34,7 +34,7 @@ build: ## Build app using pyinstaller
 
 .PHONY: installer-windows
 installer-windows: ## Make windows installer using NSIS
-	cd packaging/installer && makensis /DPRODUCT_VERSION=$(version) lightshow.nsi
+	cd packaging/installer && MSYS_NO_PATHCONV=1 makensis /DPRODUCT_VERSION=$(version) lightshow.nsi
 
 .PHONY: hooks
 hooks: ## Install hooks
