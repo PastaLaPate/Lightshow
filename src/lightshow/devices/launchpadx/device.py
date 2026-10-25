@@ -9,6 +9,7 @@ from typing import ClassVar, Literal
 import mido
 
 from lightshow.core import config
+from lightshow.core.events import notifications
 from lightshow.core.observable_model import ObservableModel
 from lightshow.devices.device import InputDevice
 from lightshow.devices.events import device_events
@@ -352,7 +353,6 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
     DEVICE_TYPE_NAME = DeviceTypeName.LAUNCHPAD_X
 
     def __init__(self, config):
-        from lightshow.core.config import global_config
 
         super().__init__(config)
         self.in_port: mido.ports.BaseInput | None = None
@@ -379,12 +379,30 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
         self.running = False
         self._effect_thread: threading.Thread | None = None
 
-        for id, device_entry in global_config.device_store.all().items():
-            if (
-                device_entry.type_name == DeviceTypeName.MOVING_HEAD
-                and device_entry.status == DeviceStatus.CONNECTED
-            ):
-                self._assign_panel(id)
+    def init_device(self) -> bool:
+        from lightshow.core.config import global_config
+
+        if not self.scan_for_device():
+            return False
+        try:
+            self.in_port = mido.open_input(  # type: ignore
+                self.device_name, callback=self._on_midi_receive
+            )
+            self.out_port = mido.open_output(self.device_name)  # type: ignore
+            self.ready = True
+            self.out_port.send(mido.Message("sysex", data=[0, 32, 41, 2, 12, 14, 1]))
+
+            self.start_effect_engine()  # Start the single shared thread
+            for id, device_entry in global_config.device_store.all().items():
+                if (
+                    device_entry.type_name == DeviceTypeName.MOVING_HEAD
+                    and device_entry.status == DeviceStatus.CONNECTED
+                ):
+                    self._assign_panel(id)
+            return True
+        except Exception as e:  # noqa
+            notifications.error.emit("Connection Error To launchpad", e)
+            return False
 
     def _on_device_status_changed(self, device_id: str, new_status: DeviceStatus):
         # Assign the device a panel if one is available
@@ -470,23 +488,6 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
             if panel_slot and panel_slot.contains(note):
                 panel_slot.on_released(note)
                 break
-
-    def init_device(self) -> bool:
-        if not self.scan_for_device():
-            return False
-        try:
-            self.in_port = mido.open_input(  # type: ignore
-                self.device_name, callback=self._on_midi_receive
-            )
-            self.out_port = mido.open_output(self.device_name)  # type: ignore
-            self.ready = True
-            self.out_port.send(mido.Message("sysex", data=[0, 32, 41, 2, 12, 14, 1]))
-
-            self.start_effect_engine()  # Start the single shared thread
-            return True
-        except Exception as e:  # noqa
-            print(f"Error: {e}")
-            return False
 
     def set_color(
         self,

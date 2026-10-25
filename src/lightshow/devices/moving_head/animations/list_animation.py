@@ -1,4 +1,3 @@
-import random
 from itertools import cycle
 
 from lightshow.devices.moving_head.colors import COLOR_MODE
@@ -39,7 +38,7 @@ class ListAnimation(AbstractMHAnimation):
 
         self.poses: list[ServoAngles] = [calibration.to_servo(x, y) for x, y in points]
         self.index = -1  # first beat lands on pose 0
-        self.steps_done = 0
+        # self.steps_done = 0
 
         self.cached_rgb = RGB(0, 0, 0)
         self.cached_poses = (TopServoCommand(0), BaseServoCommand(0))
@@ -83,11 +82,11 @@ class ListAnimation(AbstractMHAnimation):
         )
 
         # End of a full pass: maybe flip direction
-        self.steps_done += 1
-        if self.steps_done >= len(self.poses):
-            self.steps_done = 0
-            if random.random() < self.reverse_chance:
-                self.reverse()
+        # self.steps_done += 1
+        # if self.steps_done >= len(self.poses):
+        # self.steps_done = 0
+        # if random.random() < self.reverse_chance:
+        #    self.reverse()
 
         return MHAnimationFrame(
             duration=0,

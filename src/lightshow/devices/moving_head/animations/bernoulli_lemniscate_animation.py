@@ -20,9 +20,10 @@ class BernoulliLemniscateAnimation(CircleAnimation):
         scale: float = 1.0,
         center: tuple[float, float] = (0.0, 0.0),
         phase: float = 0.0,
-        laps_per_beat: float = 1.0,
-        damping: float = 3.0,
-        max_servo_speed: float = 270.0,
+        laps_per_beat: float = 0.8,
+        damping: float = 3.5,
+        min_speed: float = 0.15,
+        max_servo_speed: float = 600.0,
         fill_y: bool = False,
     ):
         """
@@ -39,12 +40,13 @@ class BernoulliLemniscateAnimation(CircleAnimation):
         super().__init__(
             calibration,
             rgb,
-            scale,
-            center,
-            phase,
-            laps_per_beat,
-            damping,
-            max_servo_speed,
+            scale=scale,
+            center=center,
+            phase=phase,
+            laps_per_beat=laps_per_beat,
+            damping=damping,
+            min_speed=min_speed,
+            max_servo_speed=max_servo_speed,
         )
         self.fill_y = fill_y
 

@@ -20,7 +20,7 @@ from lightshow.devices.device import (
 )
 from lightshow.devices.moving_head import MovingHeadController
 from lightshow.devices.moving_head.commands import RGB, Command
-from lightshow.devices.types import DeviceTypeName, PacketStatus, PacketType
+from lightshow.devices.types import DeviceTypeName, PacketData, PacketStatus, PacketType
 
 # TODO: Sync with other Device -> Mirror & Flip + Upload Firmware + Set GPIO
 
@@ -88,7 +88,7 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
         self.socket = None
         self.packetIndex = 0
 
-        self.manual = False
+        self.manual: bool = False
         self.auto_tick = False
 
         self.controller = MovingHeadController(self)
@@ -206,7 +206,7 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
         commands_dicts = [command.toUDP_MH_Command() for command in commands]
         self.send_message(";".join(commands_dicts))
 
-    def on(self, packet):
+    def on(self, packet: PacketData):
         if not self.socket:
             return
 

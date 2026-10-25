@@ -80,8 +80,8 @@ class CircleAnimation(AbstractMHAnimation):
         dt = min(dt, 0.1)
 
         if not isTick:  # beat
-            if random.random() < 1 / 12:
-                self.reverse()
+            # if random.random() < 1 / 12: Moved to controller
+            #     self.reverse()
             self.speed = self._kick_speed()
             if not self.change_color_on_tick:
                 self.cached_color = self.apply_transformer(self.nextRGB(), audio_data)

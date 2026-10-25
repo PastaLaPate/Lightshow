@@ -1,5 +1,4 @@
 import math
-import random
 from itertools import cycle
 
 from lightshow.devices.moving_head.colors import COLOR_MODE
@@ -101,12 +100,12 @@ class RegularPolygonAnimation(AbstractMHAnimation):
             BaseServoCommand(angle=pose.base),
         )
 
-        # End of a full lap: maybe flip direction, optionally rotate the polygon
+        # End of a full lap:  optionally rotate the polygon
         self.steps_done += 1
         if self.steps_done >= len(self.poses):
             self.steps_done = 0
-            if random.random() < 0.5:
-                self.reverse()
+            # if random.random() < 0.5: Moved to controller
+            #    self.reverse()
             if self.angle_offset_step:
                 self.angle_offset += self.angle_offset_step
                 self.calculateServoPoses()

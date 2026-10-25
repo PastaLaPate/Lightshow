@@ -296,6 +296,8 @@ class MovingHeadController:
         if self._holding() or not self.beats.accept():
             return
         self.beats_since_anim_change += 1
+        if random.random() < 1 / 12 and not self.device.manual:
+            self.reverse_animation()
         self._send(self._advance(self.current_anim, beat=True), force=True)
 
     # helpers
