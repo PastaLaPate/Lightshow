@@ -23,7 +23,9 @@ from lightshow.devices.moving_head.animation_factories import (
 from lightshow.devices.moving_head.colors import (
     BLUE_COLORS,
     RED_COLORS,
+    BlueLowsModulator,
     ColorTransformer,
+    PurpleLowsModulator,
     RedLowsModulator,
     StartWhiteTransformer,
     ToBlackTransformer,
@@ -44,7 +46,7 @@ from lightshow.devices.types import (
 class Buttons:
     # Row 1 (Top / Indices 12-15)
     COLORS_MODES: int = 12
-    REVERSE_ANIM: int = 13
+    MODULATORS: int = 13
     FLASH_WHITE: int = 14
     FADE_BLACK: int = 15
 
@@ -52,7 +54,7 @@ class Buttons:
     ANIM_CIRCLE: int = 8
     ANIM_SQUARE: int = 9
     ANIM_LEMNISCATE: int = 10
-    RED_MODULATOR: int = 11
+    REVERSE_ANIM: int = 11
 
     # Row 3 (Indices 4-7)
     AUTO_TICK: int = 4
@@ -80,6 +82,7 @@ class Colors:
     DARK_GRAY: int = 1
     BLACK: int = 0
     BLUE: int = 45
+    PURPLE: int = 80
 
 
 # From bottom left to top right
@@ -147,6 +150,13 @@ class ColorModes(Enum):
     RANDOM = 4
 
 
+class ModulatorsModes(Enum):
+    RED_LOW = RedLowsModulator
+    BLUE_LOW = BlueLowsModulator
+    PURPLE_LOW = PurpleLowsModulator
+    NONE = None
+
+
 class MovingHeadPanelSlot(PanelSlot):
     ANIM_BUTTONS: ClassVar[dict[int, AnimationFactory]] = {
         Buttons.ANIM_CIRCLE: CIRCLE_ANIMATION,
@@ -171,8 +181,10 @@ class MovingHeadPanelSlot(PanelSlot):
         self.controls_mode = cycle(
             [ControlMode.AUTO, ControlMode.MANUAL, ControlMode.HYBRID]
         )
-        self.color_mode = ColorModes.RANDOM
+        self.color_mode: ColorModes = ColorModes.RANDOM
         self.colors_modes = cycle(list(ColorModes))
+        self.modulator_mode: ModulatorsModes = ModulatorsModes.NONE
+        self.modulators_modes = cycle(list(ModulatorsModes))
         self.auto_tick = False
         self.breaking = False
         self.random_anim = True
@@ -210,9 +222,14 @@ class MovingHeadPanelSlot(PanelSlot):
             self.ctrl.set_palette(None if isinstance(value, int) else value)
             self.update_state()
 
-        elif key == Buttons.REVERSE_ANIM:
-            self.ctrl.reverse_animation()
-            self.update_state()
+        elif key == Buttons.MODULATORS:
+            if not self.random_anim:
+                self.modulator_mode = next(self.modulators_modes)
+                value = self.modulator_mode.value
+                if value is not None:
+                    self.ctrl.set_transformer(value())
+                else:
+                    self.ctrl.clear_transformer()
 
         elif key in self.TRANSFORMER_BUTTONS:
             self.ctrl.toggle_transformer(self.TRANSFORMER_BUTTONS[key])
@@ -222,9 +239,9 @@ class MovingHeadPanelSlot(PanelSlot):
             if not self.random_anim:
                 self.ctrl.set_animation(self.ANIM_BUTTONS[key])
 
-        elif key == Buttons.RED_MODULATOR:
-            if not self.random_anim:
-                self.ctrl.toggle_transformer(RedLowsModulator)
+        elif key == Buttons.REVERSE_ANIM:
+            self.ctrl.reverse_animation()
+            self.update_state()
 
         # --- ROW 3: TICKING & RANDOM ---
         elif key == Buttons.AUTO_TICK:
@@ -316,8 +333,10 @@ class MovingHeadPanelSlot(PanelSlot):
         self.set_color(Buttons.ANIM_SQUARE, anim_color)
         self.set_color(Buttons.ANIM_LEMNISCATE, anim_color)
         self.set_color(
-            Buttons.RED_MODULATOR,
-            Colors.MID_RED if not self.random_anim else Colors.BLACK,
+            Buttons.REVERSE_ANIM,
+            Colors.BRIGHT_GREEN
+            if not self.ctrl.current_anim.reversed
+            else Colors.BRIGHT_RED,
         )
 
         # --- ROW 1 (Top) ---
@@ -330,12 +349,21 @@ class MovingHeadPanelSlot(PanelSlot):
             self.set_color(Buttons.COLORS_MODES, COLOR_MODES_COLORS[self.color_mode])
         else:
             self.set_color(Buttons.COLORS_MODES, Colors.WHITE, mode="pulse")
-        self.set_color(
-            Buttons.REVERSE_ANIM,
-            Colors.BRIGHT_GREEN
-            if not self.ctrl.current_anim.reversed
-            else Colors.BRIGHT_RED,
-        )
+
+        MODULATOR_MODES_COLORS = {
+            ModulatorsModes.RED_LOW: Colors.BRIGHT_RED,
+            ModulatorsModes.BLUE_LOW: Colors.BLUE,
+            ModulatorsModes.PURPLE_LOW: Colors.PURPLE,
+        }
+        if self.modulator_mode != ModulatorsModes.NONE:
+            self.set_color(
+                Buttons.MODULATORS,
+                MODULATOR_MODES_COLORS[self.modulator_mode],
+                mode="pulse",
+            )
+        else:
+            self.set_color(Buttons.MODULATORS, Colors.BLACK)
+
         self.set_color(Buttons.FLASH_WHITE, Colors.WHITE)
         self.set_color(Buttons.FADE_BLACK, Colors.GRAY, mode="pulse")
 

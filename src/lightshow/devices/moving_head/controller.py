@@ -202,6 +202,9 @@ class MovingHeadController:
         active = isinstance(self.current_anim.transformer, kind)
         self.set_transformer(BlankTransformer() if active else kind())
 
+    def clear_transformer(self) -> None:
+        self.set_transformer(BlankTransformer())
+
     def set_animation(self, factory: AnimationFactory) -> None:
         """Replace the current animation, keeping the palette and transformer."""
         previous = self.current_anim

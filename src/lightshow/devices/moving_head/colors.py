@@ -81,20 +81,21 @@ class ColorTransformer(ABC):
         pass
 
 
-class RedLowsModulator(ColorTransformer):
+class LowsModulator(ColorTransformer):
     """Color mode that returns red with brightness modulated by low-frequency energy."""
 
-    MIN_BRIGHTNESS = 50
+    MIN_BRIGHTNESS = 30
     MAX_BRIGHTNESS = 255
 
     ATTACK_TAU = 0.02  # how fast it rises on a hit
-    RELEASE_TAU = 0.20  # how slowly it falls
-    PEAK_HALF_LIFE = 1.5  # how fast the normalization peak decays
+    RELEASE_TAU = 0.10  # how slowly it falls
+    PEAK_HALF_LIFE = 1  # how fast the normalization peak decays
 
-    def __init__(self):
+    def __init__(self, color: RGB | None = None):
         self.peak_energy = 1.0  # Avoid division by zero, self-calibrates upward
         self.level = 0.0
         self._last_t = time.monotonic()
+        self._modulation_color = color or RGB(255, 0, 0)
 
     @staticmethod
     def override() -> bool:
@@ -125,11 +126,32 @@ class RedLowsModulator(ColorTransformer):
         tau = self.ATTACK_TAU if target > self.level else self.RELEASE_TAU
         self.level += (target - self.level) * (1 - math.exp(-dt / tau))
 
-        brightness = int(
-            self.MIN_BRIGHTNESS
-            + self.level * (self.MAX_BRIGHTNESS - self.MIN_BRIGHTNESS)
+        effective_brightness = self.MIN_BRIGHTNESS + self.level * (
+            self.MAX_BRIGHTNESS - self.MIN_BRIGHTNESS
         )
-        return RGB(brightness, 0, 0)
+
+        scale = effective_brightness / 255.0
+
+        return RGB(
+            int(self._modulation_color.r * scale),
+            int(self._modulation_color.g * scale),
+            int(self._modulation_color.b * scale),
+        )
+
+
+class RedLowsModulator(LowsModulator):
+    def __init__(self):
+        super().__init__(RGB(255, 0, 0))
+
+
+class BlueLowsModulator(LowsModulator):
+    def __init__(self):
+        super().__init__(RGB(0, 0, 255))
+
+
+class PurpleLowsModulator(LowsModulator):
+    def __init__(self):
+        super().__init__(RGB(130, 0, 255))
 
 
 class BlankTransformer(ColorTransformer):
