@@ -43,3 +43,15 @@ hooks: ## Install hooks
 .PHONY: commit
 commit: ## CZ commit
 	PYTHONPATH=. uv run cz commit $(ARGS)
+
+.PHONY: bump-major
+bump-major: ## Bump MAJOR version
+	PYTHONPATH=. uv run cz bump --increment MAJOR
+
+.PHONY: bump-minor
+bump-minor: ## Bump MINOR version
+	PYTHONPATH=. uv run cz bump --increment MINOP
+
+.PHONY: bump-patch
+bump-patch: ## Bump PATCH version
+	PYTHONPATH=. uv run cz bump --increment PATCH
