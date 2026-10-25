@@ -85,7 +85,7 @@ ignore_imports = [
 py-modules = []
 
 [tool.ty.src]
-exclude = ["scripts/cz_conventional_chore.py"]
+exclude = ["scripts/cz_conventional_chore.py", "scripts/mv_module.py"]
 
 [tool.uv]
 link-mode = "copy"
