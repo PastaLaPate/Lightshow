@@ -68,13 +68,13 @@ Section "Lightshow" SEC01
   SectionIn RO
   SetOutPath "$INSTDIR"
   SetOverwrite ifnewer
-  File ".\..\..\dist\lightshow\lightshow.exe"
+  File ".\..\..\dist\lightshow-windows\lightshow.exe"
   CreateDirectory "$SMPROGRAMS\Lightshow"
   CreateShortCut "$SMPROGRAMS\Lightshow\Lightshow.lnk" "$INSTDIR\lightshow.exe"
   CreateShortCut "$DESKTOP\Lightshow.lnk" "$INSTDIR\lightshow.exe"
   CreateDirectory "$INSTDIR\_internal"
   SetOutPath "$INSTDIR\_internal"
-  File /nonfatal /a /r ".\..\..\dist\lightshow\_internal\"
+  File /nonfatal /a /r ".\..\..\dist\lightshow-windows\_internal\"
 SectionEnd
 
 
