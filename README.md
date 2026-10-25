@@ -6,6 +6,8 @@
 
 A software designed to control the [DIY Moving Head projector](https://github.com/PastaLaPate/DIY_MovingHeadLight)
 
+![Software Screenshot](.github/imgs/software.png)
+
 > [!CAUTION]
 > Software made for windows and linux.
 
