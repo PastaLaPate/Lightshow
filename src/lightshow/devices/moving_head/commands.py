@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from typing import Literal
 
-from lightshow.devices.moving_head.types import ServoType
+ServoType = Literal["base", "top"]
 
 
 class Command(ABC):

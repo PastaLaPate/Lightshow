@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Literal, NamedTuple, Protocol, TypedDict, runtime_checkable
+from typing import NamedTuple, Protocol, TypedDict, runtime_checkable
 
 from lightshow.audio.data import AudioData
 from lightshow.devices.moving_head.colors import (
@@ -24,9 +24,6 @@ class ServoAngles(NamedTuple):
 
 def QUART_OUT(t):
     return 1 - (1 - t) ** 4
-
-
-ServoType = Literal["base", "top"]
 
 
 class MHAnimationFrame(TypedDict):

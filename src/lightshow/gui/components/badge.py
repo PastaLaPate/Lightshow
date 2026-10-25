@@ -1,7 +1,9 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QLabel, QSizePolicy
 
+from lightshow.devices.registry import DEVICE_CLASSES
+from lightshow.devices.types import DeviceTypeName
 from lightshow.gui.theme import style
 
 
@@ -11,11 +13,10 @@ class Badge(QLabel):
     ):
         super().__init__(parent)
         self._color = color or QColor(255, 0, 0)
-        self.setText(text or "")
-
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setMinimumSize(18, 18)
+        self.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         style.mark(self, "badge")
+        self.setText(text or "")
         self._apply_color()
 
     def setText(self, text: str):
@@ -51,3 +52,8 @@ class Badge(QLabel):
         if is_dot:
             parts.append("padding: 0;")
         self.setStyleSheet(" ".join(parts))
+        self.updateGeometry()
+
+    def for_device_type(self, type_name: DeviceTypeName):
+        self.setText(type_name)
+        self.color = QColor(DEVICE_CLASSES[type_name].BADGE_COLOR)

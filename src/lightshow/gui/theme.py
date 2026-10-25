@@ -1,4 +1,6 @@
+import tempfile
 from dataclasses import dataclass, replace
+from pathlib import Path
 from string import Template
 
 from PySide6.QtCore import QObject, Qt
@@ -6,6 +8,20 @@ from PySide6.QtGui import QColor, QPalette
 from PySide6.QtWidgets import QApplication, QWidget
 
 from lightshow.core.consts import resource_path
+
+_ARROW_POINTS = {"up": "1,6 5,1 9,6", "down": "1,1 5,6 9,1"}
+
+
+def _arrow_svg(direction: str, color: str) -> Path:
+    d = Path(tempfile.gettempdir()) / "lightshow_theme"
+    d.mkdir(parents=True, exist_ok=True)
+    p = d / f"{direction}_{color.lstrip('#')}.svg"
+    if not p.exists():
+        p.write_text(
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="10" height="7" viewBox="0 0 10 7">'
+            f'<polygon points="{_ARROW_POINTS[direction]}" fill="{color}"/></svg>'
+        )
+    return p
 
 
 @dataclass(frozen=True)
@@ -113,7 +129,9 @@ class StyleManager(QObject):
         if self._app is None:
             return
         self._app.setPalette(self._build_palette(theme))
-        self._app.setStyleSheet(_QSS.substitute(vars(theme)))
+        self._app.setStyleSheet(
+            _QSS.substitute({**vars(theme), **self._arrow_urls(theme)})
+        )
 
     def tweak(self, **overrides):
         """Derive and apply a modified copy of the current theme."""
@@ -131,6 +149,14 @@ class StyleManager(QObject):
         widget.style().unpolish(widget)
         widget.style().polish(widget)
         return widget
+
+    def _arrow_urls(self, t: Theme) -> dict[str, str]:
+        return {
+            "arrow_up": _arrow_svg("up", t.text_dim).as_posix(),
+            "arrow_up_hover": _arrow_svg("up", t.text).as_posix(),
+            "arrow_down": _arrow_svg("down", t.text_dim).as_posix(),
+            "arrow_down_hover": _arrow_svg("down", t.text).as_posix(),
+        }
 
     @staticmethod
     def _build_palette(t: Theme) -> QPalette:

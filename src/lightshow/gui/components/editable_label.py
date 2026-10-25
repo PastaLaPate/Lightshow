@@ -49,6 +49,9 @@ class EditableLabel(QWidget):
                 return True
         return False
 
+    def start_editing(self):
+        self._to_line_edit()
+
     def _to_label(self):
 
         if self.line_edit.isHidden():

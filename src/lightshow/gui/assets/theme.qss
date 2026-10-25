@@ -14,7 +14,7 @@ QTabBar::tab:selected { background: $panel; color: $text; }
 QTabBar::tab:hover:!selected { background: $header_hover; }
 
 
-/* lists / trees */
+/* lists / trees / itemview */
 QListView, QTreeView, QTableView {
     background: $panel; color: $text; border: 1px solid $header;
     border-radius: ${radius_small}px; outline: none;
@@ -26,20 +26,38 @@ QListView::item:selected, QTreeView::item:selected {
 }
 
 QAbstractItemView QLineEdit {
-    min-height: 0;
-    padding: 0 5px;
-    margin: 0;
-    border: 1px solid $accent;
-    border-radius: 0;
+    min-height: 0; padding: 0; margin: 0;
+    border: 1px solid $accent; border-radius: 0;
     background: $input_bg;
 }
 
-QListView::item, QTreeView::item { padding: 3px 6px; min-height: 20px; }
-
-/* UE-style spinboxes: no buttons */
-QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
-    width: 0; border: none;
+QLineEdit[role="row-name"] {
+    background: transparent; border: none; border-radius: 0;
+    padding: 0 0 0 1px; margin: 0; min-height: 0;
+    color: $text;
 }
+QLineEdit[role="row-name"][selected="true"] { color: $accent_text; }
+QLineEdit[role="row-name"][editing="true"] {
+    background: $input_bg; color: $text;
+    border: 1px solid $accent; padding: 0;
+}
+
+QAbstractSpinBox { padding-right: 18px; }   /* room for the buttons */
+
+QAbstractSpinBox::up-button, QAbstractSpinBox::down-button {
+    subcontrol-origin: padding;
+    width: 16px; border: none; background: transparent;
+}
+QAbstractSpinBox::up-button   { subcontrol-position: top right; }
+QAbstractSpinBox::down-button { subcontrol-position: bottom right; }
+QAbstractSpinBox::up-button:hover,
+QAbstractSpinBox::down-button:hover { background: $header_hover; }
+
+QAbstractSpinBox::up-arrow   { image: url("$arrow_up");   width: 8px; height: 6px; }
+QAbstractSpinBox::down-arrow { image: url("$arrow_down"); width: 8px; height: 6px; }
+QAbstractSpinBox::up-arrow:hover   { image: url("$arrow_up_hover"); }
+QAbstractSpinBox::down-arrow:hover { image: url("$arrow_down_hover"); }
+QAbstractSpinBox::up-arrow:disabled, QAbstractSpinBox::down-arrow:disabled { image: none; }
 
 
 /* checkboxes */

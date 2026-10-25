@@ -1,6 +1,6 @@
 from functools import partial
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QAction, QKeyEvent
 from PySide6.QtWidgets import (
     QComboBox,
@@ -11,7 +11,9 @@ from PySide6.QtWidgets import (
     QMenu,
     QPushButton,
     QSizePolicy,
+    QStyledItemDelegate,
     QVBoxLayout,
+    QWidget,
 )
 
 from lightshow.core.config import global_config
@@ -19,6 +21,8 @@ from lightshow.core.logger import Logger
 from lightshow.devices.device import Device
 from lightshow.devices.events import device_events
 from lightshow.devices.types import DeviceTypeName
+from lightshow.gui.components.badge import Badge
+from lightshow.gui.components.editable_label import EditableLabel
 from lightshow.gui.theme import style
 from lightshow.gui.utils import ui_signals
 
@@ -41,6 +45,62 @@ class DeviceListWidget(QListWidget):
             super().keyPressEvent(e)
 
 
+class FullRectDelegate(QStyledItemDelegate):
+    """Row widgets get exactly the item rect (the default would inset them by the item padding)."""
+
+    def updateEditorGeometry(self, editor, option, index) -> None:
+        editor.setGeometry(option.rect)
+
+
+class DeviceRow(QWidget):
+    renamed = Signal(str, str)  # device_id, new_name
+
+    MARGIN_H = 6
+    SPACING = 8
+
+    def __init__(self, device_id: str, name: str, type_name: DeviceTypeName):
+        super().__init__()
+        self.device_id = device_id
+        self._name = name
+
+        self.name = EditableLabel(name)
+        self.name.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+        )  # long names clip
+        style.mark(self.name.label, "row-name", selected=False)
+        self.name.text_changed.connect(self._on_text_changed)
+
+        self.badge = Badge()
+        self.badge.for_device_type(type_name)
+
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(self.MARGIN_H, 0, self.MARGIN_H, 0)
+        lay.setSpacing(self.SPACING)
+        lay.addWidget(self.name, 1)
+        lay.addWidget(self.badge, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        self.name.label.ensurePolished()
+        self.badge.ensurePolished()
+
+    def set_name(self, name: str) -> None:
+        self._name = name
+        self.name.setText(name)
+
+    def set_selected(self, selected: bool) -> None:
+        style.mark(self.name, "row-name", selected=selected)
+
+    def start_editing(self) -> None:
+        self.name.start_editing()
+
+    def _on_text_changed(self, text: str) -> None:
+        text = text.strip()
+        if not text:  # refuse empty names, restore the old one
+            self.name.setText(self._name)
+            return
+        self._name = text
+        self.renamed.emit(self.device_id, text)
+
+
 class DevicesPanel(BasePanel):
     """Panel for managing device list and additions."""
 
@@ -61,9 +121,11 @@ class DevicesPanel(BasePanel):
         layout.addWidget(title_label)
 
         self.device_listbox = DeviceListWidget(self._delete_selected_device)
+        self.device_listbox.setItemDelegate(FullRectDelegate(self.device_listbox))
         self.refresh_list()
         self.device_listbox.itemSelectionChanged.connect(self._on_device_select)
-        self.device_listbox.itemChanged.connect(self._on_item_renamed)
+        self.device_listbox.itemSelectionChanged.connect(self._sync_row_selection)
+
         self.device_listbox.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.device_listbox.customContextMenuRequested.connect(
             self._show_selected_context_menu
@@ -88,23 +150,49 @@ class DevicesPanel(BasePanel):
 
     def refresh_list(self, *args):
         """Refresh the device listbox with current devices."""
-        if self.device_listbox is not None:
-            self.device_listbox.blockSignals(True)
-            try:
-                self.device_listbox.clear()
-                for id, device_entry in global_config.device_store.all().items():
-                    item = QListWidgetItem(device_entry.config.name)
-                    item.setData(Qt.ItemDataRole.UserRole, id)
-                    item.setFlags(item.flags() | Qt.ItemFlag.ItemIsEditable)
-                    self.device_listbox.addItem(item)
-            finally:
-                self.device_listbox.blockSignals(False)
+        if self.device_listbox is None:
+            return
+        self.device_listbox.blockSignals(True)
+        try:
+            self.device_listbox.clear()
+            for id, device_entry in global_config.device_store.all().items():
+                item = QListWidgetItem()
+                item.setData(Qt.ItemDataRole.UserRole, id)
+
+                row = DeviceRow(id, device_entry.config.name, device_entry.type_name)
+                row.renamed.connect(self._on_row_renamed)
+                hint = row.sizeHint()
+                item.setSizeHint(QSize(hint.width(), max(hint.height(), 20) + 6))
+
+                self.device_listbox.addItem(item)
+                self.device_listbox.setItemWidget(item, row)
+
+        finally:
+            self.device_listbox.blockSignals(False)
+
+    def _row(self, item: QListWidgetItem | None) -> DeviceRow | None:
+        if item is None or self.device_listbox is None:
+            return None
+        w = self.device_listbox.itemWidget(item)
+        return w if isinstance(w, DeviceRow) else None
+
+    def _sync_row_selection(self):
+        if self.device_listbox is None:
+            return
+        for i in range(self.device_listbox.count()):
+            item = self.device_listbox.item(i)
+            if row := self._row(item):
+                row.set_selected(item.isSelected())
+
+    def _on_row_renamed(self, device_id: str, new_name: str):
+        if device_id in global_config.device_store.all():
+            ui_signals.devices_req.rename.emit(device_id, new_name)
 
     def _device_created(self, id: str):
         self.refresh_list()
-        item = self._select_device_by_id(id)
-        if item and self.device_listbox is not None:
-            self.device_listbox.editItem(item)
+        row = self._row(self._select_device_by_id(id))
+        if row is not None:
+            QTimer.singleShot(0, row.start_editing)
 
     def _on_device_select(self):
         """Handle device selection from listbox."""
@@ -116,19 +204,6 @@ class DevicesPanel(BasePanel):
                 current_item.data(Qt.ItemDataRole.UserRole)
             )
 
-    def _on_item_renamed(self, item: QListWidgetItem):
-        device_id = item.data(Qt.ItemDataRole.UserRole)
-        new_name = item.text().strip()
-
-        if (
-            not device_id
-            or not new_name
-            or device_id not in global_config.device_store.all()
-        ):
-            return
-
-        ui_signals.devices_req.rename.emit(device_id, new_name)
-
     def _device_renamed(self, device_id: str, new_name: str):
         assert self.device_listbox is not None
         for i in range(self.device_listbox.count()):
@@ -139,6 +214,10 @@ class DevicesPanel(BasePanel):
                     item.setText(new_name)
                 finally:
                     self.device_listbox.blockSignals(False)
+                    if row := self._row(item):
+                        row.set_name(new_name)
+                        row.update()
+                        self.device_listbox.viewport().update()
                 break
 
     def _add_device_callback(self):

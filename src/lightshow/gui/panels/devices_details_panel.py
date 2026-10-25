@@ -17,7 +17,7 @@ from lightshow.devices.device import Device
 from lightshow.devices.events import device_events
 from lightshow.devices.registry import DEVICE_CLASSES
 from lightshow.devices.store import DeviceEntry
-from lightshow.devices.types import DeviceStatus
+from lightshow.devices.types import DeviceStatus, DeviceTypeName
 from lightshow.gui.components.badge import Badge
 from lightshow.gui.components.editable_label import EditableLabel
 from lightshow.gui.components.status_circle import StatusCircle
@@ -82,8 +82,8 @@ class DeviceHeader(QWidget):
     def get_device_type(self) -> str:
         return self.device_type.text()
 
-    def set_device_type(self, device_type: str):
-        self.device_type.setText(device_type)
+    def set_device_type(self, device_type: DeviceTypeName):
+        self.device_type.for_device_type(device_type)
 
 
 class DeviceProps(
@@ -274,9 +274,6 @@ class DeviceDetailsPanel(BasePanel):
             entry = global_config.device_store.get(device_id)
             self.device_header.set_device_name(entry.config.name)
             self.device_header.set_device_type(entry.type_name)
-            self.device_header.set_badge_color(
-                QColor(DEVICE_CLASSES[entry.type_name].BADGE_COLOR)
-            )
             self.device_header.set_status(entry.status)
             self.device_props.render_device(entry)
             self.update_status(entry.status)
