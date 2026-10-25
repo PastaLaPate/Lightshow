@@ -20,6 +20,7 @@ from lightshow.devices.moving_head.types import (
 
 
 class CircleAnimation(AbstractMHAnimation):
+    NAME = "Circle Animation"
     MAX_LAPS_PER_S = 2.0
     TEMPO_TIMEOUT = 2.5
 

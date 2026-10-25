@@ -12,7 +12,8 @@ _LEMNISCATE_MAX_Y = np.sqrt(2) / 4
 
 
 class BernoulliLemniscateAnimation(CircleAnimation):
-    # fix absurd speed
+    NAME = "Lemniscate Animation"
+
     def __init__(
         self,
         calibration: FixtureCalibration,

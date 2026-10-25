@@ -33,7 +33,7 @@ class MHAnimationFrame(TypedDict):
     baseServo: ServoCommand
 
 
-class AbstractMHAnimation(AbstractAnimation):
+class AbstractMHAnimation(AbstractAnimation, abstract=True):
     def __init__(self, calibration: FixtureCalibration):
         super().__init__()
         self.calibration = calibration

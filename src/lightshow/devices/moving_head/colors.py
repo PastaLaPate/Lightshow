@@ -3,6 +3,7 @@ import random
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from typing import ClassVar
 
 from lightshow.audio.data import AudioData
 from lightshow.core.colors import hsv_to_rgb
@@ -56,6 +57,13 @@ def random_rainbow_color():
 
 
 class ColorTransformer(ABC):
+    NAME: ClassVar[str]
+
+    def __init_subclass__(cls, *, abstract: bool = False, **kw):
+        super().__init_subclass__(**kw)
+        if not abstract and not hasattr(cls, "NAME"):
+            raise TypeError(f"{cls.__name__} must define Name")
+
     def __init__(self):
         pass
 
@@ -81,8 +89,31 @@ class ColorTransformer(ABC):
         pass
 
 
+class BlankTransformer(ColorTransformer):
+    NAME = "Blank"
+
+    @staticmethod
+    def override():
+        return False
+
+    @staticmethod
+    def reactive():
+        return False
+
+    @staticmethod
+    def filter():
+        return lambda _: True
+
+    def next(
+        self, color: RGB, audio_data: AudioData
+    ) -> RGB | FadeCommand | FlickerCommand:
+        return color
+
+
 class LowsModulator(ColorTransformer):
     """Color mode that returns red with brightness modulated by low-frequency energy."""
+
+    NAME = "Lows Modulator"
 
     MIN_BRIGHTNESS = 30
     MAX_BRIGHTNESS = 255
@@ -140,40 +171,29 @@ class LowsModulator(ColorTransformer):
 
 
 class RedLowsModulator(LowsModulator):
+    NAME = "Red Modulator"
+
     def __init__(self):
         super().__init__(RGB(255, 0, 0))
 
 
 class BlueLowsModulator(LowsModulator):
+    NAME = "Blue Modulator"
+
     def __init__(self):
         super().__init__(RGB(0, 0, 255))
 
 
 class PurpleLowsModulator(LowsModulator):
+    NAME = "Purple Modulator"
+
     def __init__(self):
         super().__init__(RGB(130, 0, 255))
 
 
-class BlankTransformer(ColorTransformer):
-    @staticmethod
-    def override():
-        return False
-
-    @staticmethod
-    def reactive():
-        return False
-
-    @staticmethod
-    def filter():
-        return lambda _: True
-
-    def next(
-        self, color: RGB, audio_data: AudioData
-    ) -> RGB | FadeCommand | FlickerCommand:
-        return color
-
-
 class ToBlackTransformer(ColorTransformer):
+    NAME = "To black"
+
     @staticmethod
     def override():
         return False
@@ -193,6 +213,8 @@ class ToBlackTransformer(ColorTransformer):
 
 
 class StartWhiteTransformer(ColorTransformer):
+    NAME = "Start White"
+
     @staticmethod
     def override():
         return False

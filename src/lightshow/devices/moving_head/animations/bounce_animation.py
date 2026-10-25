@@ -17,7 +17,7 @@ from lightshow.devices.moving_head.types import (
 
 
 class BounceAnimation(AbstractMHAnimation):
-    NAME = "Bounce"
+    NAME = "Bounce Animation"
 
     def __init__(self, calibration: FixtureCalibration, rgb: COLOR_MODE):
         super().__init__(calibration)

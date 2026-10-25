@@ -15,6 +15,8 @@ from lightshow.devices.moving_head.types import (
 
 
 class ListAnimation(AbstractMHAnimation):
+    NAME = "List Animation"
+
     def __init__(
         self,
         calibration: FixtureCalibration,

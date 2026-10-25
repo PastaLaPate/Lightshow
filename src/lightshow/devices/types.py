@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from enum import Enum, IntEnum, StrEnum, auto
-from typing import Any, TypedDict
+from typing import Any, ClassVar, TypedDict
 
 from pydantic import BaseModel, ConfigDict
 
@@ -66,6 +66,13 @@ class BaseDeviceSettings(BaseModel):
 
 
 class AbstractAnimation(ABC):
+    NAME: ClassVar[str]
+
+    def __init_subclass__(cls, *, abstract: bool = False, **kw):
+        super().__init_subclass__(**kw)
+        if not abstract and not hasattr(cls, "NAME"):
+            raise TypeError(f"{cls.__name__} must define Name")
+
     def __init__(self):
         self.reversed = False
 

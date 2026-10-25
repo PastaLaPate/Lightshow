@@ -4,12 +4,14 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum, IntEnum
 from itertools import cycle
-from typing import ClassVar, Literal
+from typing import ClassVar, Literal, cast
 
 import mido
+from mido.ports import BaseInput, BaseOutput
 
 from lightshow.core import config
 from lightshow.core.events import notifications
+from lightshow.core.fields import RuntimeField
 from lightshow.core.observable_model import ObservableModel
 from lightshow.devices.device import InputDevice
 from lightshow.devices.events import device_events
@@ -373,7 +375,8 @@ class LaunchpadSettings(BaseDeviceSettings):
 
 
 class LaunchpadRuntime(ObservableModel):
-    pass
+    midi_in_port: str = RuntimeField("", "Midi IN Port")
+    midi_out_port: str = RuntimeField("", "Midi OUT Port")
 
 
 class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
@@ -383,6 +386,7 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
     def __init__(self, config):
 
         super().__init__(config)
+        self._device_name: str | None = None
         self.in_port: mido.ports.BaseInput | None = None
         self.out_port: mido.ports.BaseOutput | None = None
 
@@ -407,16 +411,33 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
         self.running = False
         self._effect_thread: threading.Thread | None = None
 
+    def scan_for_device(self) -> bool:
+        for name in mido.get_input_names():  # type: ignore
+            if "Launchpad X" in name and "MIDI In" in name:
+                self._device_name = name
+                return True
+        return False
+
     def init_device(self) -> bool:
         from lightshow.core.config import global_config
 
         if not self.scan_for_device():
             return False
         try:
-            self.in_port = mido.open_input(  # type: ignore
-                self.device_name, callback=self._on_midi_receive
+            self.in_port = cast(
+                BaseInput,
+                mido.open_input(  # type: ignore
+                    self._device_name, callback=self._on_midi_receive
+                ),
             )
-            self.out_port = mido.open_output(self.device_name)  # type: ignore
+            self.out_port = cast(
+                BaseOutput,
+                mido.open_output(self._device_name),  # type: ignore
+            )
+
+            self.runtime.midi_in_port = self.in_port.name or ""
+            self.runtime.midi_out_port = self.out_port.name or ""
+
             self.ready = True
             self.out_port.send(mido.Message("sysex", data=[0, 32, 41, 2, 12, 14, 1]))
 
@@ -431,6 +452,14 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
         except Exception as e:  # noqa
             notifications.error.emit("Connection Error To launchpad", e)
             return False
+
+    def disconnect(self):
+        self.running = False
+        if self.in_port:
+            self.in_port.close()
+        if self.out_port:
+            self.out_port.close()
+        self.ready = False
 
     def _on_device_status_changed(self, device_id: str, new_status: DeviceStatus):
         # Assign the device a panel if one is available
@@ -550,21 +579,6 @@ class LaunchpadX(InputDevice[LaunchpadSettings, LaunchpadRuntime]):
         colourspec = [3, note, r, g, b]
 
         self.out_port.send(mido.Message("sysex", data=header + colourspec))
-
-    def scan_for_device(self) -> bool:
-        for name in mido.get_input_names():  # type: ignore
-            if "Launchpad X" in name and "MIDI In" in name:
-                self.device_name = name
-                return True
-        return False
-
-    def disconnect(self):
-        self.running = False
-        if self.in_port:
-            self.in_port.close()
-        if self.out_port:
-            self.out_port.close()
-        self.ready = False
 
     def _on_midi_receive(self, message: mido.Message):
         if message.type == "note_on":  # type: ignore

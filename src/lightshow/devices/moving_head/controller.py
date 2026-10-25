@@ -212,7 +212,10 @@ class MovingHeadController:
         self.beats_since_anim_change = 0
         self.set_palette(self.color_mode)
         self.set_transformer(previous.transformer or BlankTransformer())
-        self.device.runtime.current_animation = type(self.current_anim).__name__
+        self.device.runtime.current_animation = type(self.current_anim).NAME
+        self.device.runtime.current_transformer = type(
+            self.current_anim.transformer or BlankTransformer()
+        ).NAME
 
     def reverse_animation(self) -> None:
         self.current_anim.reverse()

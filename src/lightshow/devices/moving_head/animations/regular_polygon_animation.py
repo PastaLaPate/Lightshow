@@ -17,6 +17,8 @@ from lightshow.devices.moving_head.types import (
 
 
 class RegularPolygonAnimation(AbstractMHAnimation):
+    NAME = "Regular Polygon Animation"
+
     def __init__(
         self,
         calibration: FixtureCalibration,

@@ -74,6 +74,7 @@ class MovingHeadSettings(BaseDeviceSettings):
 
 class MovingHeadRuntime(ObservableModel):
     current_animation: str = RuntimeField("", "Current Animation")
+    current_transformer: str = RuntimeField("", "Current Transformer")
     fps: int = RuntimeField(0, "FPS")
 
 
