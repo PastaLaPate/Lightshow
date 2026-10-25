@@ -18,6 +18,7 @@ jobs:
     outputs:
       version: ${{ steps.get_version.outputs.version }}
       should_release: ${{ steps.check_tag.outputs.should_release }}
+      is_upload_event: ${{ steps.check_upload.outputs.is_upload_event }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -107,7 +108,7 @@ jobs:
       - name: Create installer
         if: needs.check-version.outputs.should_release == 'true'
         run: |
-          make installer-windows
+          make installer-windows version=${{ needs.check-version.outputs.version }}
 
       - name: Upload installer # Build and upload the installer only if we are going to release, otherwise it would just be a waste of time and resources
         if: needs.check-version.outputs.should_release == 'true'
