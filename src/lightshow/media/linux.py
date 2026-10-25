@@ -10,9 +10,9 @@ import threading
 from collections.abc import Callable
 from typing import Final, Protocol, runtime_checkable
 
-from dbus_next.aio.message_bus import MessageBus
-from dbus_next.constants import BusType
-from dbus_next.signature import Variant
+from dbus_fast.aio.message_bus import MessageBus
+from dbus_fast.constants import BusType
+from dbus_fast.signature import Variant
 
 from lightshow.core.logger import Logger
 from lightshow.media.types import PlaybackStatus, TrackInfo
