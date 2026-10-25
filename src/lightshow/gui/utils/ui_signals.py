@@ -1,7 +1,7 @@
 from PySide6.QtCore import QObject, Signal
 
 from lightshow.audio.types import AudioDevice
-from lightshow.devices.types import DeviceTypeName
+from lightshow.devices.types import DeviceTypeName, PacketData
 
 
 class DeviceRequests(QObject):
@@ -13,6 +13,7 @@ class DeviceRequests(QObject):
 
     connect_ = Signal(str)
     disconnect_ = Signal(str)
+    send_packet = Signal(PacketData)
 
 
 class AudioRequests(QObject):

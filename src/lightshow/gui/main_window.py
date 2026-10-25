@@ -56,7 +56,7 @@ class UIManager(QMainWindow):
         self.manual_packets = ManualPacketsSenderPanel()
         self.stats_panel = StatsPanel()
 
-        self.device_controller = DeviceController()
+        self.device_controller = DeviceController(audio_listener)
         self.audio_controller = AudioController(audio_listener, audio_handler)
 
         # Shortcuts:
@@ -230,15 +230,6 @@ class UIManager(QMainWindow):
 
         global_config.apply(settings)
         global_config.save()
-
-    """
-
-    def _send_packet_callback(self, packet_data):
-        self.logger.info(
-            f"Sending manual packet: {packet_data.packet_type}, {packet_data.packet_status}"
-        )
-        self.listener.send_packet_to_devices(packet_data, True)
-"""
 
     def _update_visualizations(self):
         """Update visualizations in real-time."""

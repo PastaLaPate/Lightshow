@@ -1,8 +1,11 @@
+from functools import partial
+
 from PySide6.QtCore import QSize
 from PySide6.QtWidgets import QGridLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout
 
 from lightshow.devices.types import PacketData, PacketStatus, PacketType
 from lightshow.gui.theme import style
+from lightshow.gui.utils import ui_signals
 
 from .base_panel import BasePanel
 
@@ -39,9 +42,9 @@ class ManualPacketsSenderPanel(BasePanel):
         grid = QGridLayout()
         for i, (label, packet) in enumerate(self.buttons):
             button = Button(label)
-            # button.clicked.connect(
-            #    lambda _, p=packet: self.trigger("send_manual_packet", p)
-            # )
+            button.clicked.connect(
+                partial(ui_signals.devices_req.send_packet.emit, packet)
+            )
             grid.addWidget(button, i // 3, i % 3)
 
         layout.addWidget(title_label)

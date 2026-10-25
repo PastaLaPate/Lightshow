@@ -4,15 +4,19 @@ from PySide6.QtCore import QObject
 
 from lightshow.core.config import global_config
 from lightshow.core.events import notifications
+from lightshow.core.logger import Logger
 from lightshow.devices.events import device_events
-from lightshow.devices.types import DeviceTypeName
+from lightshow.devices.types import DeviceTypeName, PacketData
 from lightshow.document.history import global_history
 from lightshow.gui.utils import ui_signals
 
+logger = Logger("DeviceController")
+
 
 class DeviceController(QObject):
-    def __init__(self) -> None:
+    def __init__(self, audio_listener) -> None:
         super().__init__(None)
+        self._listener = audio_listener
 
         ui_signals.devices_req.create.connect(self.handle_create_device)
         ui_signals.devices_req.duplicate.connect(self.handle_duplicate_device)
@@ -22,6 +26,8 @@ class DeviceController(QObject):
 
         ui_signals.devices_req.connect_.connect(self.handle_connect_device)
         ui_signals.devices_req.disconnect_.connect(self.handle_disconnect_device)
+
+        ui_signals.devices_req.send_packet.connect(self._handle_send_packet)
 
         # global_config.device_store.device_added.connect(ui_signals.new_device) Handled via handle_create_device, to attribute a name
         global_config.device_store.device_renamed.connect(device_events.renamed)
@@ -83,6 +89,12 @@ class DeviceController(QObject):
 
     def handle_disconnect_device(self, id: str):
         global_config.device_store.disconnect_device(id)
+
+    def _handle_send_packet(self, packet_data: PacketData):
+        logger.info(
+            f"Sending manual packet: {packet_data.packet_type}, {packet_data.packet_status}"
+        )
+        self._listener.send_packet_to_devices(packet_data, True)
 
     def send_field_set(self, id: str, field: str):
         ui_signals.devices_req.set_field.emit(
