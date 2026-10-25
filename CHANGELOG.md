@@ -1,3 +1,9 @@
+## v1.0.7 (2026-10-25)
+
+### Fix
+
+- **deps**: replaced dbus-next to dbus-fast (for 3.15 support)
+
 ## v1.0.6 (2026-10-25)
 
 ### Fix
