@@ -16,8 +16,6 @@ from lightshow.devices.moving_head.types import (
     MHAnimationFrame,
 )
 
-# TODO: Redo this animations entirely
-
 
 class CircleAnimation(AbstractMHAnimation):
     NAME = "Circle Animation"

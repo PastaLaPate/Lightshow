@@ -196,8 +196,7 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
             )
 
     def on_config_changed(self, field: str):
-        # TODO: Transmit to controller if angles changed
-        pass
+        self.controller.rebuild_animations()
 
     def sendCommand(self, command: Command):
         # print(command.toMHCommand())
