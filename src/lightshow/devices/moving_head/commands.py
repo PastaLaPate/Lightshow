@@ -8,15 +8,13 @@ ServoType = Literal["base", "top"]
 
 class Command(ABC):
     @abstractmethod
-    def toMHCommand(self) -> dict:
+    def serialize(self) -> dict:
         pass
 
     @abstractmethod
-    def toUDP_MH_Command(self) -> str:
+    def serialize_udp(self) -> str:
         pass
 
-
-# TODO: remove like toMH and rename like to serialize...
 
 """
 
@@ -59,10 +57,10 @@ class RGB(Command):  # out of 255
     def rgbDict(self):
         return {"r": int(self.r), "g": int(self.g), "b": int(self.b)}
 
-    def toMHCommand(self):
+    def serialize(self):
         return {"led": self.rgbDict()}
 
-    def toUDP_MH_Command(self) -> str:
+    def serialize_udp(self) -> str:
         return f"r={self.r};g={self.g};b={self.b}"
 
     @classmethod
@@ -96,11 +94,11 @@ class FlickerCommand(Command):
         self.color = rgb
         self.flicker = flicker
 
-    def toMHCommand(self):
-        return self.color.toMHCommand() | {"flicker": int(self.flicker)}
+    def serialize(self):
+        return self.color.serialize() | {"flicker": int(self.flicker)}
 
-    def toUDP_MH_Command(self) -> str:
-        return self.color.toUDP_MH_Command() + f";fl={int(self.flicker)}"
+    def serialize_udp(self) -> str:
+        return self.color.serialize_udp() + f";fl={int(self.flicker)}"
 
 
 class FadeCommand(Command):
@@ -120,12 +118,12 @@ class FadeCommand(Command):
         self.to = to
         self.fade = fade
 
-    def toMHCommand(self):
-        return self.to.toMHCommand() | {"from": self.from_.rgbDict(), "fade": self.fade}
+    def serialize(self):
+        return self.to.serialize() | {"from": self.from_.rgbDict(), "fade": self.fade}
 
-    def toUDP_MH_Command(self) -> str:
+    def serialize_udp(self) -> str:
         return (
-            self.to.toUDP_MH_Command()
+            self.to.serialize_udp()
             + f";fa={int(self.fade)};fr={self.from_.r};fg={self.from_.g};fb={self.from_.b}"
         )
 
@@ -138,10 +136,10 @@ class ServoCommand(Command):
         self.servo = servo
         self.angle = angle
 
-    def toMHCommand(self):
+    def serialize(self):
         return {"servo": [{"servo": self.servo, "angle": self.angle}]}
 
-    def toUDP_MH_Command(self) -> str:
+    def serialize_udp(self) -> str:
         return ("tS" if self.servo == "top" else "bS") + f"={self.angle}"
 
 

@@ -201,10 +201,10 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
 
     def sendCommand(self, command: Command):
         # print(command.toMHCommand())
-        self.send_message(command.toUDP_MH_Command())
+        self.send_message(command.serialize_udp())
 
     def sendCommands(self, commands: list[Command]):
-        commands_dicts = [command.toUDP_MH_Command() for command in commands]
+        commands_dicts = [command.serialize_udp() for command in commands]
         self.send_message(";".join(commands_dicts))
 
     def on(self, packet: PacketData):
