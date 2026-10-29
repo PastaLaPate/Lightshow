@@ -34,6 +34,7 @@ class MHAnimationFrame(TypedDict):
 
 
 class AbstractMHAnimation(AbstractAnimation, abstract=True):
+    # TODO: Split animations and colors, animations only return angles.
     def __init__(self, calibration: FixtureCalibration):
         super().__init__()
         self.calibration = calibration
