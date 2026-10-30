@@ -1,0 +1,5 @@
+- Make Animation and colors independant
+- Add premade mode
+- UI Tests
+- Detection Method Benchmark
+- Make listener less dependent on UI etc => for benchmark
