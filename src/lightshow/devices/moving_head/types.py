@@ -1,13 +1,8 @@
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import NamedTuple, Protocol, TypedDict, runtime_checkable
+from typing import NamedTuple, TypedDict
 
 from lightshow.audio.data import AudioData
-from lightshow.devices.moving_head.colors import (
-    COLOR_MODE,
-    ColorTransformer,
-    DEFAULT_RGBs,
-)
 from lightshow.devices.moving_head.commands import (
     RGB,
     FadeCommand,
@@ -34,40 +29,22 @@ class MHAnimationFrame(TypedDict):
 
 
 class AbstractMHAnimation(AbstractAnimation, abstract=True):
-    # TODO: Split animations and colors, animations only return angles.
     def __init__(self, calibration: FixtureCalibration):
         super().__init__()
         self.calibration = calibration
-        self.transformer = None
-        self.color_mode = DEFAULT_RGBs
 
     @abstractmethod
-    def next(self, audio_data: AudioData, isTick=False, dt=0) -> MHAnimationFrame:
-        pass
+    def next(self, audio_data: AudioData, tick=False, dt=0) -> ServoAngles:
+        """Get next servos angles
 
-    def setTransformer(self, transformer: ColorTransformer):
-        self.transformer = transformer
+        Args:
+            audio_data (AudioData): Audio data
+            tick (bool, optional): Is this a tick. Defaults to False.
+            dt (int, optional): Delta time, time since last frame. Defaults to 0.
 
-    def setRGB(self, color_mode: COLOR_MODE):
-        self.color_mode = color_mode
-
-    def apply_transformer(
-        self, color: RGB, audio_data: AudioData
-    ) -> RGB | FlickerCommand | FadeCommand:
-        if self.transformer:
-            transformed = self.transformer.next(color, audio_data)
-            return transformed
-        return color
-
-
-@runtime_checkable
-class HasPalette(Protocol):
-    def setRGB(self, color_mode: COLOR_MODE) -> None: ...
-
-
-@runtime_checkable
-class ColorOnTick(Protocol):
-    change_color_on_tick: bool
+        Returns:
+            ServoAngles: Servo angles.
+        """
 
 
 @dataclass

@@ -3,6 +3,7 @@ import random
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable
+from itertools import cycle
 from typing import ClassVar
 
 from lightshow.audio.data import AudioData
@@ -10,11 +11,41 @@ from lightshow.core.colors import hsv_to_rgb
 from lightshow.devices.moving_head.commands import RGB, FadeCommand, FlickerCommand
 from lightshow.devices.types import AbstractAnimation
 
-COLOR_MODE = list[RGB] | Callable[[], RGB]
+# TODO: Rename ColorMode to palette
 
-DEFAULT_RGBs: list[RGB] = RGB.fromRGBsList([[255, 0, 0], [0, 255, 0], [0, 0, 255]])
 
-RAINBOW_KICK_COLORS = RGB.fromRGBsTupleList(
+class ColorMode(ABC):
+    def next(self, *args, **kwargs) -> RGB:
+        return self(*args, **kwargs)
+
+    @abstractmethod
+    def __call__(self) -> RGB:
+        pass
+
+
+class ListColorMode(ColorMode):
+    def __init__(self, color_list: list[RGB]):
+        self._color_list = color_list
+        self._cycle = cycle(self._color_list)
+
+    @classmethod
+    def fromRGBsList(cls, list: list[list[int]]):
+        return cls(RGB.fromRGBsList(list))
+
+    @classmethod
+    def fromRGBsTupleList(cls, list: list[tuple[int, int, int]]):
+        return cls(RGB.fromRGBsTupleList(list))
+
+    def __call__(self) -> RGB:
+        return next(self._cycle)
+
+
+RGBPalette: ColorMode = ListColorMode.fromRGBsList(
+    [[255, 0, 0], [0, 255, 0], [0, 0, 255]]
+)
+
+
+BasicRainbowPalette = ListColorMode.fromRGBsTupleList(
     [
         (148, 0, 211),  # Violet
         (75, 0, 130),  # Indigo
@@ -26,7 +57,7 @@ RAINBOW_KICK_COLORS = RGB.fromRGBsTupleList(
     ]
 )
 
-BLUE_COLORS = RGB.fromRGBsTupleList(
+BluePalette = ListColorMode.fromRGBsTupleList(
     [
         (0, 0, 255),
         (0, 150, 255),
@@ -37,7 +68,7 @@ BLUE_COLORS = RGB.fromRGBsTupleList(
     ]
 )
 
-RED_COLORS = RGB.fromRGBsTupleList(
+RedPalette = ListColorMode.fromRGBsTupleList(
     [
         (136, 8, 8),
         (255, 0, 0),
@@ -50,10 +81,20 @@ RED_COLORS = RGB.fromRGBsTupleList(
 )
 
 
-def random_rainbow_color():
-    return RGB.fromList(
-        [x * 255 for x in hsv_to_rgb(random.uniform(0, 1), 1, 1, 1)[:3]]
-    )
+class RainbowPalette(ColorMode):
+    def __call__(self) -> RGB:
+        return RGB.fromList(
+            [x * 255 for x in hsv_to_rgb(random.uniform(0, 1), 1, 1, 1)[:3]]
+        )
+
+
+PALETTES: list[ColorMode] = [
+    RGBPalette,
+    BasicRainbowPalette,
+    BluePalette,
+    RedPalette,
+    RainbowPalette(),
+]
 
 
 class ColorTransformer(ABC):

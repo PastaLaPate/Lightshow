@@ -78,7 +78,7 @@ class AbstractAnimation(ABC):
 
     # dt: time since last frame in s
     @abstractmethod
-    def next(self, audio_data: AudioData, isTick: bool = False, dt: float = 0) -> Any:
+    def next(self, audio_data: AudioData, tick: bool = False, dt: float = 0) -> Any:
         pass
 
     @abstractmethod

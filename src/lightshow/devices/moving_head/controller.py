@@ -18,21 +18,24 @@ from lightshow.devices.moving_head.animations import (
     RegularPolygonAnimation,
 )
 from lightshow.devices.moving_head.colors import (
-    COLOR_MODE,
-    RAINBOW_KICK_COLORS,
+    PALETTES,
     TRANSFORMERS,
+    BasicRainbowPalette,
     BlankTransformer,
+    ColorMode,
     ColorTransformer,
-    DEFAULT_RGBs,
-    random_rainbow_color,
 )
-from lightshow.devices.moving_head.commands import RGB, FadeCommand, FlickerCommand
+from lightshow.devices.moving_head.commands import (
+    RGB,
+    BaseServoCommand,
+    FadeCommand,
+    FlickerCommand,
+    TopServoCommand,
+)
 from lightshow.devices.moving_head.types import (
     QUART_OUT,
     AbstractMHAnimation,
-    ColorOnTick,
     FixtureCalibration,
-    HasPalette,
     MHAnimationFrame,
 )
 from lightshow.devices.types import PacketStatus, PacketType
@@ -40,24 +43,20 @@ from lightshow.devices.types import PacketStatus, PacketType
 if typing.TYPE_CHECKING:
     from lightshow.devices.moving_head import MovingHead
 
-TRIANGLE_ANIMATION = lambda calib: RegularPolygonAnimation(
-    calib, rgb=DEFAULT_RGBs, points_num=3
-)
-SQUARE_ANIMATION = lambda calib: RegularPolygonAnimation(
-    calib, rgb=DEFAULT_RGBs, points_num=4
-)
+TRIANGLE_ANIMATION = lambda calib: RegularPolygonAnimation(calib, points_num=3)
+SQUARE_ANIMATION = lambda calib: RegularPolygonAnimation(calib, points_num=4)
 CIRCLE_ANIMATION = lambda calib: CircleAnimation(
     calib,
-    rgb=DEFAULT_RGBs,
 )
 LEMNISCATE_ANIMATION = lambda calib: BernoulliLemniscateAnimation(
     calib,
-    rgb=DEFAULT_RGBs,
 )
 CIRCLE_BREAK_ANIMATION = lambda calib: BreakCircleAnimation(calib, hue_speed=0.5)
-BOUNCE_ANIMATION = lambda calib: BounceAnimation(calib, rgb=DEFAULT_RGBs)
+BOUNCE_ANIMATION = lambda calib: BounceAnimation(calib)
 
 NS_PER_S = 1e9
+
+# TODO: Fix BreakCircle rainbow colors
 
 
 def now_ns() -> int:
@@ -133,16 +132,15 @@ class MovingHeadController:
 
         self.latest_audio_data = AudioData(np.zeros(20000))
 
+        # colors
+        self.color_mode: ColorMode = BasicRainbowPalette
+        self.transformer: ColorTransformer = BlankTransformer()
+
         # animations
-        self.color_mode_list: list[COLOR_MODE] = [
-            RAINBOW_KICK_COLORS,
-            random_rainbow_color,
-        ]
-        self.color_mode: COLOR_MODE = RAINBOW_KICK_COLORS
         self.break_anim: AbstractMHAnimation = CIRCLE_BREAK_ANIMATION(self.get_calib())
         self.anim_list: list[AbstractMHAnimation] = self._build_animations()
         self.current_anim: AbstractMHAnimation = random.choice(self.anim_list)
-        self._activate(self.current_anim)
+        self._activate(self.current_anim, self.color_mode, self.transformer)
 
     # animations
 
@@ -164,42 +162,55 @@ class MovingHeadController:
         # Called after calibration changed
         self.break_anim = CIRCLE_BREAK_ANIMATION(self.get_calib())
         self.anim_list = self._build_animations()
-        self._activate(random.choice(self.anim_list))
+        self._activate(self.random_animation(), self.color_mode, self.transformer)
 
-    def randomAnimation(self) -> None:
+    def random_animation(self) -> AbstractMHAnimation:
         candidates = [a for a in self.anim_list if a is not self.current_anim]
-        self._activate(random.choice(candidates or self.anim_list))
-        self._send(self._advance(self.current_anim, beat=True), force=True)
+        return random.choice(candidates or self.anim_list)
 
-    def _activate(self, anim: AbstractMHAnimation) -> None:
+    def random_color_mode(self) -> ColorMode:
+        return random.choice(PALETTES)
+
+    def random_transformer(self, anim: AbstractMHAnimation | None) -> ColorTransformer:
+        return random.choice(
+            [t for t in TRANSFORMERS if t.filter()(anim)]
+            if anim is not None
+            else TRANSFORMERS
+        )()
+
+    def apply_random_style(self):
+        self._activate(
+            anim := self.random_animation(),
+            self.random_color_mode(),
+            self.random_transformer(anim),
+        )
+
+    def _activate(
+        self,
+        anim: AbstractMHAnimation,
+        color_mode: ColorMode,
+        transformer: ColorTransformer,
+    ) -> None:
         self.current_anim = anim
         self.beats_since_anim_change = 0
-        self.set_palette(None)
-        self.set_transformer(
-            random.choice([t for t in TRANSFORMERS if t.filter()(anim)])()
-        )
-        self.device.runtime.current_animation = type(anim).__name__
+        self.set_palette(color_mode)
+        self.set_transformer(transformer)
 
     # public api
-    def set_palette(self, color_mode: COLOR_MODE | None = None) -> None:
+    def set_palette(self, color_mode: ColorMode | None = None) -> None:
         """Set the palette on the current animation. None = pick a random mode."""
-        if color_mode is None:
-            color_mode = random.choice(self.color_mode_list)
-        self.color_mode = color_mode
-        if isinstance(self.current_anim, HasPalette):
-            self.current_anim.setRGB(color_mode)
+        self.color_mode = color_mode or self.random_color_mode()
+        self.device.runtime.current_animation = type(self.current_anim).NAME
 
     def set_transformer(self, transformer: ColorTransformer) -> None:
-        anim = self.current_anim
-        anim.setTransformer(transformer)
-        if isinstance(anim, ColorOnTick):
-            # Any transformer that follows the audio updates per tick; all others
-            # only on beats. Set on every swap so the flag can never go stale.
-            anim.change_color_on_tick = transformer.reactive()
+        self.transformer = transformer
+        self.device.runtime.current_transformer = type(
+            self.transformer or BlankTransformer()
+        ).NAME
 
     def toggle_transformer(self, kind: type[ColorTransformer]) -> None:
         """Switch `kind` on, or back to Blank if it's already active."""
-        active = isinstance(self.current_anim.transformer, kind)
+        active = isinstance(self.transformer, kind)
         self.set_transformer(BlankTransformer() if active else kind())
 
     def clear_transformer(self) -> None:
@@ -207,15 +218,8 @@ class MovingHeadController:
 
     def set_animation(self, factory: AnimationFactory) -> None:
         """Replace the current animation, keeping the palette and transformer."""
-        previous = self.current_anim
         self.current_anim = factory(self.get_calib())
         self.beats_since_anim_change = 0
-        self.set_palette(self.color_mode)
-        self.set_transformer(previous.transformer or BlankTransformer())
-        self.device.runtime.current_animation = type(self.current_anim).NAME
-        self.device.runtime.current_transformer = type(
-            self.current_anim.transformer or BlankTransformer()
-        ).NAME
 
     def reverse_animation(self) -> None:
         self.current_anim.reverse()
@@ -237,7 +241,7 @@ class MovingHeadController:
             self.beats_since_anim_change > self.ANIM_CHANGE_AFTER_BEATS
             and not self.disable_anim_change
         ):
-            self.randomAnimation()
+            self.apply_random_style()
 
         if packet.packet_type == PacketType.NEW_MUSIC:
             self._on_new_music(packet)
@@ -287,7 +291,7 @@ class MovingHeadController:
         ramp = min(duration_ns / NS_PER_S / self.BREAK_RAMP_S, 1.0)
         extra_s = self.BREAK_ADDED_TIME_CURVE(ramp) * self.BREAK_ADDED_TIME_MAX
 
-        self.randomAnimation()
+        self.apply_random_style()
         if duration_ns > self.BREAK_FLASH_MIN_NS:
             self._hold_until_ns = now + int(extra_s * NS_PER_S)
             self.device.sendCommand(
@@ -318,7 +322,15 @@ class MovingHeadController:
         now = now_ns()
         dt = (now - self._last_tick_ns) / NS_PER_S
         self._last_tick_ns = now
-        return anim.next(self.latest_audio_data, not beat, dt)
+        angles = anim.next(self.latest_audio_data, not beat, dt)
+        color = self.color_mode()
+        transformed = self.transformer.next(color, self.latest_audio_data)
+        return MHAnimationFrame(
+            duration=0,
+            rgb=transformed,
+            topServo=TopServoCommand(angles.top),
+            baseServo=BaseServoCommand(angles.base),
+        )
 
     def _send(self, frame: MHAnimationFrame, force: bool = False) -> None:
         # Send a frame, force ignores the limiter

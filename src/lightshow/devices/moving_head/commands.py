@@ -44,7 +44,8 @@ Fade:
 """
 
 
-class RGB(Command):  # out of 255
+# TODO: Have multiple rgb types, stored internally as float, then mode = RGBMode.8Bits, RGBMode.Normalized etc
+class RGB(Command):
     r: int
     g: int
     b: int
@@ -54,26 +55,26 @@ class RGB(Command):  # out of 255
         self.g = g
         self.b = b
 
-    def rgbDict(self):
+    def to_rgb_dict(self):
         return {"r": int(self.r), "g": int(self.g), "b": int(self.b)}
 
     def serialize(self):
-        return {"led": self.rgbDict()}
+        return {"led": self.to_rgb_dict()}
 
     def serialize_udp(self) -> str:
         return f"r={self.r};g={self.g};b={self.b}"
 
     @classmethod
-    def fromTuple(cls, tuple: tuple[int, int, int]) -> RGB:
-        return cls.fromList(list(tuple))
+    def fromTuple(cls, tuple_: tuple[int, int, int]) -> RGB:
+        return cls(*tuple_)
 
     @classmethod
-    def fromList(cls, list: list[int]) -> RGB:
-        return cls(list[0], list[1], list[2])
+    def fromList(cls, list_: list[int]) -> RGB:
+        return cls(list_[0], list_[1], list_[2])
 
     @classmethod
-    def fromRGBsList(cls, list: list[list[int]]) -> list[RGB]:
-        return [cls.fromList(x) for x in list]
+    def fromRGBsList(cls, list_: list[list[int]]) -> list[RGB]:
+        return [cls.fromList(x) for x in list_]
 
     @classmethod
     def fromRGBsTupleList(cls, list: list[tuple[int, int, int]]) -> list[RGB]:
@@ -119,7 +120,10 @@ class FadeCommand(Command):
         self.fade = fade
 
     def serialize(self):
-        return self.to.serialize() | {"from": self.from_.rgbDict(), "fade": self.fade}
+        return self.to.serialize() | {
+            "from": self.from_.to_rgb_dict(),
+            "fade": self.fade,
+        }
 
     def serialize_udp(self) -> str:
         return (
@@ -130,7 +134,7 @@ class FadeCommand(Command):
 
 class ServoCommand(Command):
     servo: ServoType
-    angle: int
+    angle: int  # Raw angle in degree (0-360)
 
     def __init__(self, servo: ServoType, angle: int):
         self.servo = servo
