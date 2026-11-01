@@ -9,13 +9,13 @@ from lightshow.audio.data import AudioData
 from lightshow.core.logger import Logger
 from lightshow.core.tempo import BeatTracker
 from lightshow.devices.device import PacketData
-from lightshow.devices.moving_head.animation_factories import AnimationFactory
-from lightshow.devices.moving_head.animations import (
-    BernoulliLemniscateAnimation,
-    BounceAnimation,
-    BreakCircleAnimation,
-    CircleAnimation,
-    RegularPolygonAnimation,
+from lightshow.devices.moving_head.animation_factories import (
+    BOUNCE_ANIMATION,
+    CIRCLE_ANIMATION,
+    LEMNISCATE_ANIMATION,
+    SQUARE_ANIMATION,
+    TRIANGLE_ANIMATION,
+    AnimationFactory,
 )
 from lightshow.devices.moving_head.colors import (
     PALETTES,
@@ -42,17 +42,6 @@ from lightshow.devices.types import PacketStatus, PacketType
 
 if typing.TYPE_CHECKING:
     from lightshow.devices.moving_head import MovingHead
-
-TRIANGLE_ANIMATION = lambda calib: RegularPolygonAnimation(calib, points_num=3)
-SQUARE_ANIMATION = lambda calib: RegularPolygonAnimation(calib, points_num=4)
-CIRCLE_ANIMATION = lambda calib: CircleAnimation(
-    calib,
-)
-LEMNISCATE_ANIMATION = lambda calib: BernoulliLemniscateAnimation(
-    calib,
-)
-CIRCLE_BREAK_ANIMATION = lambda calib: BreakCircleAnimation(calib, hue_speed=0.5)
-BOUNCE_ANIMATION = lambda calib: BounceAnimation(calib)
 
 NS_PER_S = 1e9
 
@@ -135,9 +124,10 @@ class MovingHeadController:
         # colors
         self.color_mode: ColorMode = BasicRainbowPalette
         self.transformer: ColorTransformer = BlankTransformer()
+        self._cached_color: RGB = RGB(0, 0, 0)
 
         # animations
-        self.break_anim: AbstractMHAnimation = CIRCLE_BREAK_ANIMATION(self.get_calib())
+        self.break_anim: AbstractMHAnimation = CIRCLE_ANIMATION(self.get_calib())
         self.anim_list: list[AbstractMHAnimation] = self._build_animations()
         self.current_anim: AbstractMHAnimation = random.choice(self.anim_list)
         self._activate(self.current_anim, self.color_mode, self.transformer)
@@ -160,7 +150,7 @@ class MovingHeadController:
 
     def rebuild_animations(self) -> None:
         # Called after calibration changed
-        self.break_anim = CIRCLE_BREAK_ANIMATION(self.get_calib())
+        self.break_anim = CIRCLE_ANIMATION(self.get_calib())
         self.anim_list = self._build_animations()
         self._activate(self.random_animation(), self.color_mode, self.transformer)
 
@@ -172,11 +162,24 @@ class MovingHeadController:
         return random.choice(PALETTES)
 
     def random_transformer(self, anim: AbstractMHAnimation | None) -> ColorTransformer:
-        return random.choice(
-            [t for t in TRANSFORMERS if t.filter()(anim)]
+        available_transformers = (
+            {t: w for t, w in TRANSFORMERS.items() if t.filter()(anim)}
             if anim is not None
             else TRANSFORMERS
-        )()
+        )
+
+        total_weight = 0
+        for weights in available_transformers.values():
+            total_weight += weights
+
+        index = random.uniform(0, total_weight)
+        running_weight = 0
+        for transformer, weight in available_transformers.items():
+            if running_weight <= index < running_weight + weight:
+                return transformer()
+            running_weight += weight
+
+        return next(iter(available_transformers.keys()))()
 
     def apply_random_style(self):
         self._activate(
@@ -323,7 +326,8 @@ class MovingHeadController:
         dt = (now - self._last_tick_ns) / NS_PER_S
         self._last_tick_ns = now
         angles = anim.next(self.latest_audio_data, not beat, dt)
-        color = self.color_mode()
+        color = self.color_mode() if beat else self._cached_color
+        self._cached_color = color
         transformed = self.transformer.next(color, self.latest_audio_data)
         return MHAnimationFrame(
             duration=0,

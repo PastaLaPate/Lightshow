@@ -23,15 +23,15 @@ from lightshow.devices.moving_head.animation_factories import (
     AnimationFactory,
 )
 from lightshow.devices.moving_head.colors import (
-    BLUE_COLORS,
-    RED_COLORS,
+    BasicRainbowPalette,
     BlueLowsModulator,
+    BluePalette,
     ColorTransformer,
     PurpleLowsModulator,
     RedLowsModulator,
+    RedPalette,
     StartWhiteTransformer,
     ToBlackTransformer,
-    random_rainbow_color,
 )
 from lightshow.devices.types import (
     BaseDeviceSettings,
@@ -146,9 +146,9 @@ class ControlMode(IntEnum):
 
 
 class ColorModes(Enum):
-    RED = RED_COLORS
-    BLUE = BLUE_COLORS
-    RAINBOW = random_rainbow_color
+    RED = RedPalette
+    BLUE = BluePalette
+    RAINBOW = BasicRainbowPalette
     RANDOM = 4
 
 

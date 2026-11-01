@@ -274,9 +274,9 @@ class StartWhiteTransformer(ColorTransformer):
         return FadeCommand(RGB(255, 255, 255), color, 100)
 
 
-TRANSFORMERS = [
-    BlankTransformer,
-    RedLowsModulator,
-    ToBlackTransformer,
-    StartWhiteTransformer,
-]
+TRANSFORMERS: dict[type[ColorTransformer], float] = {
+    BlankTransformer: 7,
+    RedLowsModulator: 2,
+    ToBlackTransformer: 1,
+    StartWhiteTransformer: 1,
+}
