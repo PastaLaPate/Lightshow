@@ -1,5 +1,4 @@
 import random
-import time
 from collections.abc import Callable
 from itertools import cycle
 
@@ -7,13 +6,11 @@ import numpy as np
 
 from lightshow.devices.moving_head.commands import (
     RGB,
-    BaseServoCommand,
-    TopServoCommand,
 )
 from lightshow.devices.moving_head.types import (
     AbstractMHAnimation,
     FixtureCalibration,
-    MHAnimationFrame,
+    ServoAngles,
 )
 
 
@@ -25,7 +22,6 @@ class CircleAnimation(AbstractMHAnimation):
     def __init__(
         self,
         calibration: FixtureCalibration,
-        rgb: list[RGB] | Callable[[], RGB],
         scale: float = 1.0,
         center: tuple[float, float] = (0.0, 0.0),
         phase: float = 0.0,
@@ -44,12 +40,6 @@ class CircleAnimation(AbstractMHAnimation):
             max_servo_speed: max servo angular speed in deg/s (clamps the kick).
         """
         super().__init__(calibration)
-
-        self.setRGB(rgb)
-
-        self.change_color_on_tick = False
-        self.cached_color = RGB(0, 0, 0)
-        self.color_cooldown = 0
 
         self.scale = scale
         self.center = center
@@ -75,18 +65,11 @@ class CircleAnimation(AbstractMHAnimation):
         v_max = self.max_servo_speed / (2 * np.pi * max(self._radius_deg, 1e-3))
         return min(v0, max(v_max, self.min_speed))
 
-    def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
+    def next(self, audio_data, tick=False, dt=0.0) -> ServoAngles:
         dt = min(dt, 0.1)
 
-        if not isTick:  # beat
-            # if random.random() < 1 / 12: Moved to controller
-            #     self.reverse()
+        if not tick:  # beat
             self.speed = self._kick_speed()
-            if not self.change_color_on_tick:
-                self.cached_color = self.apply_transformer(self.nextRGB(), audio_data)
-            self.color_cooldown = time.time_ns() + 0.2 * 1e9
-        elif self.change_color_on_tick and time.time_ns() >= self.color_cooldown:
-            self.cached_color = self.apply_transformer(self.nextRGB(), audio_data)
 
         if dt > 0:
             decay = np.exp(-self.damping * dt)
@@ -99,12 +82,7 @@ class CircleAnimation(AbstractMHAnimation):
         x, y = self.nextCurve(self.circle_progress * 2 * np.pi)
         angles = self.calibration.to_servo(x, y)
 
-        return MHAnimationFrame(
-            duration=0,
-            rgb=self.cached_color,
-            topServo=TopServoCommand(angles.top),
-            baseServo=BaseServoCommand(angles.base),
-        )
+        return angles
 
     def shape(self, t: float) -> tuple[float, float]:
         """Unit shape, both axes in [-1, 1], same unit on both. Override per animation."""

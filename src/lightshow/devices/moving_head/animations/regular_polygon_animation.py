@@ -5,7 +5,6 @@ from lightshow.devices.moving_head.colors import COLOR_MODE
 from lightshow.devices.moving_head.commands import (
     RGB,
     BaseServoCommand,
-    ServoCommand,
     TopServoCommand,
 )
 from lightshow.devices.moving_head.types import (
@@ -22,7 +21,6 @@ class RegularPolygonAnimation(AbstractMHAnimation):
     def __init__(
         self,
         calibration: FixtureCalibration,
-        rgb: COLOR_MODE,
         points_num: int = 4,
         angle_offset: float = 15,
         angle_offset_step: float = 0,
@@ -39,7 +37,6 @@ class RegularPolygonAnimation(AbstractMHAnimation):
             center: polygon center in normalized space, (x=base, y=top).
         """
         super().__init__(calibration)
-        self.setRGB(rgb)
 
         self.points_num = points_num
         self.angle_offset = angle_offset
@@ -47,11 +44,7 @@ class RegularPolygonAnimation(AbstractMHAnimation):
         self.scale = scale
         self.center = center
 
-        self.cached_rgb = RGB(0, 0, 0)
-        self.cached_poses = (
-            ServoCommand("top", angle=0),
-            ServoCommand("base", angle=0),
-        )
+        self.cached_pose: ServoAngles = ServoAngles(0, 0)
 
         self.poses: list[ServoAngles] = []
         self.index = -1  # first step lands on pose 0

@@ -1,29 +1,17 @@
-from collections.abc import Callable
-from itertools import cycle
-
-from lightshow.devices.moving_head.colors import COLOR_MODE
-from lightshow.devices.moving_head.commands import (
-    RGB,
-    BaseServoCommand,
-    FadeCommand,
-    FlickerCommand,
-    TopServoCommand,
-)
 from lightshow.devices.moving_head.types import (
     AbstractMHAnimation,
     FixtureCalibration,
-    MHAnimationFrame,
+    ServoAngles,
 )
 
 
 class BounceAnimation(AbstractMHAnimation):
     NAME = "Bounce Animation"
 
-    def __init__(self, calibration: FixtureCalibration, rgb: COLOR_MODE):
+    def __init__(self, calibration: FixtureCalibration):
         super().__init__(calibration)
 
         self.tickeable = True
-        self.setRGB(rgb)
 
         self.cycle_progress = 0.0  # 0 -> left, 1 -> right
         self.direction = 1  # 1 forward, -1 backward
@@ -35,14 +23,6 @@ class BounceAnimation(AbstractMHAnimation):
         # Arc height as a function of progress, in 0..1 (0 = bottom of the
         # top range, 1 = top). Peaks at the middle, lower at the sides.
         self.y_f = lambda x: 0.7 - 2 * (x - 0.5) ** 2
-        self.base_color = RGB(255, 255, 255)
-        self.color: RGB | FlickerCommand | FadeCommand = self.base_color
-
-    def setRGB(self, color_mode: COLOR_MODE):
-        self.color_mode = color_mode
-        self.rgb: cycle[RGB] | Callable[[], RGB] = (
-            cycle(color_mode) if isinstance(color_mode, list) else color_mode
-        )
 
     def _compute_required_velocity(self, dt_est: float = 1 / 60):
         distance = (
@@ -68,10 +48,10 @@ class BounceAnimation(AbstractMHAnimation):
         v0 = distance * d / denom
         return v0 * 1.05  # small boost
 
-    def next(self, audio_data, isTick=False, dt=0.0) -> MHAnimationFrame:
+    def next(self, audio_data, tick=False, dt=0.0) -> ServoAngles:
         self.velocity *= max(0, 1.0 - 3.0 * dt)  # damping, proportional to dt
 
-        if isTick:
+        if tick:
             self.cycle_progress += self.direction * self.velocity * dt
 
             # Clamp & bounce
@@ -88,33 +68,12 @@ class BounceAnimation(AbstractMHAnimation):
             v = self._compute_required_velocity(dt if dt > 0 else 1 / 60)
             self.velocity = max(v, 0.2)
 
-        if not isTick:  # beat: pick a new color, once
-            self.base_color = (
-                next(self.rgb) if isinstance(self.rgb, cycle) else self.rgb()
-            )
-            self.color = self.apply_transformer(self.base_color, audio_data)
-        elif self.transformer and self.transformer.reactive():
-            self.color = self.apply_transformer(self.base_color, audio_data)
-
         # Progress 0..1 -> normalized -1..1 -> servo angles
         x = 2.0 * self.cycle_progress - 1.0
         y = 2.0 * self.y_f(self.cycle_progress) - 1.0
         angles = self.calibration.to_servo(x, y)
 
-        # FadeCommand support
-        if isinstance(self.color, FadeCommand) and isTick:
-            self.color = (
-                self.color.to
-                if (self.color.to.r or self.color.to.g or self.color.to.b)
-                else self.color.from_
-            )
-
-        return MHAnimationFrame(
-            duration=0,
-            rgb=self.color,
-            topServo=TopServoCommand(angles.top),
-            baseServo=BaseServoCommand(angles.base),
-        )
+        return angles
 
     def reverse(self):
         # Cannot reverse this effect

@@ -1,11 +1,8 @@
-from collections.abc import Callable
-
 import numpy as np
 
 from lightshow.devices.moving_head.animations.circle_animation import (
     CircleAnimation,
 )
-from lightshow.devices.moving_head.commands import RGB
 from lightshow.devices.moving_head.types import FixtureCalibration
 
 _LEMNISCATE_MAX_Y = np.sqrt(2) / 4
@@ -17,7 +14,6 @@ class BernoulliLemniscateAnimation(CircleAnimation):
     def __init__(
         self,
         calibration: FixtureCalibration,
-        rgb: list[RGB] | Callable[[], RGB],
         scale: float = 1.0,
         center: tuple[float, float] = (0.0, 0.0),
         phase: float = 0.0,
@@ -40,7 +36,6 @@ class BernoulliLemniscateAnimation(CircleAnimation):
         """
         super().__init__(
             calibration,
-            rgb,
             scale=scale,
             center=center,
             phase=phase,

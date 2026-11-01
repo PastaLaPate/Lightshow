@@ -198,6 +198,7 @@ class MovingHead(OutputDevice[MovingHeadSettings, MovingHeadRuntime]):
     def on_config_changed(self, field: str):
         self.controller.rebuild_animations()
 
+    # TODO: Rename this to lower case
     def sendCommand(self, command: Command):
         # print(command.toMHCommand())
         self.send_message(command.serialize_udp())
