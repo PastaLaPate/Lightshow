@@ -24,10 +24,14 @@ class LineAnimation(AbstractMHAnimation):
         """
         super().__init__(calibration)
 
+        self.damping = 3
+
         self.angle = angle
         self.length = length
 
         self.progress: float = 0
+        self.velocity: float = 0
+        self.target_cross_time = 0.2  # In seconds
 
     def next(self, audio_data, tick=False, dt=0.0) -> ServoAngles:
         if tick:

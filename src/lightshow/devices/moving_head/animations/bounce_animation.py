@@ -11,8 +11,6 @@ class BounceAnimation(AbstractMHAnimation):
     def __init__(self, calibration: FixtureCalibration):
         super().__init__(calibration)
 
-        self.tickeable = True
-
         self.cycle_progress = 0.0  # 0 -> left, 1 -> right
         self.direction = 1  # 1 forward, -1 backward
         self.velocity = 0.0  # progress units per second
