@@ -1,4 +1,4 @@
-- Make Animation and colors independant
+- Make Animation and colors independent
 - Add premade mode
 - UI Tests
 - Detection Method Benchmark

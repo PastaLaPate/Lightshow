@@ -22,6 +22,7 @@ dependencies = [
   "requests>=2.34.2",
   "semver>=3.1.0",
   "soundcard>=0.4.6",
+  "soundfile>=0.14.0",
   "ty>=0.0.91",
   "websocket-client>=1.9.2",
   "winrt-runtime>=3.2.1 ; platform_system == \"Windows\"",
